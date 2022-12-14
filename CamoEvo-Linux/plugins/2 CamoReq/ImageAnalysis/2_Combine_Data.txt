@@ -1,0 +1,84 @@
+/*____________________________________________________________________
+
+	Title: Combine Genes and Ranks
+	Authors:  George Hancock 
+	Date: 19/04/22
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Merges the combined genes and ranks with the measures
+
+*/
+
+popDIR = getDirectory("population");
+fileList  =  getFileList(popDIR);
+
+setBatchMode(true);
+
+combineDIR=0;
+measureDIR=0;
+
+//Array.show(fileList);
+
+for(i=0;i<fileList.length;i++){
+
+tStr=fileList[i];
+
+if(startsWith(tStr,"Data_Gene&Ranks_")) combineDIR=tStr;
+
+if(startsWith(tStr,"Data_Measures")) measureDIR=tStr;
+
+
+}
+
+
+if(combineDIR==0)exit("Missing Genes&Ranks");
+if(measureDIR==0)exit("Missing Measures");
+
+
+genesranksSTR = File.openAsString(popDIR+combineDIR);
+genesranksARR = split(genesranksSTR,"\n");
+
+measureSTR = File.openAsString(popDIR+measureDIR);
+measureARR = split(measureSTR,"\n");
+
+saveDIR = popDIR+"Data_Combined_"+replace(combineDIR,"Data_Gene&Ranks_","");
+
+if(File.exists(saveDIR)) File.delete(saveDIR); 
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+
+titlesG = split(genesranksARR[0],"\t");
+
+IDindex=index(titlesG,"Parent1");
+
+
+for(A=0;A<genesranksARR.length;A++){
+
+tArr1 = split(genesranksARR[A],"\t");
+tArr1_1 = Array.slice(tArr1,0,IDindex);
+tArr1_2 = Array.slice(tArr1,IDindex,tArr1.length);
+
+tArr2 = split(measureARR[A],"\t");
+
+tArr3 = Array.concat(tArr1_1,tArr2,tArr1_2);
+tStr = String.join(tArr3,"\t");
+
+
+File.append(tStr, saveDIR);
+
+} // (A)
+
+

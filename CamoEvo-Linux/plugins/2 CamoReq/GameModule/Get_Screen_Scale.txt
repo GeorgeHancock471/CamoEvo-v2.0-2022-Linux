@@ -1,0 +1,77 @@
+//Get Scale
+//Get's the scale of the computer screen in use
+setBatchMode(true);
+
+newImage("Scale","RGB black", 200, 200, 3);
+
+setBatchMode("Show");
+run("Maximize");
+getLocationAndSize(x, y, windowWidth, windowHeight);
+
+originalPW = getWidth;
+originalPH = getHeight;
+
+fullScale =  screenWidth/windowWidth;
+fullWidth = (getWidth()*fullScale);
+fullHeight = (getHeight);
+
+run("Canvas Size...", "width=&fullWidth height=&fullHeight  position=Center");
+
+xButtonShift = (fullWidth - originalPW);
+
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+setLocation(screenWidth/2, 0, screenWidth+50 , windowHeight+50);
+}else{
+setLocation(screenWidth/2, 0, screenWidth , windowHeight);
+}
+getLocationAndSize(x, y, width, height);
+
+
+interfaceX=x-((width)/2);
+interfaceY=y-10;
+interfaceW=width;
+interfaceH=height;
+gameARatio=fullWidth/fullHeight;
+
+close("Scale");
+
+
+//Create Test Image
+//--------------------------------
+
+/*
+setColor("red");
+
+newImage("Scaled","RGB black", 1478, 1130, 1);
+
+gameHeight = getHeight();
+gameWidth = gameHeight*gameARatio;
+
+fill();
+
+run("Canvas Size...", "width=&gameWidth height=&gameHeight  position=Center");
+setBatchMode("Show");
+
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+*/
+
+
+
+
+//Save Scale
+
+dataFile = File.open(getDirectory("plugins") + "2 CamoReq/GameModule/screenScales.txt");  
+
+print(dataFile, interfaceX);
+print(dataFile, interfaceY);
+print(dataFile, interfaceW);
+print(dataFile, interfaceH);
+print(dataFile, gameARatio);
+print(dataFile, fullWidth);
+print(dataFile, fullHeight);
+
+File.close(dataFile);
+
+

@@ -1,0 +1,168 @@
+/*____________________________________________________________________
+
+	Title: Measure XYZ Values
+	Authors:  George Hancock and Jolyon Troscianko
+	Date: 19/04/22
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Measures the XYZ Mean, Dev and GabRat
+
+*/
+
+
+popDIR = getDirectory("population");
+FolderName=File.getName(popDIR);
+saveDIR = popDIR + "Data_Measures_" + FolderName +".txt";
+
+
+while(roiManager("count")>0){
+roiManager("select", 0);
+roiManager("delete");
+}
+
+setBatchMode(true);
+
+selectImage("Background");
+
+setBatchMode("show");
+run("sRGB to CIEXYZ");
+rename("XYZ");
+
+
+//MeasureTitles
+//========================================
+
+//Make Sure to add all the titles and in the same order as the measurements.
+
+TiArray=newArray();
+
+TiArray=Array.concat(TiArray,"RNL_Similarity_Surround","RNL_Similarity_Local","RNL_Similarity_Global");
+
+
+
+if(!File.exists(saveDIR)){
+File.append(String.join(TiArray,"\t"),saveDIR);
+}
+
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+  
+  
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+ 
+
+
+
+
+
+//Measures Array
+//========================================
+
+MsArray=newArray(); // Blank Measure Array
+
+
+
+setBatchMode("show");
+
+
+selectImage("TargetMask");
+run("Create Selection");
+roiManager("Add");
+	roiManager("select",0);
+	run("Interpolate", "interval=1");
+	roiManager("update");
+	roiManager("select",0);
+	roiManager("Rename","Target");
+close();
+
+selectImage("LocalMask");
+run("Create Selection");
+roiManager("Add");
+	roiManager("select",1);
+	roiManager("Rename","Local");
+close();
+
+roiManager("select",0);
+run("Make Inverse");
+roiManager("add");
+	roiManager("select",2);
+	roiManager("Rename","Global");
+	
+roiManager("select",0);
+run("Make Band...", "band=10");
+roiManager("add");
+	roiManager("select",3);
+	roiManager("Rename","Surround");
+		
+
+	
+	
+rnlDIR = getDirectory("plugins") + "2 CamoReq/ImageAnalysis/RNL/";
+rnlList= getFileList(rnlDIR);
+for(i=0;i<rnlList.length;i++){
+File.delete(rnlDIR+rnlList[i]);
+}
+
+selectImage("XYZ");
+run("Select None");
+
+
+rnlString = "visual=[Human XYZ 0.05] resolution=4 select=["+rnlDIR+"]";
+
+run("1.0) Create RNL Colour Maps From ROIs", rnlString);
+
+
+rnlString = "threshold=0.99 metric=Mean frequency=Yes choose=["+rnlDIR+"]";
+
+run("4.0) Compare RNL Distance", rnlString);
+
+
+labelList=Table.getColumn("Label");
+
+targetIndex=index(labelList,"Target");
+ 
+DifferenceLocal = getResult("Local",targetIndex);
+DifferenceGlobal = getResult("Global",targetIndex);
+DifferenceSurround = getResult("Surround",targetIndex);
+
+
+close("XYZ");
+
+
+selectImage("Background");
+
+
+MsArray=Array.concat(DifferenceSurround,DifferenceLocal,DifferenceGlobal); // Adds the measure to the measure array.
+
+close("*");
+setBatchMode(true);
+
+//------------------------------------------------------------------------------------------------------------------
+
+//Save Measurements
+//========================================
+
+File.append(String.join(MsArray,"\t"),saveDIR);

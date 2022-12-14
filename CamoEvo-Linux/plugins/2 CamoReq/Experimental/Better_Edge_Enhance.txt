@@ -1,0 +1,82 @@
+canvasW =400;
+
+if(isOpen("eeExternal")) close("eeExternal");
+if(isOpen("eeExternal")) close("eeExternal");
+
+run("Select None");
+selectImage("Pattern");
+
+//Edges
+//=================
+
+newImage("eeExternal", "32-bit black", canvasW, canvasW, 1);
+
+
+
+
+
+blurV=random();
+expV=random();
+intV=random();
+offX = random();
+offY= random();
+
+
+gaV = 1+expV*2;
+blurV=blurV*10;
+expV=1+expV*10;
+
+maxO=10;
+
+offX=-maxO+offX*maxO*2;
+offY=-maxO+offY*maxO*2;
+
+
+roiManager("select", 0);
+
+
+//Offset
+//----------
+run("Enlarge...", "enlarge=&expV");
+
+
+Roi.getBounds(x, y, width, height);
+
+for(i=0;i<3;i++){
+Roi.move(x+offX/3, y+offY/3);
+run("Set...","value=1");
+}
+
+//----------
+
+
+
+
+run("Select None");
+
+roiManager("select", 0);
+run("Enlarge...", "enlarge=-1");
+run("Set...","value=0");
+
+run("Select None");
+
+run("Gaussian Blur...", "sigma=&blurV");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+roiManager("select", 0);
+run("Set...","value=0");
+run("Select None");
+
+run("Min...","value=0");
+run("Max...","value=1");
+
+run("Multiply...","value=intV");
+
+run("Select None");
+
+run("Invert");
+wait(100);
+run("Copy to System");
+
+
+

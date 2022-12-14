@@ -1,0 +1,3498 @@
+/*____________________________________________________________________
+
+	Title: Camouflage_Evolution
+	Authors:  George Hancock 
+	Date: 20/04/2022
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Sets up the targets and game screen used for CamoEvo.
+
+*/
+
+
+setBatchMode(true);
+
+
+
+/*
+..........................................................................................................................................
+
+															Setup
+
+..........................................................................................................................................
+
+*/
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) General
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+//================================================================
+//Functions
+//================================================================
+
+// TestPoint
+//---------------------------------------------------
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Setup Clicks
+//--------------------------------------------------
+rightButton=4;
+leftButton=16;
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+// Idle
+//---------------------------------------------------
+// Allows the program to check wether to go idle during a loop
+
+iSettings = newArray(10000,0, 0, 0);
+
+ function idle(array) {
+ 
+ wGate = 1;
+ 
+ while(wGate==1){
+ 
+ wGate=0;
+ 
+ t=array[0];
+ iGate=array[1];
+ xM=array[2];
+ yM=array[3];
+
+scaleX = getWidth() / screenWidth;
+scaleY = getHeight() / screenHeight;
+
+wait(100);
+getCursorLoc(xM2, yM2, zM, flag);
+
+getLocationAndSize(x, y, width, height);
+
+width = width*scaleX;
+height = height*scaleY;
+
+threshold = 10;
+if(flag==02) threshold = 30;
+
+if(iGate>t/5 && xM2>=width-threshold) iGate=t;
+if(iGate>t/5 && xM2<= threshold) iGate=t;
+if(iGate>t/5 && yM2>=height- threshold) iGate=t;
+if(iGate>t/5 && yM2<= threshold)iGate=t;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0  && iGate>=t) Overlay.remove;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0 ) iGate=0;
+
+if(xM2==xM && yM2==yM) iGate=iGate+100;
+
+if(iGate>=t){
+
+	getCursorLoc(xM1, yM1, zM, flag);
+
+	Overlay.add;
+
+	setColor(255,100,100);
+	setFont("SansSerif", round(40*scaleX*scaleY));
+
+	Overlay.drawString("Idle", 40*scaleX*scaleY, 40*scaleX*scaleY);
+
+	Overlay.show;
+
+	wait(2500);
+	
+	wGate=1;
+
+	}
+
+
+if(iGate>=120000){
+
+waitForUser("Idle for too long, operation paused");
+
+}
+
+}
+
+return newArray(t, iGate, xM2, yM2);
+
+  }
+
+
+//================================================================
+//Population Location
+//================================================================
+
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory of the evolution game population.");
+	Dialog.show();
+
+
+gameDIR = getDirectory("Select folder you wish to use.");
+gameDIR=gameDIR;
+tempString = "select=["+ gameDIR+"]";
+
+gameName=File.getName(gameDIR);
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+dataFile = File.open(PopLocal);
+print(dataFile, gameDIR );
+File.close(dataFile);
+
+
+
+//================================================================
+//Appearance
+//================================================================
+
+
+setBackgroundColor(50, 50, 50);
+setTool("arrow");
+ToolOld = 0;
+
+
+
+startTimeTest = getTime();
+TestTime= getTime()- startTimeTest;
+
+//print(TestTime/1000);
+
+setBatchMode(true);
+
+if (isOpen("ROI Manager")) {
+selectWindow("ROI Manager");
+run("Close");
+}
+
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+LoadingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Loading/01.jpg";
+} else {
+LoadingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Loading/";
+}
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/01.jpg";
+} else {
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/";
+}
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 1) Get Scale Settings & Open Loading Screen if it isn't open
+//----------------------------------------------------------------------------------------------------------------
+
+
+//Obtain Scales
+//------------------
+
+screenScales = getDirectory("plugins") + "2 CamoReq/GameModule/screenScales.txt";
+
+screenSettings = File.openAsString(screenScales);
+screenSettings = split(screenSettings, "\n");
+
+interfaceX= parseFloat(screenSettings[0] );
+interfaceY= parseFloat( screenSettings[1] );
+interfaceW= parseFloat( screenSettings[2] );
+interfaceH= parseFloat( screenSettings[3] );
+
+gameARatio= parseFloat( screenSettings[4] );
+
+
+interfaceHeight= 1130;
+interfaceWidth= 1130*gameARatio;
+
+
+iButtonShift = (interfaceWidth - 1478);
+
+
+
+
+//Open Loading
+//------------------
+if(!isOpen("Loading")){
+run("Image Sequence...", "open=[&LoadingDirectory] sort");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight position=Center");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+}
+
+selectImage("Loading");
+
+
+/*
+..........................................................................................................................................
+
+														Operate Game
+
+..........................................................................................................................................
+
+*/
+
+
+
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) Setup New Generation
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+//=========================
+//Get Population Settings
+//=========================
+
+GameDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Game/";
+
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+if(!File.exists(GameDirectory+"01.jpg")){
+exit("Game Screen Img, missing, reinstall suggested");
+}
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet[1];
+
+PopSize = split(PopulationSettings[2],"\t");
+PopSize = parseFloat(PopSize [1]);
+
+
+TimeOutTime = split(PopulationSettings[4],"\t");
+TimeOutTime = parseFloat(TimeOutTime [1]);
+
+numPerSlide = split(PopulationSettings[3],"\t");
+numPerSlide = parseFloat(numPerSlide [1]);
+
+numberRepeats= split(PopulationSettings[12],"\t");
+numberRepeats= parseFloat(numberRepeats [1]);
+
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+
+
+DefaultDirectory = getDirectory("plugins") + "2 CamoReq/GameModule/popSettingsDefault.txt";
+
+if(!File.exists(PopulationSet)){
+
+File.copy(DefaultDirectory, PopulationSet);
+
+}
+
+
+
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet[1];
+
+FitnessM = split(PopulationSettings[7],"\t");
+FitnessMeasure = FitnessM[1];
+
+
+if(PopulationSettings.length<9){
+
+fitnessMethod = "Survival"; // (left&right , survival, response, capture, rank)
+
+transitionMethod = "Centre"; // (centre, click, wait)
+
+trainingMethod = "None"; // (None, First.Random, Every.Random, First.Custom, Every.Custom, Resurrect)
+
+trainingNumber = 0;
+
+numberRepeats = 1;
+
+} else {
+
+tempA = split(PopulationSettings[8],"\t");
+fitnessMethod = tempA[1];
+
+tempA = split(PopulationSettings[9],"\t");
+transitionMethod = tempA[1];
+
+tempA = split(PopulationSettings[10],"\t");
+trainingMethod = tempA[1];
+
+tempA = split(PopulationSettings[11],"\t");
+trainingNumber = parseFloat(tempA[1]);
+
+
+tempA = split(PopulationSettings[12],"\t");
+numberRepeats = parseFloat(tempA[1]);
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+//=========================
+//Get Target Settings
+//=========================
+
+TargetChoice = TargetSetting;
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+capture="response";
+if(numPerSlide>1) capture="rank";
+
+SettingPath = gameDIR + "Settings_Game.txt";
+
+settingGate=1;
+if(!File.exists(SettingPath)) settingGate=0;
+
+if(settingGate==1){
+test = File.openAsString(SettingPath);
+test = split(test,"\n");
+if(test.length<5)  settingGate=0;
+}
+
+if(settingGate==0){
+
+dataFile = File.open(SettingPath);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+print(dataFile, "TargetSize =	"+TargetChoiceScale+"px		( The size of the given target in either pixels [px] or cm [cm] )");
+print(dataFile, "NumPerSlide =	"+numPerSlide+"		( The number of targets shown per slide )");
+print(dataFile, "Angles =	"+TargetChoiceMinRotation+"	"+TargetChoiceMaxRotation+"	( The range of angles the target can have )");
+print(dataFile, "TimeOutTime = 	"+TimeOutTime+"		( The maximum time per slide )");
+print(dataFile, "SpawnMethod =	random		( The target spawning method [random, measure.L.near,  measure.L.far, grid.nx.ny] )");
+print(dataFile, "CaptureMethod =	"+capture+"	( The method used to determine capture [click,response,left&right,rank] )");
+print(dataFile, "TransitionMethod =	centre	( The method used to change between slides [centre,click,wait] )");
+print(dataFile, "TrainingNumber =	"+trainingNumber+"	( The number of dummy targets used at the beginning )");
+print(dataFile, "Repeats =	"+numberRepeats+"		( The number of repeats per individual )");
+print(dataFile, "ClickLeeWay =	0.5		( The click leeway based on the size of the target [e.g. 0.5 = + 50%] )");
+print(dataFile, "CropWidth =	1478		( The crop width CAN'T BE BIGGER THEN SOURCE IMAGE )");
+print(dataFile, "CropHeight =	1130		( The crop height CAN'T BE BIGGER THEN SOURCE IMAGE  )");
+print(dataFile, "CropMode = 	centre		( The crop location [centre or random]  )");
+print(dataFile, "FailTrigger =	none		( Fail conditions other then time out [miss.N, react, miss/react] )");
+print(dataFile, "TargetMod =	none	( runs imageJ script on target )");
+print(dataFile, "ImageMod =	none		( runs imageJ script on whole image )");
+
+
+	
+File.close(dataFile);
+
+}
+
+
+
+
+//=========================
+//Get Game Settings
+//=========================
+//Opens the Game Settings and Adjusts them to there set values.
+
+GameDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Game/";
+
+if(!File.exists(GameDirectory+"01.jpg")){
+exit("Game Screen Img, missing, reinstall suggested");
+}
+
+gameSet = gameDIR+"Settings_Game.txt";
+gameSettings = File.openAsString(gameSet);
+gameSettings = split(gameSettings , "\n");
+
+//Size
+//.........
+tArr = split(gameSettings[0],"\t");
+TargetSize = tArr[1];
+TargetChoiceScale = replace(TargetSize,"px","");
+TargetChoiceScale = parseFloat(TargetChoiceScale);
+
+//numPerSlide
+//.........
+tArr = split(gameSettings[1],"\t");
+numPerSlide = parseFloat(tArr[1]);
+
+
+//Angles
+//.........
+tArr = split(gameSettings[2],"\t");
+minAngle = parseFloat(tArr[1]);
+maxAngle = parseFloat(tArr[2]);
+
+
+//TimeOut
+//.........
+tArr = split(gameSettings[3],"\t");
+TimeOutTime = parseFloat(tArr[1]);
+
+
+//Spawn
+//.........
+tArr = split(gameSettings[4],"\t");
+spawnSystem= tArr [1];
+
+
+//Capture
+//.........
+tArr = split(gameSettings[5],"\t");
+captureMethod= tArr [1];
+
+
+//Transition
+//............
+tArr = split(gameSettings[6],"\t");
+transitionMethod= tArr [1];
+
+
+
+//TrainingNumber
+//.............
+tArr = split(gameSettings[7],"\t");
+trainingNumber= parseFloat(tArr[1]);
+
+
+//Repeats
+//.........
+tArr = split(gameSettings[8],"\t");
+repeatPlays = tArr [1];
+
+
+//clickLeeway
+//.........
+tArr = split(gameSettings[9],"\t");
+clickLeeway = parseFloat(tArr [1]);
+
+
+//cropWidth
+//.........
+tArr = split(gameSettings[10],"\t");
+cropWidth = parseFloat(tArr [1]);
+
+
+//cropHeight
+//.........
+tArr = split(gameSettings[11],"\t");
+cropHeight = parseFloat(tArr [1]);
+
+
+//cropMode
+//.........
+tArr = split(gameSettings[12],"\t");
+cropMode = tArr[1];
+
+
+//failTrigger
+//.........
+tArr = split(gameSettings[13],"\t");
+failTrigger = tArr[1];
+
+
+
+//targetMod
+//.........
+tArr = split(gameSettings[14],"\t");
+targetMod = tArr[1];
+
+
+
+
+//imageMod
+//.........
+tArr = split(gameSettings[15],"\t");
+imageMod = tArr[1];
+
+
+
+
+
+
+//=========================
+//Check for Generation 0
+//=========================
+
+//If there is no Generation 0 Create one
+//----------------------------------------------
+
+if(!File.exists(PopLocation+"gen_0_genes.txt")){
+
+//run("CamoEvo ImageGA Relay");
+
+
+populatorDirectory1= "select_folder=[" + PopLocation+ "]";
+
+
+populatorDirectory2= " select_template=[" + getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+TargetPatternChoice+".txt]";
+
+
+
+
+populatorDirectory = populatorDirectory1+populatorDirectory2;
+
+run("Assign Algorithm Settings");
+
+print(populatorDirectory);
+
+run("ImageGA Populator", populatorDirectory);
+
+
+
+
+run("Colour Range Modifier");
+
+}
+
+
+
+checkZ=1;
+
+runCount=-1;
+
+while(checkZ==1){
+
+
+
+CheckDirectory = PopLocation;
+
+checkA = 1;
+checkB1 = getFileList(CheckDirectory);
+checkB1 = checkB1.length;
+
+checkB2 = getFileList(CheckDirectory);
+checkB2 = checkB2.length;
+
+
+
+while(checkA==1){
+
+setBatchMode(true);
+
+//===============================
+//Get Current Generation
+//===============================
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum= CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+RawGenNum = CheckDirectory + "gen_" + GenNumber +"_raw" + txt;
+
+runCount=runCount+1;
+
+
+//===============================
+//Run Evolving Animation
+//===============================
+
+if(!isOpen("Evolving")){
+run("Image Sequence...", "open=[&EvolvingDirectory] sort");
+}
+
+if(runCount==0){
+
+if(isOpen("Evolving")){
+
+selectImage("Evolving");
+setBatchMode("show");
+run("Maximize");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+for(i=0;i<4;i++){
+setSlice(i+1);
+
+ setFont("Caldibri ", 52, "bold");
+ setColor( "#16150D");
+
+fillRect(154 + (iButtonShift/2), 426, 1176, 204);
+
+ setColor("white");
+
+
+
+setJustification("center");
+
+ stringT= " Evolving Generation "+GenNumber+" ... ";
+
+ drawString(stringT, 740 + (iButtonShift/2), 552, "#16150D");
+
+
+
+}
+
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+
+if(isOpen("Evolving")){
+selectImage("Evolving");
+run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+}
+}
+}
+
+
+//===============================
+//Hide Loading Animation
+//===============================
+
+if(isOpen("Loading")){
+selectImage("Loading");
+setBatchMode("hide");
+}
+
+
+
+//===============================
+//Check if Generation Exists
+//===============================
+TrainPath = CheckDirectory + "Training/";
+if(trainingMethod != "None" )if(!File.exists(TrainPath)) File.makeDirectory(TrainPath);
+
+
+
+
+if(File.exists(GenNum)){
+
+GenerationString=File.openAsString(GenNum);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+
+
+//==================================
+//Create Population
+//==================================
+
+
+
+
+//Create Image Directory
+//---------------------------------
+
+fold = "GenPat_" + GenNumber;
+foldOld = "GenPat_" + GenNumber-1;
+PatternPath = CheckDirectory + fold;
+PriorPath = CheckDirectory + foldOld;
+
+
+if(GenNumber>0 && startsWith(trainingMethod,"First")) trainingNumber = 0;
+if(trainingMethod == "None") trainingNumber = 0;
+
+//Work out existing patterns
+//---------------------------------
+//IF there is already patterns for that Generation,don't remake them.
+// If the file already exists and its size == the desired pop size then don't make pattersn.
+
+
+CheckLength = getFileList(PatternPath);
+
+if(CheckLength.length<PopSize || !File.exists(PatternPath)) {
+File.makeDirectory(PatternPath );
+
+
+//Temporary
+if(GenNumber>0){ 	 // if it is generation 1 or higher it will check which individuals have survived without mutating, and save them without remaking them. 
+					 // this preserves the exact same phenotype.
+				
+				
+notMade=newArray();
+
+for(i=1; i<GenerationRows.length; i++){
+Temp = split(GenerationRows[i], "\t");
+Temp = Temp[0];
+patternGet = PriorPath + "/" + Temp + tif;
+patternPaste = PatternPath + "/" + Temp + tif;
+
+
+if(File.exists(patternGet) == 1){
+
+/*
+	while(!isOpen(Temp + tif)){
+	//open(patternGet);
+	
+}
+*/
+
+
+File.copy(patternGet,patternPaste);
+
+} else {
+	str=GenerationRows[i];
+	notMade=Array.concat(notMade,str);
+}
+
+
+
+}
+
+
+
+dataFile = File.open(PatternTemplate);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+	print(dataFile, GenerationRows[0]);
+	
+	for(i=0; i<notMade.length; i++){
+	print(dataFile, notMade[i]);
+	}
+	
+	
+		if(trainingMethod == "Every.Random"){
+	
+			trainArray = split(GenerationRows[GenerationRows.length-1], "\t");
+			
+			for(i=0; i<trainingNumber*numPerSlide; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+			
+			trainArray[0] = "Train_"+i;
+			
+			for(j=3;j<trainArray.length;j++){
+			trainArray[j] = random();
+			}
+			
+			trainString = String.join(trainArray,"\t");
+			
+			print(dataFile, 	trainString);
+			
+			}
+		
+		
+		} // Train
+	
+	
+	File.close(dataFile);
+
+}
+
+
+//Copy all if Gen = 0
+//---------------------------------
+
+if(GenNumber==0){ // if it is generation 0 it will need to generate all the patterns no matter what.
+
+	dataFile = File.open(PatternTemplate);
+	
+	for(i=0; i<GenerationRows.length; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+	
+	print(dataFile, GenerationRows[i]);
+	
+	}
+	
+	
+		if(trainingMethod != "None"){
+	
+			trainArray = split(GenerationRows[GenerationRows.length-1], "\t");
+			
+			for(i=0; i<trainingNumber*numPerSlide; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+			
+			trainArray[0] = "Train_"+i;
+			
+			for(j=3;j<trainArray.length;j++){
+			trainArray[j] = random();
+			}
+			
+			trainString = String.join(trainArray,"\t");
+			
+			print(dataFile, 	trainString);
+			
+			}
+		
+		
+		} // Train
+	
+	
+	
+	File.close(dataFile);
+}
+
+
+
+
+//Create Patterns
+//--------------------------------
+// Users can add direction to different pattern generation scripts here.
+
+
+
+generateString = "Generate "+ TargetPatternChoice;
+
+run(generateString);
+
+//Save Patterns
+//---------------------------------
+
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+for ( i=0; i<Win; i++ ) { 
+
+	pat = "/" + WinNam[i] + tif;
+	PatternPath = CheckDirectory + fold + pat;
+
+	selectWindow(WinNam[i]);
+
+	if(endsWith(WinNam[i], ".tif")){
+
+	close(WinNam[i]);
+	} else {
+
+		if(startsWith(WinNam[i], "Gen")==1 || startsWith(WinNam[i], "gloss")==1){
+		
+		
+		
+		if(targetMod != "none" && startsWith(targetMod, "PreGame")){
+		run(targetMod);
+		}
+		
+
+		saveAs("Tiff", PatternPath); 
+
+		close(WinNam[i]+".tif");
+
+		} // GenTarget
+		
+		
+		if(startsWith(WinNam[i], "Train")==1){
+
+		saveAs("Tiff", TrainPath + WinNam[i] + tif); 
+
+		close(WinNam[i]+".tif");
+
+		} // GenTarget
+
+
+	}
+} // (i)
+
+
+
+}
+
+
+
+//Save Ressurected
+//---------------------------------
+if(trainingMethod == "Resurrect" && GenNumber>0){
+oldTargets = getFileList(CheckDirectory + "GenPat_"+GenNumber-1+"/");
+newTargets = getFileList(CheckDirectory + "GenPat_"+GenNumber+"/");
+
+dummyTargets = newArray();
+
+inD = 0;
+while(dummyTargets.length<trainingNumber*numPerSlide){
+
+tStr = oldTargets[inD];
+checkExist = index(newTargets,tStr);
+checkExist2 =  index(newTargets,replace(tStr,"ID","IDR"));
+
+if(checkExist==-1 && checkExist2 == -1) dummyTargets = Array.concat(dummyTargets, tStr);
+
+inD = inD+1;
+
+}
+
+for(i=0;i<dummyTargets.length;i++){
+File.copy(CheckDirectory + "GenPat_"+GenNumber-1+"/"+dummyTargets[i], CheckDirectory+"training/"+"Train_"+i+".tif");
+
+} //(i)
+
+
+} // Resurrect
+
+
+
+
+PatternCombinedPath = CheckDirectory + "Combined_"+fold+"/";
+PatthernPath = CheckDirectory+fold+"/";
+
+TargetPath = CheckDirectory+"Targets/";
+RemovePath = CheckDirectory+"Blank/";
+
+if(File.exists(TargetPath)){
+	targetList=File.getList(TargetPath);
+	for(i=0;i<targetList.length;i++){
+	File.delete(TargetPath+targetList[i];
+	}
+}
+
+
+
+File.rename(PatthernPath,TargetPath);
+wait(1000);
+
+if(!File.exists(TargetPath)){
+File.rename(PatthernPath,TargetPath);
+wait(1000);
+}
+
+if(!File.exists(TargetPath)){
+File.rename(PatthernPath,TargetPath);
+wait(1000);
+}
+
+
+if(File.exists(gameDIR +"psychOutput.txt")) File.delete(gameDIR +"psychOutput.txt");
+
+//----------------------------------------------------------------------------------------------------------------
+// 3) Run the Game
+//----------------------------------------------------------------------------------------------------------------
+
+
+//================================================
+//Ask to Play Screen
+//================================================
+
+
+// Open Screen
+//---------------------------------
+
+if(!isOpen("Game")){
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+playDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Game/01.jpg";
+} else {
+playDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Game/";
+}
+run("Image Sequence...", "open=[&playDirectory] sort");
+}
+selectImage("Game");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+
+
+
+
+
+
+//================================================
+//Play Psychophysics Game
+//================================================
+
+
+DirectoryString= "select=[" + CheckDirectory+ "]";
+
+run("Psychophysics Game", DirectoryString);
+
+
+File.rename(TargetPath,PatthernPath);
+
+
+if(getTitle()=="Loading" || getTitle()== "Startup"){ doCommand("CamoEvo Game"); exit} //Play Later Check
+
+
+//================================================
+//Relabel Output
+//================================================
+
+if(File.exists(gameDIR +"psychOutput.txt")){ 
+psychOutput = File.openAsString(gameDIR +"psychOutput.txt");
+psychRows = split(psychOutput, "\n");
+
+if(File.exists(SurvGenNum)==1){
+File.delete(RawGenNum);
+}
+
+//File.rename(gameDIR +"psychOutput.txt",RawGenNum); 
+
+rankRows = newArray();
+
+for(i=0;i<psychRows.length;i++){
+
+tArray  = split(psychRows[i], "\t");
+
+tArray1 = tArray[0];
+tArray2 = Array.deleteIndex(tArray,0);
+
+if(i==0){ tString = "Fitness";
+
+} else{
+if(fitnessMethod == "Rank") tString= tArray[1];
+if(fitnessMethod == "Survival") tString= tArray[2];
+if(fitnessMethod == "Response")  tString= tArray[3];
+if(fitnessMethod == "Capture" || fitnessMethod == "Left&Right") tString= tArray[4];
+if(FitnessMeasure=="Yes") tString=parseFloat(tString)*-1;
+}
+
+tArray3=Array.concat(tArray1, tString, tArray2);
+rankRows = Array.concat(rankRows, String.join(tArray3,"\t") );
+}
+
+
+
+
+if(File.exists(SurvGenNum)==1){
+File.delete(SurvGenNum);
+}
+
+
+for(i=0; i<rankRows.length; i++){
+
+	File.append(rankRows[i], SurvGenNum);
+
+}
+
+
+
+}
+
+
+
+/*
+..........................................................................................................................................
+
+														Evolve Next Generation
+
+..........................................................................................................................................
+
+*/
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) Run Finale Features
+//----------------------------------------------------------------------------------------------------------------
+
+//=========================
+//Run Evolving Animation
+//========================
+
+
+if(isOpen("Evolving")){
+selectImage("Evolving");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+for(i=0;i<4;i++){
+setSlice(i+1);
+
+ setFont("Caldibri ", 52, "bold");
+ setColor( "#16150D");
+
+fillRect(154 + (iButtonShift/2), 426, 1176, 204);
+
+
+ setColor("white");
+
+
+
+setJustification("center");
+
+ stringT= " Evolving Generation "+(GenNumber+1)+" ... ";
+
+ drawString(stringT, 740 + (iButtonShift/2), 552);
+
+}
+
+selectImage("Evolving");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+}
+
+
+
+
+
+} // exists
+
+//----------------------------------------------------------------------------------------------------------------
+// 1) Run Genetic Algorithm
+//----------------------------------------------------------------------------------------------------------------
+
+//==============================
+//Image GA
+//==============================
+
+
+
+
+setBatchMode(true);
+
+DirectoryString= "select=[" + CheckDirectory+ "]";
+run("ImageGA Algorithm", DirectoryString);
+
+
+
+//========================================
+//Check whether a new generation was made?
+//=======================================
+
+
+
+checkB1 = getFileList(CheckDirectory);
+checkB1 = checkB1.length;
+
+
+	if(checkB1>checkB2){
+
+	checkB2 = getFileList(CheckDirectory);
+	checkB2 = checkB2.length;
+	
+	} else {
+
+	checkA=0;
+
+	}
+
+
+
+} // This will Loop until ImageGA stops producing new generations
+
+
+
+/*
+..........................................................................................................................................
+
+															End Screen
+
+..........................................................................................................................................
+
+*/
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) Show End Menu
+//----------------------------------------------------------------------------------------------------------------
+
+//=======================================
+//Hide Loading
+//=======================================
+if(!isOpen("Loading")){
+run("Image Sequence...", "open=[&LoadingDirectory] sort");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+}
+selectImage("Loading");
+setBatchMode("hide");
+
+
+
+checkZ=0;
+
+
+
+//=======================================
+//Open End Screen
+//=======================================
+
+
+if(!isOpen("EndScreen")){
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+FinishedDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/End/01.jpg";
+} else {
+FinishedDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/End/";
+}
+
+
+run("Image Sequence...", "open=[&FinishedDirectory] sort");
+rename("EndScreen");
+
+}
+
+selectImage("EndScreen");
+
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+Slide=1;
+
+
+//=======================================
+//Game Complete
+//=======================================
+if(isOpen("evolving")){
+close("evolving");
+}
+
+
+//BUTTON 1, Run Camo Anlysis
+//-----------------------------------------
+
+
+	b1_x1= 180 + (iButtonShift/2);
+	b1_y1= 478;
+
+	b1_x2= b1_x1 + 694;
+	b1_y2= b1_y1 + 156;
+	
+	
+//BUTTON 2, Play More
+//-----------------------------------------
+
+
+	b2_x1= 180 + (iButtonShift/2);
+	b2_y1= 688;
+
+	b2_x2= b2_x1 + 694;
+	b2_y2= b2_y1 + 156;
+	
+	
+//BUTTON 3, Exit to menu
+//-----------------------------------------
+
+
+	b3_x1= 180 + (iButtonShift/2);
+	b3_y1= 896;
+
+	b3_x2= b3_x1 + 694;
+	b3_y2= b3_y1 + 156;
+	
+	
+
+
+//BUTTON 4, Phenotype Plot
+//-----------------------------------------
+
+
+	b4_x1= 771 + (iButtonShift/2);
+	b4_y1= 478;
+
+	b4_x2= b4_x1 + 694;
+	b4_y2= b4_y1 + 156;
+	
+	
+//BUTTON 5,Evolution.gif
+//-----------------------------------------
+
+
+	b5_x1= 771 + (iButtonShift/2);
+	b5_y1= 688;
+
+	b5_x2= b5_x1 + 694;
+	b5_y2= b5_y1 + 156;
+	
+	
+//BUTTON 6, Exit
+//-----------------------------------------
+
+
+	b6_x1= 771 + (iButtonShift/2);
+	b6_y1= 896;
+
+	b6_x2= b6_x1 + 694;
+	b6_y2= b6_y1 + 156;
+	
+
+
+
+keepGoing=0;
+whileGate2=0;
+
+selectImage("EndScreen");
+run("Select None");
+
+wait(100);
+
+
+
+while(whileGate2==0){
+
+iSettings = idle(iSettings);
+
+
+	setSlice(Slide);
+
+	selectImage("EndScreen");
+
+	
+	getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+	
+	
+		{
+
+
+		clickX=mouseX;  
+		clickY=mouseY;
+
+		//Button 1
+		//-----------------
+		if( clickX > b1_x1   &&    clickX < b1_x2   &&   clickY > b1_y1 &&  clickY < b1_y2) {
+		
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		keepGoing=0;
+		whileGate2=1;
+
+		}
+		}
+		
+		//Button 2
+		//-----------------
+		if( clickX > b2_x1   &&    clickX < b2_x2   &&   clickY > b2_y1 &&  clickY < b2_y2) {
+
+
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		keepGoing=1;
+		whileGate2=1;
+
+		}
+		}
+		
+		
+		//Button 4
+		//-----------------
+		if( clickX > b4_x1   &&    clickX < b4_x2   &&   clickY > b4_y1 &&  clickY < b4_y2) {
+
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		run("Get Phenotype Plot");
+		setBatchMode("show");
+		run("Maximize");
+		setTool("hand");
+		}}
+		
+		
+		
+		//Button 5
+		//-----------------
+		if( clickX > b5_x1   &&    clickX < b5_x2   &&   clickY > b5_y1 &&  clickY < b5_y2) {
+
+
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		
+		
+		run("Get Evolution Gif");
+
+		setTool("hand");
+		
+		
+		
+		
+		}
+		}		
+		
+		
+		
+		//Button 6
+		//-----------------
+		if( clickX > b6_x1   &&    clickX < b6_x2   &&   clickY > b6_y1 &&  clickY < b6_y2) {
+
+
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		
+		close("*");
+		exit
+
+		}
+		}
+		
+		
+		
+		//Button 3
+		//-----------------
+		if( clickX > b3_x1   &&    clickX < b3_x2   &&   clickY > b3_y1 &&  clickY < b3_y2) {
+
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		
+		if(isOpen("Loading")){
+		selectImage("Loading");
+		setBatchMode("Show");
+		run("Maximize");
+		setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+		 run("Animation Options...", "speed="+6);
+		doCommand("Start Animation");
+		setBatchMode(false);
+		close("\\Others");
+		} else{
+		close("*");
+		}
+		doCommand("CamoEvo Game");
+		exit
+
+		}
+		}
+		
+		
+
+		run("Select None");
+		if(Tool != ToolOld){
+			if(Tool == 0)
+				setTool("arrow");
+			if(Tool  == 1)
+				setTool("hand");
+		ToolOld= Tool;
+}
+
+		}
+
+
+
+
+}
+
+
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 1) Run for 5 Additional Generations
+//----------------------------------------------------------------------------------------------------------------
+
+//=================================================
+// Loop if you Choose to Keep Going
+//=================================================
+if(keepGoing==1){
+setBatchMode("hide");
+
+
+selectImage("Loading");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+ run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+
+//=================================================
+// Add 5 generations to Population Settings
+//=================================================
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+Line1=PopulationSettings [0];
+Line2=PopulationSettings [1];
+Line3=PopulationSettings [2];
+Line4=PopulationSettings [3];
+Line5=PopulationSettings [4];
+Line6=PopulationSettings [5];
+Line7=PopulationSettings [6];
+Line8=PopulationSettings [7];
+
+Line2 = split(Line2,"\t");
+Line2 = newArray(Line2[0], parseFloat(Line2[1])+5);
+Line2 = String.join(Line2,"\t");
+
+
+
+
+PopulationSettings[1]=Line2;
+PopulationSettings = String.join(PopulationSettings,"\n");
+
+File.delete(PopulationSet);
+File.append(PopulationSettings,PopulationSet);
+
+
+checkZ=1;
+
+//=================================================
+// Add 5 generations to Algorithm Settings
+//=================================================
+AlgorithimSet = PopLocation+"AlgorithmSettings.txt";
+AlgorithimSettings = File.openAsString(AlgorithimSet);
+AlgorithimSettings = split(AlgorithimSettings, "\n");
+AlgorithimSettings[3]=parseFloat(AlgorithimSettings[3])+5;
+AlgorithimSettings = String.join(AlgorithimSettings, "\n");
+
+File.delete(AlgorithimSet);
+
+File.append(AlgorithimSettings, AlgorithimSet);
+
+
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/01.jpg";
+} else {
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/";
+}
+
+
+if(!isOpen("Evolving")){
+run("Image Sequence...", "open=[&EvolvingDirectory] sort");
+}
+
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 2) Run Analyses
+//----------------------------------------------------------------------------------------------------------------
+} else{
+
+
+//=================================================
+//Close Unnecesary Slides
+//=================================================
+
+if(!isOpen("Evolving")){
+close("Evolving");
+}
+if(!isOpen("Evolving")){
+close("Evolving");
+}
+
+
+
+//=================================================
+//Run Analysing Animation
+//=================================================
+
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+AnalysingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Analysing/01.jpg";
+} else {
+AnalysingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Analysing/";
+}
+
+
+run("Image Sequence...", "open=[&AnalysingDirectory] sort");
+rename("Analysing");
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+ run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+
+
+if(isOpen("EndScreen")){
+selectImage("EndScreen");
+setBatchMode("hide");
+//close();
+}
+
+
+
+
+//=================================================
+//Get Data
+//=================================================
+
+// Get Fitness
+//------------------
+
+DataCollectionDIR = gameDIR+"Data_Combined_"+gameName+".txt";
+
+MeasureSTR = "population=["+gameDIR+"] measure=[Measure Stimuli LAB Mean Dev GabRat]";
+
+run("0 Batch Measure Population", MeasureSTR);
+
+
+CombineSTR = "population=["+gameDIR+"]";
+
+run("1 Combine Genes&Ranks",CombineSTR);
+
+
+run("2 Combine Data",CombineSTR);
+
+setBatchMode(true);
+
+/*
+//=======================================
+//Open End Screen
+//=======================================
+
+
+if(!isOpen("EndScreen")){
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+FinishedDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/End/01.jpg";
+} else {
+FinishedDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/End/";
+}
+
+
+run("Image Sequence...", "open=[&FinishedDirectory] sort");
+rename("EndScreen");
+
+}
+
+selectImage("EndScreen");
+
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+Slide=1;
+
+*/
+
+
+
+survivalDIR=gameDIR;
+
+
+		survivalArray = newArray();
+
+		survivalList  =  getFileList(survivalDIR);
+
+		Leng = lengthOf(survivalList);
+
+		for(i=0; i<Leng; i++) { 
+			if(endsWith(survivalList[i], "_ranks.txt")==1){
+
+				survivalArray = Array.concat(survivalArray, survivalList[i]);
+			}}
+
+
+
+
+DataCollectionSTR = File.openAsString(DataCollectionDIR);
+
+DataCollectionARR = split(DataCollectionSTR,"\n");
+
+
+DataCollectionTitles = split(DataCollectionARR[0],"\t");
+
+//Array.show(DataCollectionTitles);
+
+id_Fit = index(DataCollectionTitles,"Capture_Time");
+
+id_Tg_L_Mn = index(DataCollectionTitles,"Target_L_Mean");
+id_BgL_L_Mn = index(DataCollectionTitles,"BgLocal_L_Mean");
+
+id_Tg_L_Dv = index(DataCollectionTitles,"Target_L_Dev");
+id_BgL_L_Dv = index(DataCollectionTitles,"BgLocal_L_Dev");
+
+id_Tg_A_Mn = index(DataCollectionTitles,"Target_A_Mean");
+id_BgL_A_Mn = index(DataCollectionTitles,"BgLocal_A_Mean");
+
+id_Tg_B_Mn = index(DataCollectionTitles,"Target_B_Mean");
+id_BgL_B_Mn = index(DataCollectionTitles,"BgLocal_B_Mean");
+
+id_Tg_L_Gb = index(DataCollectionTitles,"Target_L_GabRat");
+
+Fit_Array=newArray();
+
+Gen_Array=newArray();
+
+Lum_Array=newArray();
+
+Col_Array=newArray();
+
+Con_Array=newArray();
+
+Gab_Array=newArray();
+
+
+Tg_L_Array = newArray();
+Tg_A_Array = newArray();
+Tg_B_Array = newArray();
+
+//Get Values
+
+for(i=1;i<DataCollectionARR.length;i++){
+tArr = split(DataCollectionARR[i],"\t");
+
+Gen_Array=Array.concat(Gen_Array,tArr[0]);
+Fit_Array=Array.concat(Fit_Array, parseFloat(tArr [id_Fit]));
+
+//Luminance
+lumT = parseFloat( tArr [id_Tg_L_Mn]);
+lumB = parseFloat( tArr [id_BgL_L_Mn]);
+lumD = Math.sqrt(Math.sqr(lumT-lumB));
+Lum_Array=Array.concat(Lum_Array,lumD);
+
+//Colour
+caT = parseFloat( tArr [id_Tg_A_Mn]);
+caB = parseFloat( tArr [id_BgL_A_Mn]);
+caD = Math.sqr(caT-caB);
+
+cbT = parseFloat( tArr [id_Tg_B_Mn]);
+cbB = parseFloat( tArr [id_BgL_B_Mn]);
+cbD = Math.sqr(cbT-cbB);
+
+Col_Array=Array.concat(Col_Array,Math.sqrt(caD+cbD));
+
+Tg_L_Array=Array.concat(Tg_L_Array,lumT);
+Tg_A_Array=Array.concat(Tg_A_Array,caT);
+Tg_B_Array=Array.concat(Tg_B_Array,cbT);
+
+//Contrast
+ConT = parseFloat( tArr [id_Tg_L_Dv]);
+ConB = parseFloat( tArr [id_BgL_L_Dv]);
+ConD = Math.sqrt(Math.sqr(ConT-ConB));
+Con_Array=Array.concat(Con_Array,ConD);
+
+
+//GabRat
+GabT = parseFloat( tArr [id_Tg_L_Gb]);
+Gab_Array=Array.concat(Gab_Array,GabT);
+
+
+}
+
+//Get Averages
+shortGenArray=newArray();
+
+Fit_MeanArray = newArray();
+Fit_ErrorArray = newArray();
+
+Lum_MeanArray = newArray();
+Lum_ErrorArray = newArray();
+
+Col_MeanArray = newArray();
+Col_ErrorArray = newArray();
+
+Con_MeanArray = newArray();
+Con_ErrorArray = newArray();
+
+Gab_MeanArray = newArray();
+Gab_ErrorArray = newArray();
+
+for(i=0;i<Gen_Array.length/(PopSize*numberRepeats);i++){
+startIndex=i*(PopSize*numberRepeats);
+
+shortGenArray=Array.concat(shortGenArray,i);
+
+//Time
+tArray=Array.slice(Fit_Array,startIndex,startIndex+(PopSize*numberRepeats));
+Array.getStatistics(tArray,min,max,mean,dev);
+
+Fit_MeanArray = Array.concat(Fit_MeanArray,mean);
+Fit_ErrorArray = Array.concat(Fit_MeanArray,dev/Math.sqrt((PopSize*numberRepeats)));
+
+
+//Luminance
+
+tArray=Array.slice(Lum_Array,startIndex,startIndex+(PopSize*numberRepeats));
+Array.getStatistics(tArray,min,max,mean,dev);
+
+Lum_MeanArray = Array.concat(Lum_MeanArray,mean);
+Lum_ErrorArray = Array.concat(Lum_MeanArray,dev/Math.sqrt((PopSize*numberRepeats)));
+
+
+//Colour
+
+tArray=Array.slice(Col_Array,startIndex,startIndex+(PopSize*numberRepeats));
+Array.getStatistics(tArray,min,max,mean,dev);
+
+Col_MeanArray = Array.concat(Col_MeanArray,mean);
+Col_ErrorArray = Array.concat(Col_MeanArray,dev/Math.sqrt((PopSize*numberRepeats)));
+
+//Contrast
+
+tArray=Array.slice(Con_Array,startIndex,startIndex+(PopSize*numberRepeats));
+Array.getStatistics(tArray,min,max,mean,dev);
+
+Con_MeanArray = Array.concat(Con_MeanArray,mean);
+Con_ErrorArray = Array.concat(Con_MeanArray,dev/Math.sqrt((PopSize*numberRepeats)));
+
+//GabRat
+
+tArray=Array.slice(Gab_Array,startIndex,startIndex+(PopSize*numberRepeats));
+Array.getStatistics(tArray,min,max,mean,dev);
+
+Gab_MeanArray = Array.concat(Gab_MeanArray,mean);
+Gab_ErrorArray = Array.concat(Gab_MeanArray,dev/Math.sqrt((PopSize*numberRepeats)));
+
+
+}//(i)
+
+
+//=================================================
+//Create Plots
+//=================================================
+
+			//  Time Plot
+			// -----------------------	
+
+
+			
+	
+			
+			function customPlot(TitleX,TitleY,xarray,yarray,sxarray,syarray) {
+			marg =150;
+			pW=900;
+			pH=520;
+			bdW = 6;
+			
+			
+			newImage("Plot", "RGB black", pW+marg , pH+marg , 1);
+			makeRectangle(70-(bdW/2),pH+30-(bdW/2),pW,bdW);
+			setColor("White");
+			fill();
+
+			makeRectangle(70-(bdW/2),pH+30-(bdW/2)-pH,bdW,pH);
+			setColor("White");
+			fill();
+			
+			sF=35;
+			bF=40;
+			
+			pD = 12;
+			ind=50;
+			xR = pW-ind;
+			yR = pH-ind;
+			
+			Array.getStatistics(xarray,Xmin,Xmax,Xmean,Xdev);
+			Array.getStatistics(yarray,Ymin,Ymax,Ymean,Ydev);
+			
+			//Draw Points
+			for(i=0;i<xarray.length;i++){
+			xc = 70+ind/2+(parseFloat(xarray[i])-Xmin)*(xR/(Xmax-Xmin));
+			yc = pH+30-(ind/2)-(parseFloat(yarray[i])-Ymin)*(yR/(Ymax-Ymin));
+			makeOval(xc-pD/2,yc-pD/2,pD,pD);
+			run("Add...","value=marg ");
+			}
+			
+			//Draw Line and X Axis
+			//Array.show(sxarray,syarray);
+			for(i=0;i<sxarray.length-1;i++){
+			
+			xc1 = 70+ind/2+(parseFloat(sxarray[i])-Xmin)*(xR/(Xmax-Xmin));
+			yc1 = pH+30-(ind/2)-(parseFloat(syarray[i])-Ymin)*(yR/(Ymax-Ymin));
+			
+			xc2 = 70+ind/2+(parseFloat(sxarray[i+1])-Xmin)*(xR/(Xmax-Xmin));
+			yc2 = pH+30-(ind/2)-(parseFloat(syarray[i+1])-Ymin)*(yR/(Ymax-Ymin));
+			
+			setLineWidth(4);	
+						
+			setColor("#738CD5");
+			drawLine(xc1,yc1,xc2,yc2);
+			
+			makeRectangle(xc1-(pD*1.5/2),yc1-(pD*1.5/2),pD*1.5,pD*1.5);
+			run("Rotate...", "  angle=45");
+			fill();
+			makeRectangle(xc2-(pD*1.5/2),yc2-(pD*1.5/2),pD*1.5,pD*1.5);
+			run("Rotate...", "  angle=45");
+			fill();
+			
+			setColor("White");
+			
+			setFont("SansSerif",sF);
+			setJustification("center");
+
+			drawString(i, xc1, pH+marg -30);
+			}
+			
+			drawString(i, xc2, pH+marg -30);
+			
+			run("Select None");
+			
+			setFont("SansSerif",bF);
+			setJustification("center");
+			
+			xc = 70+ind/2+(0.5*xR);
+			//drawString(TitleX, xc, pH+marg -15);
+			
+			
+			
+			//Y Axis
+			
+			newImage("Yaxis", "RGB black", 600, 65, 1);
+			xc = 70+ind/2+(0.5*yR);
+			//drawString(TitleY, xc, 40);
+			run("Select None");
+			
+
+			
+			setFont("SansSerif",sF);
+			for(i=0;i<=4;i++){
+			xc = 70+ind/2+(i/4)*(yR);
+			yc = 60;
+			drawString(parseInt(Ymin+(i/4)*(Ymax-Ymin)*10)/10, xc, 60);
+			}
+			
+
+			
+			
+			run("Rotate 90 Degrees Left");
+			run("Copy");
+			close();
+			makeRectangle(0,0,65,600);
+			run("Paste");
+			
+
+			}
+
+
+plotMax = 530;
+
+
+//Time
+
+customPlot("Generation","Capture Time Milliseconds",Gen_Array,Fit_Array,shortGenArray,Fit_MeanArray);
+			
+rename("TimePlot");
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+
+
+
+plotScale = plotMax/width;
+
+ts = "x=- y=- width="+ width*plotScale + " height=" + height*plotScale  + "  interpolation=Bilinear";
+ts2 = "width="+ width*plotScale + " height=" + height*plotScale + " position=Center";
+
+
+run("Scale...", ts);
+run("Canvas Size...", ts2);
+
+
+//Luminance
+
+customPlot("Generation","Luminance Difference",Gen_Array,Lum_Array,shortGenArray,Lum_MeanArray);		
+rename("LuminancePlot");
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+plotScale = plotMax/width;
+
+ts = "x=- y=- width="+ width*plotScale + " height=" + height*plotScale  + "  interpolation=Bilinear";
+ts2 = "width="+ width*plotScale + " height=" + height*plotScale + " position=Center";
+
+
+run("Scale...", ts);
+run("Canvas Size...", ts2);
+
+
+
+//Contrast
+
+customPlot("Generation","Contrast Difference",Gen_Array,Con_Array,shortGenArray,Con_MeanArray);		
+rename("PatternPlot");
+
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+plotScale = plotMax/width;
+
+ts = "x=- y=- width="+ width*plotScale + " height=" + height*plotScale  + "  interpolation=Bilinear";
+ts2 = "width="+ width*plotScale + " height=" + height*plotScale + " position=Center";
+
+run("Scale...", ts);
+run("Canvas Size...", ts2);
+
+
+
+//Colour
+
+customPlot("Generation","Colour Difference",Gen_Array,Col_Array,shortGenArray,Col_MeanArray);		
+rename("ColourPlot");
+
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+plotScale = plotMax/width;
+
+ts = "x=- y=- width="+ width*plotScale + " height=" + height*plotScale  + "  interpolation=Bilinear";
+ts2 = "width="+ width*plotScale + " height=" + height*plotScale + " position=Center";
+
+
+run("Scale...", ts);
+run("Canvas Size...", ts2);
+
+
+//GabRat
+
+customPlot("Generation","Colour Difference",Gen_Array,Gab_Array,shortGenArray,Gab_MeanArray);		
+rename("GabRatPlot");
+
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+plotScale = plotMax/width;
+
+ts = "x=- y=- width="+ width*plotScale + " height=" + height*plotScale  + "  interpolation=Bilinear";
+ts2 = "width="+ width*plotScale + " height=" + height*plotScale + " position=Center";
+
+
+run("Scale...", ts);
+run("Canvas Size...", ts2);
+
+
+//=================================================
+//Get Top 9 Target Pictures
+//=================================================
+
+
+GenNum = survivalDIR + "gen_" + (survivalArray.length-1) +"_ranks"  + txt;
+
+GenName = "gen_" + (survivalArray.length-1);
+
+PhenotypePath =  survivalDIR+"GenPat_"+ (survivalArray.length-1) +"/";
+
+
+
+				referenceString=File.openAsString(GenNum);	// open txt data file
+				referenceRows=split(referenceString, "\n");
+
+				IDarray2 =newArray(referenceRows.length-1);
+				FitnessArray2 =newArray(referenceRows.length-1);
+
+				for(j=1;j<referenceRows.length;j++){
+				tempArray = split(referenceRows[j], "\t");
+				IDarray2[j-1]=tempArray [0];
+				
+				tVal = parseFloat( tempArray [1] );
+				FitnessArray2[j-1]= tVal;
+				}
+
+				
+
+	
+
+				IDRankedarray = newArray();
+
+				IDSort=Array.copy(IDarray2);
+				FitnessRanked = Array.copy(FitnessArray2);
+				
+				Array.sort(FitnessRanked,IDSort );
+				
+							
+
+
+for(i=0; i<3; i++){
+				
+for(j=0; j<3; j++){
+
+
+IDnam = IDSort[IDSort.length-1 - ((i*3)+j)];
+
+open(PhenotypePath+IDnam+".tif");
+wait(10);
+selectImage(IDnam+".tif");
+run("Select All");
+run("Size...", "width=157 height=157 depth=1 constrain average interpolation=Bilinear");
+run("Select All");
+run("Copy");
+close(IDnam+".tif");
+
+selectImage("EndScreen");
+slide=3;
+
+setSlice(slide);
+
+makeRectangle( 817  + (177*j) + (iButtonShift/2), 300 + (186*i), 157,157);
+setPasteMode("Transparent-zero");
+run("Paste");
+run("Select None");
+
+setJustification("center");
+setColor("white");
+setFont("SansSerif",18);
+
+Rank = "Rank " + j+1 + (i*3);
+
+drawString(Rank , 817 + (177*j)+(177/2) + (iButtonShift/2), (300 + (186*i))+ 186);
+
+
+}
+}			
+
+//Array.show(IDarrayCheck, IDarray, genomeArray);
+
+
+
+
+
+
+//=================================================
+//Get First and Last Genome for Distribution Plot
+//=================================================
+
+genFirst=File.openAsString( survivalDIR  + "gen_0_genes" + txt);
+genFirstRows = split(genFirst, "\n");
+
+genLast =File.openAsString( survivalDIR + "gen_" + (survivalArray.length-1) + "_genes"  + txt);
+genLastRows = split(genLast, "\n");
+
+GeneTitleList = split(genFirstRows[0], "\t");
+GeneChoiceList = Array.slice(GeneTitleList, 1, GeneTitleList.length-2);
+
+
+//=================================================
+//Display Averages
+//=================================================
+
+
+// Give Average times
+//------------------------------
+selectImage("EndScreen");
+setColor("white");
+setFont("Caldibri ", 30);
+setJustification("left");
+
+ stringT= "Average Times:";
+ drawString(stringT, 195 + (iButtonShift/2), 340);
+ 
+ 
+ setFont("Caldibri ", 24);
+
+ stringT= "Generation 0 = " + toString( (Fit_MeanArray[0]/1000), 2)+ " seconds";
+ drawString(stringT, 195 + (iButtonShift/2), 390);
+ 
+ stringT= "Generation "+ Fit_MeanArray.length-1 +" = " + toString((Fit_MeanArray[Fit_MeanArray.length-1]/1000), 2)+ " seconds";
+ drawString(stringT, 195 + (iButtonShift/2), 430);
+
+selectImage("TimePlot");
+run("Select All");
+Roi.getBounds(x, y, plotWidth, plotHeight);
+run("Copy");
+setPasteMode("transparent-zero");
+
+
+selectImage("EndScreen");
+setSlice(3);
+makeRectangle(134 + (iButtonShift/2),454,plotWidth, plotHeight);
+run("Paste");
+run("Select None");
+
+
+setSlice(4);
+
+
+// Give Average Camo Stats
+//------------------------------
+open(getDirectory("plugins") + "1 CamoEvo/Interface/buttonCover.jpg");
+selectImage("EndScreen");
+setSlice(4);
+
+overlayPasteX = 170 + (iButtonShift/2);
+
+run("Add Image...", "image=buttonCover.jpg x=overlayPasteX  y=300 opacity=60");
+
+run("Add Image...", "image=buttonCover.jpg x=overlayPasteX y=420 opacity=60");
+
+run("Add Image...", "image=buttonCover.jpg x=overlayPasteX y=550 opacity=60");
+
+run("Add Image...", "image=buttonCover.jpg x=overlayPasteX y=680 opacity=60");
+
+Overlay.moveSelection(0, 170 + iButtonShift/2, -300);
+Overlay.moveSelection(1, 170 + iButtonShift/2, 420);
+Overlay.moveSelection(2, 170 + iButtonShift/2, 550);
+Overlay.moveSelection(3, 170 + iButtonShift/2, 680);
+
+setColor("#16150D");
+fillRect(792 + (iButtonShift/2), 248, 562, 574);
+
+setColor("white");
+
+setFont("Caldibri ", 30);
+
+stringT= "Luminance Match:";
+ drawString(stringT, 830 + (iButtonShift/2), 290);
+ 
+				  if( startsWith(getInfo("os.name"), "Windows") ==1){
+  					setFont("Caldibri ", 22, "bold");
+							} else {
+  					setFont("Caldibri ", 18, "bold");
+					}	
+					
+		  stringT= "Difference of Mean Luminance.";
+		
+		 drawString(stringT, 830 + (iButtonShift/2) , 330);
+		 
+		   stringT= "As difference 'decreases' camouflage improves.";
+		
+		 drawString(stringT,  830 + (iButtonShift/2) ,370);
+		 
+			stringT= "Generation 0 mean = " + toString (Lum_MeanArray[0]);
+		 
+		 drawString(stringT, 830 + (iButtonShift/2) , 410);
+		 
+			 stringT= "Generation "+ Fit_MeanArray.length-1 +" mean = " + toString(Lum_MeanArray[Fit_MeanArray.length-1]);
+		 
+		 drawString(stringT, 830 + (iButtonShift/2) , 450);
+				
+				selectImage("LuminancePlot");
+				run("Select All");
+				Roi.getBounds(x, y, plotWidth, plotHeight);
+				run("Copy");
+				setPasteMode("transparent-zero");
+
+
+				selectImage("EndScreen");
+				setSlice(4);
+				makeRectangle(800 + (iButtonShift/2),474,plotWidth, plotHeight);
+				run("Paste");
+				run("Select None");
+				setColor("White");
+
+setSlice(4);
+
+//----------------------------------------------------------------------------------------------------------------
+// 3) Show Analysis Menu
+//----------------------------------------------------------------------------------------------------------------
+
+//=================================================
+//Close Unnecessary Slides
+//=================================================
+
+
+selectImage("EndScreen");
+slide=2;
+setSlice(slide);
+
+
+if(isOpen("Evolving")){
+close("Evolving");
+}
+
+if(isOpen("Analysing")){
+close("Analysing");
+}
+
+
+
+//=================================================
+//Show the end screen
+//=================================================
+
+previewGate = 0;
+downloadGate = 0;
+endGate = 0;
+
+run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+setBatchMode("Show");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+
+while(endGate==0){
+
+slide=2;
+
+setSlice(slide);
+
+previewGate = 0;
+
+//BUTTON 1, Preview Results
+//-----------------------------------------
+
+
+	b1_x1= 386 + (iButtonShift/2);
+	b1_y1= 478;
+
+	b1_x2= b1_x1 + 694;
+	b1_y2= b1_y1 + 156;
+	
+	
+//BUTTON 2, Download Results
+//-----------------------------------------
+
+
+	b2_x1= 386 + (iButtonShift/2);
+	b2_y1= 688;
+
+	b2_x2= b2_x1 + 694;
+	b2_y2= b2_y1 + 156;
+	
+	
+//BUTTON 3, Exit
+//-----------------------------------------
+
+
+	b3_x1= 386 + (iButtonShift/2);
+	b3_y1= 896;
+
+	b3_x2= b3_x1 + 694;
+	b3_y2= b3_y1 + 156;
+
+
+
+	
+	
+if(getSliceNumber()==2){
+wait(75);
+
+	flag=0;
+	getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+
+		clickX=mouseX; 
+		clickY=mouseY;
+
+		//Button 1
+		//-----------------
+		if( clickX > b1_x1   &&    clickX < b1_x2   &&   clickY > b1_y1 &&  clickY < b1_y2) {
+		Tool=1; 
+		  if(flag&leftButton!=0){
+
+		previewGate = 1;
+		setSlice(3);
+		slide=3;
+		}
+		}
+		
+		//Button 2
+		//-----------------
+		if( clickX > b2_x1   &&    clickX < b2_x2   &&   clickY > b2_y1 &&  clickY < b2_y2) {
+		
+		Tool=1; 
+		  if(flag&leftButton!=0){
+
+		downloadGate = 1;
+		
+		datafileDIR = getDirectory("Select the Folder you wish to download your results to.");
+		
+		if(File.exists(survivalDIR + "Data_Output.txt")){
+		File.copy(survivalDIR + "Data_Output.txt", datafileDIR + "Data_Output.txt");
+		}
+		
+		if(File.exists(survivalDIR+"Data_Output_" + FolderName + ".txt")){
+		File.copy(survivalDIR+"Data_Output_" + FolderName + ".txt", datafileDIR + "Data_Output_" + FolderName + ".txt");
+		}
+		
+		wait(75);
+		}
+		}
+		
+		
+		//Button 3
+		//-----------------
+		if( clickX > b3_x1   &&    clickX < b3_x2   &&   clickY > b3_y1 &&  clickY < b3_y2) {
+		Tool=1; 
+		  if(flag&leftButton!=0){
+
+		endGate = 1;
+		
+		wait(75);
+		}
+		}
+		
+
+		run("Select None");
+		if(Tool != ToolOld){
+			if(Tool == 0)
+				setTool("arrow");
+			if(Tool  == 1)
+				setTool("hand");
+		ToolOld= Tool;
+		}
+
+		}
+
+
+// Present the Preview Screen
+//---------------------------------------
+
+if(previewGate == 1) {
+wait(300);
+
+				//BUTTON 1, Right Arrow
+				//-----------------------------------------
+
+
+					b1_x1= 1013  + (iButtonShift/2);
+					b1_y1= 898;
+
+					b1_x2= b1_x1 + 205;
+					b1_y2= b1_y1 + 160;
+					
+					
+				//BUTTON 2, Left Arrow
+				//-----------------------------------------
+
+
+					b2_x1= 260 + (iButtonShift/2);
+					b2_y1= 898;
+
+					b2_x2= b2_x1 + 205;
+					b2_y2= b2_y1 + 160;
+					
+					
+					
+				//BUTTON 3, Luminance
+				//-----------------------------------------
+
+
+					b3_x1= 182 + (iButtonShift/2);
+					b3_y1= 310;
+
+					b3_x2= b3_x1 + 448;
+					b3_y2= b3_y1 + 96;
+					
+					
+				//BUTTON 4, Pattern
+				//-----------------------------------------
+
+
+					b4_x1= 182 + (iButtonShift/2);
+					b4_y1= 440;
+
+					b4_x2= b4_x1 + 448;
+					b4_y2= b4_y1 + 96;
+					
+					
+				//BUTTON 5, Colour
+				//-----------------------------------------
+
+
+					b5_x1= 182 + (iButtonShift/2);
+					b5_y1= 580;
+
+					b5_x2= b5_x1 + 448;
+					b5_y2= b5_y1 + 96;
+					
+				//BUTTON 6, Disruption
+				//-----------------------------------------
+
+
+					b6_x1= 182 + (iButtonShift/2);
+					b6_y1= 698;
+
+					b6_x2= b6_x1 + 448;
+					b6_y2= b6_y1 + 96;
+				
+				
+				//BUTTON 7, Gene Choice
+				//-----------------------------------------
+
+
+					b7_x1= 534 + (iButtonShift/2);
+					b7_y1= 769;
+
+					b7_x2= b7_x1 + 409;
+					b7_y2= b7_y1 + 159;
+					
+				
+				
+				
+	whileGate=0;
+
+	run("Select None");
+				
+	slide = 3;
+
+	while(whileGate==0){
+
+	wait(100);
+
+	selectImage("EndScreen");
+					
+
+	
+	setSlice(slide);
+	getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+	
+		{
+
+		flag=0;
+		getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+		clickX=mouseX; 
+		clickY=mouseY;
+
+						//Button 1
+						//-----------------
+						if( clickX > b1_x1   &&    clickX < b1_x2   &&   clickY > b1_y1 &&  clickY < b1_y2) {
+
+						Tool=1;
+						if(flag&leftButton!=0){wait(75);
+						
+						if(slide==6){
+						whileGate=1;
+						}
+						
+						if(slide==5){
+						slide=6;
+						}
+						
+						if(slide==4){
+						slide=5;
+						}
+						
+						if(slide==3){
+						slide=4;
+						}
+						
+
+
+						
+
+	
+
+
+
+						
+						
+
+						}
+						}
+						
+						//Button 2
+						//-----------------
+						if( clickX > b2_x1   &&    clickX < b2_x2   &&   clickY > b2_y1 &&  clickY < b2_y2) {
+
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);
+
+						
+						if(slide==3){
+						whileGate=1;
+						}
+						
+						if(slide==4){
+						slide=3;
+						}
+						
+						if(slide==5){
+						slide=4;
+						}
+
+						if(slide==6){
+						slide=5;
+						}
+
+
+
+						}
+						}
+						
+						//Button 3
+						//-----------------
+						if( clickX > b3_x1   &&    clickX < b3_x2   &&   clickY > b3_y1 &&  clickY < b3_y2) {
+
+						if(slide==4){
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);
+						
+						Overlay.moveSelection(0, 170 + iButtonShift/2, -300);
+						Overlay.moveSelection(1, 170 + iButtonShift/2, 420);
+						Overlay.moveSelection(2, 170 + iButtonShift/2, 550);
+						Overlay.moveSelection(3, 170 + iButtonShift/2, 680);
+
+									setJustification("centre");
+									setColor("#16150D");
+									fillRect(792 + (iButtonShift/2), 248, 562, 574);
+
+									setColor("white");
+									setFont("Caldibri ", 30);
+									stringT= "Luminance Match:";
+									
+										
+									 drawString(stringT, 830 + (iButtonShift/2), 290, "#16150D");
+									 
+									  if( startsWith(getInfo("os.name"), "Windows") ==1){
+										setFont("Caldibri ", 22, "bold");
+												} else {
+										setFont("Caldibri ", 18, "bold");
+										}	
+
+											  stringT= "Difference in Mean Luminance.";
+
+											 drawString(stringT, 830  + (iButtonShift/2), 330, "#16150D");
+											 
+											   stringT= "As difference 'decreases' camouflage improves.";
+
+											 drawString(stringT,  830 + (iButtonShift/2),370, "#16150D");
+											 
+												stringT= "Generation 0 mean = " + toString (Lum_MeanArray[0]);
+
+											 drawString(stringT, 830 + (iButtonShift/2), 410, "#16150D");
+											 
+												 stringT= "Generation "+ Fit_MeanArray.length-1 +" mean = " + toString(Lum_MeanArray[Fit_MeanArray.length-1]);
+
+											 drawString(stringT, 830 + (iButtonShift/2), 450, "#16150D");
+
+
+									selectImage("LuminancePlot");
+									run("Select All");
+									Roi.getBounds(x, y, plotWidth, plotHeight);
+									run("Copy");
+									setPasteMode("transparent-zero");
+
+
+									selectImage("EndScreen");
+									setSlice(4);
+									makeRectangle(800 + (iButtonShift/2),474,plotWidth, plotHeight);
+									run("Paste");
+									run("Select None");
+									setColor("White");
+				
+				
+				
+								
+						}
+
+						}
+						}
+						
+					
+							//Button 4
+						//-----------------
+						if( clickX > b4_x1   &&    clickX < b4_x2   &&   clickY > b4_y1 &&  clickY < b4_y2) {
+
+						
+						if(slide==4){
+
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);
+						
+						Overlay.moveSelection(0, 170 + iButtonShift/2, 300);
+						Overlay.moveSelection(1, 170 + iButtonShift/2, -420);
+						Overlay.moveSelection(2, 170 + iButtonShift/2, 550);
+						Overlay.moveSelection(3, 170 + iButtonShift/2, 680);
+						
+									setJustification("centre");
+									setColor("#16150D");
+									fillRect(792 + (iButtonShift/2), 248, 562, 574);
+
+									setColor("white");
+									
+											
+									stringT= "Contrast Match:";
+											 
+										setFont("Caldibri ", 30);
+									 drawString(stringT, 830 + (iButtonShift/2), 290);
+									 
+									  if( startsWith(getInfo("os.name"), "Windows") ==1){
+										setFont("Caldibri ", 22, "bold");
+												} else {
+										setFont("Caldibri ", 18, "bold");
+										}	
+
+
+											  stringT= "Difference in Luminance StDev.";
+											
+											 drawString(stringT, 830 + (iButtonShift/2), 330);
+											 
+											   stringT= "As difference 'decreases' camouflage improves.";
+
+											 drawString(stringT,  830 + (iButtonShift/2),370);
+											 
+												stringT= "Generation 0 mean = " + toString (Con_MeanArray[0]);
+
+											 drawString(stringT, 830 + (iButtonShift/2), 410);
+											 
+												 stringT= "Generation "+ Fit_MeanArray.length-1 +" mean = " + toString(Con_MeanArray[Fit_MeanArray.length-1]);
+
+											 drawString(stringT, 830 + (iButtonShift/2), 450);
+
+
+									selectImage("PatternPlot");
+									run("Select All");
+									Roi.getBounds(x, y, plotWidth, plotHeight);
+									run("Copy");
+									setPasteMode("transparent-zero");
+
+
+									selectImage("EndScreen");
+									setSlice(4);
+									makeRectangle(800 + (iButtonShift/2),474,plotWidth, plotHeight);
+									run("Paste");
+									run("Select None");
+									setColor("White");
+													
+											}
+
+											}
+											}
+						
+						
+								//Button 5
+						//-----------------
+						if( clickX > b5_x1   &&    clickX < b5_x2   &&   clickY > b5_y1 &&  clickY < b5_y2) {
+
+
+						if(slide==4){
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);
+						
+						
+						Overlay.moveSelection(0, 170 + iButtonShift/2, 300);
+						Overlay.moveSelection(1, 170 + iButtonShift/2, 420);
+						Overlay.moveSelection(2, 170 + iButtonShift/2, -550);
+						Overlay.moveSelection(3, 170 + iButtonShift/2, 680);						
+						
+									setJustification("centre");
+									setColor("#16150D");
+									fillRect(792 + (iButtonShift/2), 248, 562, 574);
+
+									setColor("white");
+									
+											stringT= "Colour Match:";
+											 
+										setFont("Caldibri ", 30);
+
+									 drawString(stringT, 830 + (iButtonShift/2), 290);
+									 
+									  if( startsWith(getInfo("os.name"), "Windows") ==1){
+										setFont("Caldibri ", 22, "bold");
+												} else {
+										setFont("Caldibri ", 18, "bold");
+										}	
+
+
+											  stringT= "Difference of Mean Colour.";
+										
+											 drawString(stringT, 830 + (iButtonShift/2), 330);
+											 
+											   stringT= "As difference 'decreases' camouflage improves.";
+										
+											 drawString(stringT,  830 + (iButtonShift/2),370);
+											 
+												stringT= "Generation 0 mean = " + toString (Col_MeanArray[0]);
+										
+											 drawString(stringT, 830 + (iButtonShift/2), 410);
+											 
+												 stringT= "Generation "+ Fit_MeanArray.length-1 +" mean = " + toString(Col_MeanArray[Fit_MeanArray.length-1]);
+										
+											 drawString(stringT, 830 + (iButtonShift/2), 450);
+
+									
+									selectImage("ColourPlot");
+									run("Select All");
+									Roi.getBounds(x, y, plotWidth, plotHeight);
+									run("Copy");
+									setPasteMode("transparent-zero");
+
+
+									selectImage("EndScreen");
+									setSlice(4);
+									makeRectangle(800 + (iButtonShift/2),474,plotWidth, plotHeight);
+									run("Paste");
+									run("Select None");
+									setColor("White");				
+											}
+
+											}
+											}	
+
+
+								//Button 6
+						//-----------------
+						if( clickX > b6_x1   &&    clickX < b6_x2   &&   clickY > b6_y1 &&  clickY < b6_y2) {
+
+					
+						if(slide==4){
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);				
+						
+						Overlay.moveSelection(0, 170 + iButtonShift/2, 300);
+						Overlay.moveSelection(1, 170 + iButtonShift/2, 420);
+						Overlay.moveSelection(2, 170 + iButtonShift/2, 550);
+						Overlay.moveSelection(3, 170 + iButtonShift/2, -680);
+
+						
+							setJustification("centre");
+							setColor("#16150D");
+							fillRect(792 + (iButtonShift/2), 248, 562, 574);
+
+							setColor("white");
+										
+									stringT= "Edge Disruption:";
+									 
+								setFont("Caldibri ", 30);
+							 drawString(stringT, 830 + (iButtonShift/2), 290);
+							 
+							  if( startsWith(getInfo("os.name"), "Windows") ==1){
+								setFont("Caldibri ", 22, "bold");
+										} else {
+								setFont("Caldibri ", 18, "bold");
+								}	
+
+									  stringT= "Level of GabRat.";
+									
+									 drawString(stringT, 830 + (iButtonShift/2), 330);
+									 
+									   stringT= "As GabRat 'increases' camouflage improves.";
+							
+									 drawString(stringT,  830 + (iButtonShift/2),370);
+									 
+										stringT= "Generation 0 mean = " + toString (Gab_MeanArray[0]);
+							
+									 drawString(stringT, 830 + (iButtonShift/2), 410);
+									 
+										 stringT= "Generation "+ Fit_MeanArray.length-1 +" mean = " + toString(Gab_MeanArray[Fit_MeanArray.length-1]);
+									
+									 drawString(stringT, 830 + (iButtonShift/2), 450);
+
+
+						
+							selectImage("GabRatPlot");
+							run("Select All");
+							Roi.getBounds(x, y, plotWidth, plotHeight);
+							run("Copy");
+							setPasteMode("transparent-zero");
+
+
+							selectImage("EndScreen");
+							setSlice(4);
+							makeRectangle(800 + (iButtonShift/2),474,plotWidth, plotHeight);
+							run("Paste");
+							run("Select None");
+							setColor("White");
+											
+									}
+
+									}	
+									}
+									
+									
+								//Button 7
+						//-----------------
+						if( clickX > b7_x1   &&    clickX < b7_x2   &&   clickY > b7_y1 &&  clickY < b7_y2) {
+
+					
+						if(slide==5){
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);	
+									
+
+									Dialog.createNonBlocking("Get Gene");
+									Dialog.addChoice("Choose a Gene", GeneChoiceList,0);
+									Dialog.show();
+
+									GeneChoice = Dialog.getChoice();
+									GeneIndex = index(GeneTitleList, GeneChoice);
+
+									firstGeneValues = newArray(genFirstRows.length-1);
+									lastGeneValues = newArray(genFirstRows.length-1);
+
+									for(i=0; i<firstGeneValues.length; i++ ) {
+
+									tempArray1  = split(genFirstRows[i+1], "\t");
+									firstGeneValues[i] =   parseFloat(tempArray1[GeneIndex]) ;
+
+									tempArray2  = split(genLastRows[i+1], "\t");
+									lastGeneValues[i] =  parseFloat(tempArray2[GeneIndex]) ;
+									
+									}
+
+
+									yArray = newArray(firstGeneValues.length);
+
+									if(isOpen("Gen_0")){
+									close("Gen_0");
+									}
+
+									if(isOpen("Gen_15")){
+									close("Gen_15");
+									}
+
+
+									Array.getStatistics( firstGeneValues, min, max, firstMean, firstStdDev);
+									Array.getStatistics( lastGeneValues, min, max, lastMean,lastStdDev);
+									
+									
+									if(isNaN(firstStdDev)){
+									firstStdDev = 0;
+									}
+									if(isNaN(lastStdDev)){
+									lastStdDev = 0;
+									}
+
+									if(isOpen("GenePlots")){
+									close("GenePlots");
+									}
+
+
+									selectImage("EndScreen");
+
+									setColor("#16150D");
+									fillRect(226 + (iButtonShift/2), 318, 1020, 406);
+									setColor("white");
+
+									// =================================================
+									// Create new Plot Image
+									// =================================================
+
+
+									//makeRectangle(578, 320,  680, 400);
+
+									plotWidth = 800;
+									plotHeight = 400;
+
+									newImage("GenePlots", "RGB black", plotWidth, plotHeight, 1);
+									selectImage("GenePlots");
+						
+
+
+									ovalW = 10;
+									ovalH =60;
+									lineW = plotWidth*5/6;
+									setLineWidth(2);
+									
+									
+									//-------------------------
+									// Generation First
+									//-------------------------
+
+									rtX = (plotWidth-(lineW))/2;
+									rtY = (plotHeight*0.25)+20;
+
+									setColor("white");
+									fillRect(rtX, rtY,(lineW), 2);
+
+									setJustification("center");
+									setColor("white");
+									setFont("Caldibri ", 26);
+									stringT= "Generation 0";
+									drawString(stringT, plotWidth/2, rtY+ovalH+30);
+
+									setFont("Caldibri ", 18);
+									stringT= "0.0";
+									drawString(stringT, rtX+2, rtY+ovalH+10);
+
+									setFont("Caldibri ", 18);
+									stringT= "1.0";
+									drawString(stringT, rtX+(lineW)-2, rtY+ovalH+10);
+
+									setColor("gray");
+									for(i =0; i<firstGeneValues.length; i++){
+									xCoord = rtX + (firstGeneValues[i]*((lineW)-ovalW));
+									rand = random("gaussian");
+									makeOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									run("Add...", "value=80");
+									drawOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									}
+
+
+
+									//-------------------------
+									// Generation Last
+									//-------------------------
+
+									rtX = (plotWidth-(lineW))/2;
+									rtY = rtY+165;
+
+									setColor("white");
+									fillRect(rtX, rtY,(lineW), 2);
+
+									setJustification("center");
+									setColor("white");
+									setFont("Caldibri ", 26);
+									stringT= "Generation " + (survivalArray.length-1);
+									drawString(stringT, plotWidth/2, rtY+ovalH+30);
+
+									setFont("Caldibri ", 18);
+									stringT= "0.0";
+									drawString(stringT, rtX+2, rtY+ovalH+10);
+
+									setFont("Caldibri ", 18);
+									stringT= "1.0";
+									drawString(stringT, rtX+(lineW)-2, rtY+ovalH+10);
+
+									setColor("gray");
+									for(i =0; i<lastGeneValues.length; i++){
+									xCoord = rtX + (lastGeneValues[i]*((lineW)-ovalW));
+									rand = random("gaussian");
+									makeOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									run("Add...", "value=80");
+									drawOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									}
+
+
+									run("Select All");
+									run("Copy");
+
+									pasteX = 448 + (iButtonShift/2);
+									pasteY = 320;
+
+									selectImage("EndScreen");
+									makeRectangle(pasteX, pasteY, plotWidth, plotHeight);
+									setPasteMode("Transparent-zero");
+									run("Paste");
+									run("Select None");
+									
+									close("GenePlots");
+
+									setJustification("center");
+									setColor("#66D122");
+									setFont("Caldibri ", 30);
+									stringT= GeneChoice;
+									drawString(stringT, pasteX+(plotWidth/2), 360);
+
+
+
+
+									setJustification("right");
+									setColor("white");
+									setFont("Caldibri ", 24);
+									stringT= "Mean = " + d2s(firstMean,3);
+									drawString(stringT,pasteX, 430);
+
+									stringT= "StDv = " +d2s(firstStdDev,3);
+									drawString(stringT, pasteX, 430+60);
+
+									stringT= "Mean = " + d2s(lastMean,3);
+									drawString(stringT,pasteX, 590);
+
+									stringT= "StDv = " + d2s(lastStdDev,3);
+									drawString(stringT, pasteX, 590+60);
+
+
+
+
+						
+									
+									
+						}			
+									
+									
+									
+						}		
+							
+
+
+
+
+
+						if(slide==6){
+						Tool=1;   
+						if(flag&leftButton!=0){wait(75);	
+						
+									shortTitles=newArray("Luminance","Red-Green Colour","Blue-Yellow Colour","Pattern Contrast");
+
+									Dialog.createNonBlocking("Get Measure");
+									Dialog.addChoice("Choose a Measure", shortTitles);
+									Dialog.show();
+									
+						
+									MeasureChoice = Dialog.getChoice();
+									MeasureName=MeasureChoice;
+									if(MeasureChoice=="Luminance") MeasureChoice="Target_L_Mean";
+									if(MeasureChoice=="Red-Green Colour") MeasureChoice="Target_A_Mean";									
+									if(MeasureChoice=="Blue-Yellow Colour") MeasureChoice="Target_B_Mean";
+									if(MeasureChoice=="Pattern Contrast") MeasureChoice="Target_L_Dev";	
+									
+									MeasureIndex = index(DataCollectionTitles, MeasureChoice);
+
+									startMeasures=newArray(PopSize);
+									for(i=0;i<PopSize;i++){
+									tArr = split(DataCollectionARR[i+1],"\t");
+									startMeasures[i]=parseFloat(tArr[MeasureIndex]);
+									}
+
+									lastMeasures=newArray(PopSize);
+									for(i=0;i<PopSize;i++){
+									tArr = split(DataCollectionARR[DataCollectionARR.length-1-i],"\t");
+									lastMeasures[i]=parseFloat(tArr[MeasureIndex]);
+									}			
+
+
+			
+									Array.getStatistics(startMeasures, minF, maxF, firstMean, firstStdDev);
+									Array.getStatistics(lastMeasures, minL, maxL, lastMean,lastStdDev);
+									
+									minMin = minF;
+									if(minL<minMin) minMin=minL;
+									
+									maxMax = maxF;
+									if(maxL>maxMax) maxMax=maxL;
+									
+									for(i=0;i<PopSize;i++){
+									startMeasures[i]=(startMeasures[i]-minMin)/(maxMax-minMin);
+									lastMeasures[i]=(lastMeasures[i]-minMin)/(maxMax-minMin);
+									}
+									
+									Array.getStatistics(startMeasures, minF, maxF, firstMean, firstStdDev);
+									Array.getStatistics(lastMeasures, minL, maxL, lastMean,lastStdDev);									
+									
+									
+									if(isNaN(firstStdDev)){
+									firstStdDev = 0;
+									}
+									if(isNaN(lastStdDev)){
+									lastStdDev = 0;
+									}
+
+									if(isOpen("GenePlots")){
+									close("GenePlots");
+									}
+									
+									//Array.show(startMeasures,lastMeasures);
+
+
+									selectImage("EndScreen");
+
+									setColor("#16150D");
+									fillRect(226 + (iButtonShift/2), 318, 1020, 406);
+									setColor("white");
+
+									// =================================================
+									// Create new Plot Image
+									// =================================================
+
+
+									//makeRectangle(578, 320,  680, 400);
+
+									plotWidth = 800;
+									plotHeight = 400;
+
+									newImage("GenePlots", "RGB black", plotWidth, plotHeight, 1);
+									selectImage("GenePlots");
+						
+
+
+									ovalW = 10;
+									ovalH =60;
+									lineW = plotWidth*5/6;
+									setLineWidth(2);
+									
+									
+									//-------------------------
+									// Generation First
+									//-------------------------
+
+									rtX = (plotWidth-(lineW))/2;
+									rtY = (plotHeight*0.25)+20;
+
+									setColor("white");
+									fillRect(rtX, rtY,(lineW), 2);
+
+									setJustification("center");
+									setColor("white");
+									setFont("Caldibri ", 26);
+									stringT= "Generation 0";
+									drawString(stringT, plotWidth/2, rtY+ovalH+30);
+
+									setFont("Caldibri ", 18);
+									stringT= "0.0";
+									drawString(stringT, rtX+2, rtY+ovalH+10);
+
+									setFont("Caldibri ", 18);
+									stringT= "1.0";
+									drawString(stringT, rtX+(lineW)-2, rtY+ovalH+10);
+
+									setColor("gray");
+									for(i =0; i<startMeasures.length; i++){
+									xCoord = rtX + (startMeasures[i]*((lineW)-ovalW));
+									rand = random("gaussian")/10;
+									makeOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									run("Add...", "value=80");
+									drawOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									}
+
+
+
+									//-------------------------
+									// Generation Last
+									//-------------------------
+
+									rtX = (plotWidth-(lineW))/2;
+									rtY = rtY+165;
+
+									setColor("white");
+									fillRect(rtX, rtY,(lineW), 2);
+
+									setJustification("center");
+									setColor("white");
+									setFont("Caldibri ", 26);
+									stringT= "Generation " + (survivalArray.length-1);
+									drawString(stringT, plotWidth/2, rtY+ovalH+30);
+
+									setFont("Caldibri ", 18);
+									stringT= "0.0";
+									drawString(stringT, rtX+2, rtY+ovalH+10);
+
+									setFont("Caldibri ", 18);
+									stringT= "1.0";
+									drawString(stringT, rtX+(lineW)-2, rtY+ovalH+10);
+
+									setColor("gray");
+									for(i =0; i<lastMeasures.length; i++){
+									xCoord = rtX + (lastMeasures[i]*((lineW)-ovalW));
+									rand = random("gaussian")/10;
+									makeOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									run("Add...", "value=80");
+									drawOval(xCoord+rand, rtY-(ovalH)/2, ovalW, ovalH);
+									}
+
+
+									run("Select All");
+									run("Copy");
+
+									pasteX = 448 + (iButtonShift/2);
+									pasteY = 320;
+
+									selectImage("EndScreen");
+									makeRectangle(pasteX, pasteY, plotWidth, plotHeight);
+									setPasteMode("Transparent-zero");
+									run("Paste");
+									run("Select None");
+									
+									close("GenePlots");
+
+									setJustification("center");
+									setColor("#66D122");
+									setFont("Caldibri ", 30);
+									stringT= MeasureName;
+									drawString(stringT, pasteX+(plotWidth/2), 360);
+
+
+
+
+									setJustification("right");
+									setColor("white");
+									setFont("Caldibri ", 24);
+									stringT= "Mean = " + d2s(firstMean,3);
+									drawString(stringT,pasteX, 430);
+
+									stringT= "StDv = " +d2s(firstStdDev,3);
+									drawString(stringT, pasteX, 430+60);
+
+									stringT= "Mean = " + d2s(lastMean,3);
+									drawString(stringT,pasteX, 590);
+
+									stringT= "StDv = " + d2s(lastStdDev,3);
+									drawString(stringT, pasteX, 590+60);
+
+
+
+
+						
+									
+									
+						}			
+									
+									
+									
+						}	
+
+	
+						}
+									
+
+						
+
+				run("Select None");
+				if(Tool != ToolOld){
+			if(Tool == 0)
+				setTool("arrow");
+			if(Tool  == 1)
+				setTool("hand");
+		ToolOld= Tool;
+}
+
+				}
+
+
+				}
+
+				}
+				
+
+
+}
+
+if(endGate == 1){
+
+
+if(downloadGate==1){
+
+if(isOpen("Loading")){
+selectImage("Loading");
+
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+ run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+setBatchMode(false);
+close("\\Others");
+} else{
+close("*");
+}
+doCommand("CamoEvo Game");
+exit
+
+} else {
+
+slide=7;
+
+setSlice(slide);
+
+
+//BUTTON 1, Exit and Save
+//-----------------------------------------
+
+
+	b1_x1= 102  + (iButtonShift/2);
+	b1_y1= 576;
+
+	b1_x2= b1_x1 + 598;
+	b1_y2= b1_y1 + 164;
+	
+	
+//BUTTON 2, Exit
+//-----------------------------------------
+
+
+	b2_x1= 774 + (iButtonShift/2);
+	b2_y1= 576;
+
+	b2_x2= b2_x1 + 598;
+	b2_y2= b2_y1 + 164;
+	
+
+
+whileGate=0;
+
+while(whileGate==0){
+
+
+	
+	setSlice(slide);
+	getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+	
+	
+		{
+		
+		
+
+
+		clickX=mouseX; 
+		clickY=mouseY;
+
+		//Button 1
+		//-----------------
+		if( clickX > b1_x1   &&    clickX < b1_x2   &&   clickY > b1_y1 &&  clickY < b1_y2) {
+		
+		
+	
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		whileGate=1;
+		
+		datafileDIR = getDirectory("Select the Folder you wish to download your results to.");
+		
+		if(File.exists(survivalDIR + "Data_Output.txt")){
+		File.copy(survivalDIR + "Data_Output.txt", datafileDIR + "Data_Output.txt");
+		}
+		
+		if(File.exists(survivalDIR+"Data_Output_" + FolderName + ".txt")){
+		File.copy(survivalDIR+"Data_Output_" + FolderName + ".txt", datafileDIR + "Data_Output_" + FolderName + ".txt");
+		}
+
+		}
+		}
+		
+		//Button 2
+		//-----------------
+		if( clickX > b2_x1   &&    clickX < b2_x2   &&   clickY > b2_y1 &&  clickY < b2_y2) {
+		
+		
+		Tool=1;
+		Tool=1;   if(flag&leftButton!=0){wait(75);
+		whileGate=1;
+		}
+		}
+		
+	run("Select None");
+	if(Tool != ToolOld){
+			if(Tool == 0)
+				setTool("arrow");
+			if(Tool  == 1)
+				setTool("hand");
+		ToolOld= Tool;
+}
+
+		}
+
+
+
+}
+
+
+}
+
+if(isOpen("Loading")){
+selectImage("Loading");
+
+
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+ run("Animation Options...", "speed="+6);
+doCommand("Start Animation");
+setBatchMode(false);
+close("\\Others");
+} else{
+close("*");
+}
+doCommand("CamoEvo Game");
+exit
+
+
+}
+
+}
+
+
+
+}
+//print("loop");
+}
+

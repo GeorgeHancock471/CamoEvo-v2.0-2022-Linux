@@ -1,0 +1,832 @@
+
+setBatchMode(true);
+roiManager("Show None");
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+function TestPoint(num) {
+Dialog.createNonBlocking(num);
+Dialog.show();
+}
+
+
+PopLocal = getDirectory("plugins") + "3 CamoWild/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+
+PopulationSet = PopLocation+"PopulationSettings.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+ColourSpace = split(PopulationSettings[2], "\t");
+
+lMinR = parseFloat(ColourSpace[1]);
+lMaxR =  parseFloat(ColourSpace[2]);
+
+aMinR =  parseFloat(ColourSpace[3]);
+aMaxR =  parseFloat(ColourSpace[4]);
+
+bMinR =  parseFloat(ColourSpace[5]);
+bMaxR =  parseFloat(ColourSpace[6]);
+
+
+TargetSet = split(PopulationSettings[6],"\t");
+TargetSetting = TargetSet[1];
+
+
+TargetChoice = TargetSetting;
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+
+TargetSettingsRows = split(TargetSettings, "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoicePattern = TargetChoiceSettings[3];
+TargetChoiceCentre = parseFloat(TargetChoiceSettings[4]);
+
+
+
+
+
+PatternTemplate =  getDirectory("plugins") + "3 CamoWild/PopulationTemplate.txt";
+
+
+GenesString=File.openAsString(PatternTemplate);	// open txt data file
+GenesRows=split(GenesString, "\n");
+Var0 = 	newArray();
+Var1 =  newArray();
+Var2 =  newArray();
+Var3 =  newArray();
+Var4 =  newArray();
+Var5 =  newArray();
+Var6 =  newArray();
+Var7 =  newArray();
+Var8 =	newArray();
+Var9 = 	newArray();
+Var10 = newArray();
+Var11 = newArray();
+Var12 = newArray();
+Var13 = newArray();
+Var14 = newArray();
+Var15 = newArray();
+Var16 = newArray();
+Var17 = newArray();
+Var18 = newArray();
+Var19 = newArray();
+Var20 = newArray();
+Var21 = newArray();
+Var22 = newArray();
+Var23 = newArray();
+Var24 = newArray();
+Var25 = newArray();
+Var26 = newArray();
+Var27 = newArray();
+Var28 = newArray();
+Var29 = newArray();
+Var30 = newArray();
+Var31 = newArray();
+Var32 = newArray();
+Var33 = newArray();
+Var34 = newArray();
+Var35 = newArray();
+Var34 = newArray();
+Var35 = newArray();
+Var36 = newArray();
+Var37 = newArray();
+Var38 = newArray();
+Var39 = newArray();
+Var40 = newArray();
+Var41 = newArray();
+Var42 = newArray();
+Var43 = newArray();
+Var44 = newArray();
+Var45 = newArray();
+Var46 = newArray();
+
+Var47 = newArray();
+Var48 = newArray();
+Var49 = newArray();
+Var50 = newArray();
+Var51 = newArray();
+
+
+Temp = split(GenesRows[0],"\t");
+v0=index(Temp, "ID");
+
+
+
+v1=index(Temp, "ptn_all_swt");
+	v2=index(Temp, "ptn_dim_xcp");
+	v3=index(Temp, "ptn_dim_ycp");
+	v4=index(Temp, "ptn_dim_wdt");
+	v5=index(Temp, "ptn_dim_asr");
+	v6=index(Temp, "ptn_dim_agl");
+	v7=index(Temp, "ptn_dim_cvr");
+
+	v8=index(Temp, "ptn_cov_sig");
+	v9=index(Temp, "ptn_cov_rad");
+	v10=index(Temp, "ptn_cov_xcp");
+	v11=index(Temp, "ptn_cov_ycp");
+
+	v12=index(Temp, "ptn_edg_blr");
+	v13=index(Temp, "ptn_edg_spc");
+
+	v14=index(Temp, "ptn_bil_ctr");
+	v15=index(Temp, "ptn_bil_sft");
+	v16=index(Temp, "ptn_bil_frq");
+	
+	v43=index(Temp, "ptn_ajd_xsc");	
+	v44=index(Temp, "ptn_ajd_ysc");
+	v45=index(Temp, "ptn_ajd_enl");
+	v46=index(Temp, "ptn_ajd_ang");
+	
+
+v17=index(Temp, "col_mac_swt");
+	v18=index(Temp, "col_mac_lmv");
+	v19=index(Temp, "col_mac_rgv");
+	v20=index(Temp, "col_mac_byv");
+
+v21=index(Temp, "col_bot_swt");
+	v22=index(Temp, "col_bot_lmv");
+	v23=index(Temp, "col_bot_rgv");
+	v24=index(Temp, "col_bot_byv");
+
+
+v25=index(Temp, "col_top_swt");
+	v26=index(Temp, "col_top_lmv");
+	v27=index(Temp, "col_top_rgv");
+	v28=index(Temp, "col_top_byv");
+	
+	v29=index(Temp, "col_grd_sig");
+	v30=index(Temp, "col_grd_hgt");
+
+v31=index(Temp, "eem_all_swt");
+	v32=index(Temp, "eem_int_lvl");
+		v33=index(Temp, "eem_int_rto");
+	v34=index(Temp, "eem_sig_lvl");
+		v35=index(Temp, "eem_sig_rto");
+	v36=index(Temp, "eem_exp_lvl");
+		v37=index(Temp, "eem_exp_rto");
+		
+v38=index(Temp, "spk_one_swt");		
+	v39=index(Temp, "spk_one_lvl");		
+	v40=index(Temp, "spk_one_rto");		
+	v41=index(Temp, "spk_one_sig");		
+	v42=index(Temp, "spk_one_ycp");
+	
+v47=index(Temp, "spk_two_swt");		
+	v48=index(Temp, "spk_two_lvl");		
+	v49=index(Temp, "spk_two_rto");		
+	v50=index(Temp, "spk_two_sig");		
+	v51=index(Temp, "spk_two_ycp");
+	
+
+
+
+for(i=1; i<GenesRows.length; i++){
+Temp = split(GenesRows[i],"\t");
+
+Var0 = Array.concat(Var0,Temp[v0]);
+Var1 = Array.concat(Var1,Temp[v1]);
+Var2 = Array.concat(Var2,Temp[v2]);
+Var3 = Array.concat(Var3,Temp[v3]);
+Var4 = Array.concat(Var4,Temp[v4]);
+Var5 = Array.concat(Var5,Temp[v5]);
+Var6 = Array.concat(Var6,Temp[v6]);
+Var7 = Array.concat(Var7,Temp[v7]);
+Var8 = Array.concat(Var8,Temp[v8]);
+Var9 = Array.concat(Var9,Temp[v9]);
+Var10 = Array.concat(Var10,Temp[v10]);
+Var11 = Array.concat(Var11,Temp[v11]);
+Var12 = Array.concat(Var12,Temp[v12]);
+Var13 = Array.concat(Var13,Temp[v13]);
+Var14 = Array.concat(Var14,Temp[v14]);
+Var15 = Array.concat(Var15,Temp[v15]);
+Var16 = Array.concat(Var16,Temp[v16]);
+Var17 = Array.concat(Var17,Temp[v17]);
+Var18 = Array.concat(Var18,Temp[v18]);
+Var19 = Array.concat(Var19,Temp[v19]);
+Var20 = Array.concat(Var20,Temp[v20]);
+Var21 = Array.concat(Var21,Temp[v21]);
+Var22 = Array.concat(Var22,Temp[v22]);
+Var23 = Array.concat(Var23,Temp[v23]);
+Var24 = Array.concat(Var24,Temp[v24]);
+Var25 = Array.concat(Var25,Temp[v25]);
+Var26 = Array.concat(Var26,Temp[v26]);
+Var27 = Array.concat(Var27,Temp[v27]);
+Var28 = Array.concat(Var28,Temp[v28]);
+Var29 = Array.concat(Var29,Temp[v29]);
+Var30 = Array.concat(Var30,Temp[v30]);
+Var31 = Array.concat(Var31,Temp[v31]);
+Var32 = Array.concat(Var32,Temp[v32]);
+Var33 = Array.concat(Var33,Temp[v33]);
+Var34 = Array.concat(Var34,Temp[v34]);
+Var35 = Array.concat(Var35,Temp[v35]);
+Var36 = Array.concat(Var36,Temp[v36]);
+Var37 = Array.concat(Var37,Temp[v37]);
+Var38 = Array.concat(Var38,Temp[v38]);
+Var39 = Array.concat(Var39,Temp[v39]);
+Var40 = Array.concat(Var40,Temp[v40]);
+Var41 = Array.concat(Var41,Temp[v41]);
+Var42 = Array.concat(Var42,Temp[v42]);
+Var43 = Array.concat(Var43,Temp[v43]);
+Var44 = Array.concat(Var44,Temp[v44]);
+Var45 = Array.concat(Var45,Temp[v45]);
+Var46 = Array.concat(Var46,Temp[v46]);
+Var47 = Array.concat(Var47,Temp[v47]);
+Var48 = Array.concat(Var48,Temp[v48]);
+Var49 = Array.concat(Var49,Temp[v49]);
+Var50 = Array.concat(Var50,Temp[v50]);
+Var51 = Array.concat(Var51,Temp[v51]);
+}
+
+
+
+for(j = 0; j<GenesRows.length-1; j++){
+setBatchMode(true);
+
+
+
+while(roiManager("count") > 0){
+	roiManager("select", 0);
+	roiManager("Delete");
+}
+
+
+
+
+if(j>0) run("Select None");
+
+
+
+
+
+if(!isOpen("Target")){
+TargetPath = getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Target.png";
+open(TargetPath);
+rename("Target");
+
+}
+
+
+selectImage("Target");
+run("8-bit");
+setAutoThreshold("Default dark");
+setOption("BlackBackground", true);
+run("Convert to Mask");
+
+run("Create Selection");
+roiManager("Add");
+
+Roi.getBounds(targetX, targetY, targetWidth, targetHeight);
+
+
+if(j>0) run("Select None");
+
+canvasW = 400;
+topY = -canvasW/5; // y coordinate of the top of the image
+
+lMin = lMinR;
+lMax = lMaxR;
+aMin = aMinR;
+aMax = aMaxR; 
+bMin = bMinR;
+bMax = bMaxR;
+
+
+// ---------------------- Obtain Variables ---------------------------
+//====================================================================
+
+//	Pattern Genes
+// --------------------------------------
+
+//Switch
+switchPat = parseFloat(Var1[j]);
+
+//Coordinates
+patX = parseFloat(Var2[j]); // x (specified pattern x coord)
+patY = parseFloat(Var3[j]);  // y (specified pattern y coord)
+
+//Dimensions
+patW = parseFloat(Var4[j]);  // scale of the pattern
+patH = parseFloat(Var5[j]);  // aspect ratio of pattern (stretches pattern, turns spots to stripes)
+patR = parseFloat(Var6[j]);  // pattern rotation
+patT = parseFloat(Var7[j]);  // pattern threshold (percentage of image covered by pattern)
+
+//Shading
+csS = parseFloat(Var8[j]);  // countershading sigma (i.e. level of blurring)
+csRd = parseFloat(Var9[j]); // countershading radius 
+csX = parseFloat(Var10[j]);  // countershading x location
+csY = parseFloat(Var11[j]); // countershading y location
+
+//Edge Feathering
+patES  = parseFloat(Var12[j]); //Edge sigma
+patEN  = parseFloat(Var13[j]); //Edge speckling
+
+//Symmetry
+bnX =  parseFloat(Var14[j]); //Location
+bnY =  parseFloat(Var15[j]); //Amplitude
+bnF =  parseFloat(Var16[j]); //Frequency
+
+
+adjX =  parseFloat(Var43[j]); //X stretch
+adjY =  parseFloat(Var44[j]); //Y stretch
+adjE =  parseFloat(Var45[j]); //Expansion
+adjR =  parseFloat(Var46[j]); //Rotation
+
+
+//	Colouration Genes
+// --------------------------------------
+
+//Colour Maculation
+switchMac = parseFloat(Var17[j]);
+
+pcL = parseFloat(Var18[j]);  // pattern colour
+pcA = parseFloat(Var19[j]); 
+pcB = parseFloat(Var20[j]); 
+
+//Colour Bottom
+switchBot = parseFloat(Var21[j]);
+
+bcL = parseFloat(Var22[j]);  // bottom colour
+bcA = parseFloat(Var23[j]); 
+bcB = parseFloat(Var24[j]); 
+
+//Colour Top
+switchTop = parseFloat(Var25[j]);
+
+tcL = parseFloat(Var26[j]);  // top colour
+tcA = parseFloat(Var27[j]); 
+tcB = parseFloat(Var28[j]); 
+
+tcS = parseFloat(Var29[j]); // top colour sigma (i.e. level of blurring)
+tcH = parseFloat(Var30[j]); // top colour height
+
+
+
+//	Edge Enhancement Genes
+// --------------------------------------
+switchEdge = parseFloat(Var31[j]);
+
+ee_I = parseFloat(Var32[j]);  // maximum offset of enhanced edge
+ee_IR = parseFloat(Var33[j]);  // ratio between dark and light offset
+ee_S = parseFloat(Var34[j]);  // maximum smoothness of enhanced edge
+ee_SR = parseFloat(Var35[j]);  // ratio between dark and light smoothess
+ee_E = parseFloat(Var36[j]);  // maximum expansion of enhanced edge
+ee_ER = parseFloat(Var37[j]);  // ratio between dark and light expansion
+
+
+//	Speckling Genes
+// --------------------------------------
+
+
+//Speckle1
+switchSpeck1 = parseFloat(Var38[j]);
+
+noiL1 = parseFloat(Var39[j]);  // level of speckling noise (SDs around 1) Dark
+noiLR1 = parseFloat(Var40[j]); // level of speckling noise (SDs around 1) Light
+noiS1 = parseFloat(Var41[j]); // speckling noise sigma
+noiP1 = parseFloat(Var42[j]); // speckling noise position
+
+
+//Speckle2
+switchSpeck2 = parseFloat(Var47[j]);
+
+noiL2 = parseFloat(Var48[j]);  // level of speckling noise (SDs around 1) Dark
+noiLR2 = parseFloat(Var49[j]); // level of speckling noise (SDs around 1) Light
+noiS2 = parseFloat(Var50[j]); // speckling noise sigma
+noiP2 = parseFloat(Var51[j]); // speckling noise position
+
+
+
+
+// --------------------- Transform Variables -------------------------
+//====================================================================
+
+//	Pattern Genes
+// --------------------------------------
+
+//patW=1;
+patWmax = 1000;
+patWmin = 50;
+patW = Math.pow(patW,1)*(patWmax-patWmin) + patWmin;
+
+patHmax = patW;
+patHmin = 5;
+patH = patH*(patHmax-patHmin) + patHmin;
+
+patXmax = 1980-patW/2;
+patXmin = 20+patW/2;
+patX = patX*(patXmax-patXmin) + patXmin;
+
+patX = patX - patW/2;
+
+patYmax = 1980-patH/2;
+patYmin = 20+patH/2;
+patY = patY *(patYmax-patYmin) + patYmin;
+
+patY = patY - patH/2;
+
+//patT = pow(patT,0.5);
+
+if( TargetChoicePattern == "animal_bil"){
+patR = -180*patR; //transform to angle (degrees)
+}else{
+patR = 360*patR; //transform to angle (degrees)
+}
+csSmax = canvasW/10;
+csSmin = canvasW/100;
+csS = csS*(csSmax-csSmin) + csSmin;
+
+
+csRd = csRd*1.5;
+
+
+if( TargetChoicePattern == "animal_bil"){
+
+xMin = targetX-(targetWidth*csRd)/4;
+yMin = targetY-(targetHeight*csRd)/4;
+xMax = (targetX+targetWidth)/2-(targetWidth*csRd)/4;
+yMax = (targetY+targetHeight)-(targetHeight*csRd)/4;
+
+csX = xMin + csX*(xMax-xMin);
+csY = yMin + csY*(yMax-yMin);
+
+
+}
+
+if( TargetChoicePattern != "animal_bil"){
+
+xMin = targetX-(targetWidth*csRd)/2;
+yMin = targetY-(targetHeight*csRd)/2;
+xMax = (targetX+targetWidth)-(targetWidth*csRd)/2;
+yMax = (targetY+targetHeight)-(targetHeight*csRd)/2;
+
+csX = xMin + csX*(xMax-xMin);
+csY = yMin + csY*(yMax-yMin);
+
+}
+
+patEN =  Math.pow(patEN,2)*10;
+patES = Math.pow(patES,1)*10;
+//patES = 0;
+
+
+
+//	Colouration Genes
+// --------------------------------------
+
+pcL = pcL*(lMax-lMin) + lMin;
+pcA = pcA*(aMax-aMin) + aMin;
+pcB = pcB*(bMax-bMin) + bMin;
+
+tcL = tcL*(lMax-lMin) + lMin;
+tcA = tcA*(aMax-aMin) + aMin;
+tcB = tcB*(bMax-bMin) + bMin;
+
+bcL = bcL*(lMax-lMin) + lMin;
+bcA = bcA*(aMax-aMin) + aMin;
+bcB = bcB*(bMax-bMin) + bMin;
+
+
+
+
+
+
+//	Speckling Genes 
+// --------------------------------------
+
+noiSmax = canvasW/10; // noise sigma
+noiSmin = 0.5;
+
+noiLmax = 0.30; // noise intensity (SDs from mean, where mean=1)
+noiLmin = 0;
+
+noiPmin=50;
+noiPmax=1000-canvasW-noiPmin;
+
+
+//Speckle 1
+
+noiL1 = pow(noiL1,1.5);
+
+DnoiL1 = noiL1 *(1-noiLR1)*2;
+LnoiL1 = noiL1 *(1-(1-noiLR1))*2;
+
+if(DnoiL1 >noiL1)
+DnoiL1 = noiL1;
+
+if(LnoiL1>noiL1)
+LnoiL1 = noiL1;
+
+
+noiS1 = Math.pow(noiS1,1.5);
+
+noiS1 = noiS1*(noiSmax-noiSmin) + noiSmin;
+
+LnoiL1 = LnoiL1*(noiLmax-noiLmin) + noiLmin;
+
+DnoiL1 = DnoiL1*(noiLmax-noiLmin) + noiLmin;
+
+noiP1 = noiP1*(noiPmax-noiPmin) + noiPmin;
+
+
+//Speckle 2
+
+noiL2 = pow(noiL2,1.5);
+
+DnoiL2 = noiL2 *(1-noiLR2)*2;
+LnoiL2 = noiL2 *(1-(1-noiLR2))*2;
+
+if(DnoiL2 >noiL2)
+DnoiL2 = noiL2;
+
+if(LnoiL2>noiL2)
+LnoiL2 = noiL2;
+
+
+noiS2 = Math.pow(noiS2,1.5);
+
+noiS2 = noiS2*(noiSmax-noiSmin) + noiSmin;
+
+LnoiL2 = LnoiL2*(noiLmax-noiLmin) + noiLmin;
+
+DnoiL2 = DnoiL2*(noiLmax-noiLmin) + noiLmin;
+
+noiP2 = noiP2*(noiPmax-noiPmin) + noiPmin;
+
+
+ 
+ //Countershading
+//.............
+
+sigMax = targetWidth;
+if(targetWidth<targetHeight) sigMax = targetHeight;
+
+tcSmax = sigMax/5;
+tcSmin = 1;
+tcS = tcS*(tcSmax-tcSmin) + tcSmin;
+
+
+if(targetWidth>targetHeight){
+ tcHH = tcH * (targetHeight/targetWidth);
+ tcHW = tcH;
+ }
+
+if(targetWidth<targetHeight){
+ tcHW = tcH * (targetWidth/targetHeight);
+ tcHH = tcH;
+ }
+
+
+//Symetry
+//.............
+
+bnYmax = 11;
+bnYV = bnY*bnYmax;
+
+bnFmax =4.5;
+bnFV = Math.floor(bnF*bnFmax);
+
+bnDirArray = newArray(1,-1,1,-1,1,1,-1,1,-1,1,-1,1);
+
+
+
+
+
+// ---------------------- Colour generation --------------------------
+//====================================================================
+
+newImage("col", "32-bit black", canvasW, canvasW, 3);
+
+nSquares = 8;
+
+for(i=0; i<nSquares/2; i++){
+for(k=0; k<nSquares/2; k++){
+
+scale = canvasW/(nSquares/2);
+
+xPosition = scale*i;
+yPosition = scale*k;
+
+
+lVal = random()*(lMax-lMin)+lMin;
+aVal = random()*(aMax-aMin)+aMin;
+bVal = random()*(bMax-bMin)+bMin;
+
+makeRectangle(xPosition, yPosition, scale, scale);
+
+setSlice(1);
+run("Set...", "value=lVal");
+
+setSlice(2);
+run("Set...", "value=aVal");
+
+setSlice(3);
+run("Set...", "value=bVal");
+
+
+
+}}
+
+
+run("Min...", "value=-99");
+run("Max...", "value=99");
+
+
+
+
+
+run("CIELAB 32Bit to RGB24 smooth"); // create RGB colour from CIELAB
+
+
+run("Add Specified Noise...", "standard=1");
+
+//run("Spherical Deform"); // wrap around sphere
+
+rename(Var0[j]);
+
+
+
+run("Set... ", "zoom=50 x=200 y=200");
+
+
+
+
+selectImage(Var0[j]);
+
+//Bilateral
+if( TargetChoicePattern == "animal_bil"){
+//run("Rotate 90 Degrees Left");
+}
+
+
+
+run("Min...", "value=2");
+run("Invert");
+
+
+
+//Apply to Target Shape
+//--------------------------
+run("Select All");
+
+
+selectImage(Var0[j]);
+//run("Size...", "width=&width height=&height depth=1 average interpolation=Bilinear");
+run("Copy");
+rename("sheet");
+close("sheet");
+
+selectImage("Target");
+run("RGB Color");
+setPasteMode("Subtract");
+
+run("Paste");
+rename(Var0[j]);
+
+
+
+
+selectImage(Var0[j]);
+roiManager("deselect");
+
+if(isOpen("Shader")){
+selectWindow("Shader");
+run("Select All");
+run("Copy");
+selectImage(Var0[j]);
+setPasteMode("Subtract");
+run("Paste");
+}
+
+if(isOpen("Luma")){
+selectWindow("Luma");
+run("Select All");
+run("Copy");
+selectImage(Var0[j]);
+setPasteMode("Add");
+run("Paste");
+}
+
+
+if(isOpen("Outline")){
+
+run("Min...", "value=10");
+selectWindow("Outline");
+run("Select All");
+run("Copy");
+selectImage(Var0[j]);
+setPasteMode("Transparent-white");
+run("Paste");
+}
+
+
+
+
+
+//Clear up uneeded images.
+
+if(isOpen("col")) close("col");
+
+
+if(isOpen("dark_random")){
+close("dark_random");
+}
+
+if(isOpen("light_random")){
+close("light_random");
+}
+
+if(isOpen("texture_random")){
+close("texture_random");
+}
+
+
+if(isOpen("ee"))close("ee");
+	
+if(isOpen("cs")) close("cs");
+
+if(isOpen("pattern")) close("pattern");
+
+if(isOpen("base pattern")) close("base pattern");
+
+
+
+
+if(isOpen("Output")){
+selectImage("Output");
+close("Output");
+
+}
+
+
+}// j nResults
+
+
+close("patternSheet");
+
+
+while(roiManager("count") > 0){
+	roiManager("select", 0);
+	roiManager("Delete");
+}
+
+if(isOpen("Outline")){
+close("Outline");
+}
+
+if(isOpen("Luma")){
+close("Luma");
+}
+
+if(isOpen("Shader")){
+close("Shader");
+}
+
+if(isOpen("speckleSheet1"))close("speckleSheet1");
+if(isOpen("speckleSheet2"))close("speckleSheet2");
+
+
+
+

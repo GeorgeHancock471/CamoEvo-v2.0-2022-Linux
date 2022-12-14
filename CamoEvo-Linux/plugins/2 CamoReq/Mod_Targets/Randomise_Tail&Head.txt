@@ -1,0 +1,244 @@
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+while(roiManager("count") > 0) {
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+
+}
+
+setBatchMode(true);
+
+
+
+
+
+Dialog.create("Settings");
+		Dialog.addNumber("head_Ymax" , 80);
+		Dialog.addNumber("tail_Ymin" , 215);
+		Dialog.addNumber("tail_Diameter" , 30);
+Dialog.show();
+
+yMaxHead = Dialog.getNumber();
+yMinTail = Dialog.getNumber();
+wMaxTail = Dialog.getNumber();
+
+
+
+
+
+
+//Duplicate Image for Warping
+//--------------------------------------------
+
+if(isOpen("warp")) close("warp");
+if(isOpen("warped")) close("warped");
+if(isOpen("head"))close("head");
+
+run("Select All");
+
+run("Duplicate...", "title=warp");
+
+// Warp Tail
+//--------------------------------------------
+// The tail consists of 5 points
+// There is greater flex and range at the base
+// The tail will warp from the yMin to the bottom of the image
+// D is the maximum diameter of the tail and prevents interfering with the legs.
+
+
+D=wMaxTail;
+yMin = yMinTail;
+yMax = getHeight;
+
+c = getWidth/2;
+w = getWidth;
+
+s0y = yMin;
+s0x = c;
+
+s1y = yMin+(yMax-yMin)*0.20;
+rand1 = random("gaussian")*3;
+s1x = s0x+ rand1;
+
+s2y = yMin+(yMax-yMin)*0.40;
+rand2 = random("gaussian")*20;
+s2x = s1x+ rand1 + rand2;
+
+s3y = yMin+(yMax-yMin)*0.70;
+rand3 = random("gaussian")*30;
+s3x = s2x+ rand2 + rand3;
+
+s4y = yMin+(yMax-yMin)*1.00;
+rand4 = random("gaussian")*30;
+s4x = s3x+  rand3 + rand4;
+
+makeLine(s0x,s0y,s1x, s1y,s2x, s2y,s3x, s3y,s4x, s4y);
+
+run("Fit Spline");
+
+getStatistics(area, mean, min, max, std, histogram);
+
+scale = (yMax-yMin)/area;
+
+run("Scale... ", "x=&scale y=&scale");
+
+Roi.getCoordinates(xpoints, ypoints);
+Array.getStatistics(ypoints, min, max, mean, stdDev);
+
+
+
+ind = index(ypoints, min);
+xV = xpoints[ind];
+
+Roi.getBounds(x, y, width, height);
+
+xS = xV-c;
+
+Roi.move(x-xS,yMin);
+
+Roi.getCoordinates(xpoints, ypoints);
+
+roiManager("add");
+
+run("Select All");
+
+run("Duplicate...", "title=warped");
+
+makeRectangle(c-D/2, yMin, D, yMax);
+setColor("black");
+fill();
+
+
+vertex = Array.getVertexAngles(xpoints, ypoints, 1);
+
+angleSet=vertex[0];
+
+for(i=0; i<ypoints.length; i++){
+
+x=c;
+y=yMin+i*(yMax-yMin)/ypoints.length;
+
+selectImage("warp");
+
+if(i>0) angle=angleSet+vertex[i];
+
+makeRectangle(x-D/2,y-2,D,4);
+run("Copy");
+
+x = Math.ceil(xpoints[i]);
+y = Math.ceil(ypoints[i]);
+
+
+selectImage("warped");
+
+makeRectangle(x-D/2,y-2,D,4);
+
+setPasteMode("transparent-zero");
+run("Paste");
+
+
+
+}
+
+
+// Warp Head
+//--------------------------------------------
+// The head consists of 3 points (head and neck)
+// The tail will warp from the top of the image to the yMax
+// D is the maximum diameter of the tail and prevents interfering with the legs.
+
+
+D=60;
+yMin = 0;
+yMax = yMaxHead;
+
+s2y = yMax;
+s2x = c;
+
+s1y = yMin+(yMax-yMin)*0.75;
+rand1 = random("gaussian")*3;
+s1x = s2x+ rand1;
+
+s0y = yMin;
+rand2 = random("gaussian")*20;
+s0x = s1x+rand2+rand1;
+
+
+
+
+makeOval(c-D/2,0,D,yMax);
+roiManager("add");
+
+
+makeOval(c-D/2*0.6,yMax-30,D*0.6,yMax);
+roiManager("add");
+
+
+roiManager("select", newArray(roiManager("count")-1, roiManager("count")-2));
+
+roiManager("and");
+
+roiManager("add");
+
+roiManager("select", roiManager("count")-3);
+
+fill();
+
+selectImage("warp");
+
+roiManager("select", roiManager("count")-1);
+
+run("Copy");
+
+selectImage("warped");
+
+roiManager("select", roiManager("count")-1);
+
+run("Paste");
+
+
+selectImage("warp");
+
+roiManager("select", roiManager("count")-3);
+
+ang =  random("gaussian") *8;
+ang2 = Math.sqr(Math.sqrt(ang));
+if(isNaN(ang2))ang2=0;
+
+run("Rotate... ", "angle=ang grid=1 interpolation=None");
+run("Rotate...", "  angle=ang");
+Roi.getBounds(x, y, width, height);
+
+run("Make Inverse");
+fill();
+
+makeRectangle(c-width/2, 0, width, height);
+run("Duplicate...", "title=head");
+
+run("Copy");
+
+selectImage("warped");
+
+adjX = atan(ang*PI/180)*height/2;
+
+//adjX = ang*2;
+
+makeRectangle(c+adjX-width/2, 0, width, height);
+
+
+
+run("Paste");
+
+
+run("Select None");
+
+//run("Copy to System");

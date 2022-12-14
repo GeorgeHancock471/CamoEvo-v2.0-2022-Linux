@@ -1,0 +1,117 @@
+/*____________________________________________________________________
+
+	Title: ImageGA Demo
+	Authors:  George Hancock 
+	Date: 27/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This code allows the user to run a demo of ImageGA using one of the existing fitness calculators.
+
+
+*/
+
+setBatchMode(true);
+
+
+
+// (1) Run the Interface
+//------------------------------------------------------------------------------------------------------------------------
+Dialog.create("Population Location");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory you would like your Generations to be stored.");
+	Dialog.show();
+
+
+
+popDIR = getDirectory("Select the Population Location");
+
+popPath = "select=["+ popDIR +"]";
+
+
+
+choiceArray = newArray("No", "Yes");
+Dialog.create("Genetic_Algorithm_Settings");
+		Dialog.addMessage("____________Would you like to adjust the settings_____________");
+		Dialog.addChoice("              ", choiceArray, choiceArray[0]);
+	Dialog.show();
+
+gate = Dialog.getChoice();
+
+if(gate=="Yes"){
+run("ImageGA Interface");
+}
+
+// (2) Select Template
+//------------------------------------------------------------------------------------------------------------------------
+
+Dialog.create("Population Template");
+		Dialog.addMessage("________________Choose File___________________");
+		Dialog.addMessage("Select the gene template you would like to use");
+	Dialog.show();
+
+
+popPath2 = "select_folder=["+ popDIR +"]";
+
+PopulatorPath = File.openDialog("Select_Template");
+
+populatorPath = popPath2+" select_template=["+PopulatorPath+"]"; 
+
+run("ImageGA Populator", populatorPath);
+
+
+
+// (3) Select Calculator
+//------------------------------------------------------------------------------------------------------------------------
+
+Dialog.create("Fitness Calculator");
+		Dialog.addMessage("________________Choose File___________________");
+		Dialog.addMessage("Select the fitness calculator you would like to use");
+	Dialog.show();
+
+
+FitnessCalculatorPath = File.openDialog("Calculator");
+
+FitnessCalculator = File.getName(FitnessCalculatorPath);
+
+FitnessCalculator = replace(FitnessCalculator, ".txt", "");  
+FitnessCalculator = replace(FitnessCalculator, "_", " ");  
+
+
+
+// (4) Run LITE and Calculator until no new files are made.
+//------------------------------------------------------------------------------------------------------------------------
+
+		x=1;
+		y1= getFileList(popDIR );
+		y1 = y1.length;
+
+		y2= getFileList(popDIR );
+		y2 = y2.length;
+
+while(x==1){
+
+run(FitnessCalculator, popPath);
+
+run("ImageGA Algorithm", popPath);
+
+		y1= getFileList(popDIR);
+		y1 = y1.length;
+
+	if(y1>y2){
+
+		y2= getFileList(popDIR);
+		y2 = y2.length;
+
+	} else {
+
+	x=0;
+
+	}
+
+
+}
+
+run("Fitness Plotter", popPath);

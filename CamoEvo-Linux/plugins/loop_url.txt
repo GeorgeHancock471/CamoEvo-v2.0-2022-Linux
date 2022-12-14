@@ -1,0 +1,2 @@
+OnlineCheck1=File.openUrlAsString("ftp://sensoryecology.com:msbirdms@ftp.sensoryecology.com/greysphere/GenPathGate.txt;type=it");
+print(OnlineCheck1);

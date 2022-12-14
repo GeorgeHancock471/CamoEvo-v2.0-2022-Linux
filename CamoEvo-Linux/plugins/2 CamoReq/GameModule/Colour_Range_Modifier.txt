@@ -1,0 +1,211 @@
+//Temp Holdings
+//----------------------------------
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+if(!File.exists(PopLocation+"protect.txt")){
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+StartSpace = split(PopulationSettings[5], "\t");
+
+lMin = parseFloat(StartSpace[1]);
+lMax =  parseFloat(StartSpace[2]);
+
+aMin =  parseFloat(StartSpace[3]);
+aMax =  parseFloat(StartSpace[4]);
+
+bMin =  parseFloat(StartSpace[5]);
+bMax =  parseFloat(StartSpace[6]);
+
+
+ColourSpace = split(PopulationSettings[6], "\t");
+
+lMinR = parseFloat(ColourSpace[1]);
+lMaxR =  parseFloat(ColourSpace[2]);
+
+aMinR =  parseFloat(ColourSpace[3]);
+aMaxR =  parseFloat(ColourSpace[4]);
+
+bMinR =  parseFloat(ColourSpace[5]);
+bMaxR =  parseFloat(ColourSpace[6]);
+
+
+if(lMinR > lMin){
+lMin = lMinR;
+}
+if(lMaxR < lMax){
+lMax = lMaxR;
+}
+
+
+if(aMinR > aMin){
+aMin = aMinR;
+}
+if(aMaxR < aMax){
+aMax = aMaxR;
+}
+
+
+if(bMinR > bMin){
+bMin = bMinR;
+}
+if(bMaxR < bMax){
+bMax = bMaxR;
+}
+
+generationString = File.openAsString(PopLocation +"gen_0_genes.txt");
+
+
+//Open Generation 0
+//----------------------------------
+
+generationRows = split(generationString, "\n");
+
+geneLabels = split(generationRows[0], "\t");
+
+
+
+//Find Gene Indexes
+//----------------------------------
+
+
+LGenes = newArray();
+AGenes = newArray();
+BGenes = newArray();
+
+DpGenes = newArray();
+PiGenes = newArray();
+
+for(i=0; i<geneLabels.length; i++){
+tStr = geneLabels[i];
+if(endsWith(tStr, "L") || endsWith(tStr, "_lmv"))
+LGenes = Array.concat(LGenes, i );
+
+if(endsWith(tStr, "A") || endsWith(tStr, "_rgv"))
+AGenes = Array.concat(AGenes,i );
+
+if(endsWith(tStr, "B") || endsWith(tStr, "_byv"))
+BGenes = Array.concat(BGenes, i );
+
+if(endsWith(tStr, "col_bkg_dep"))
+DpGenes = Array.concat(DpGenes, i );
+
+if(endsWith(tStr, "pir"))
+PiGenes = Array.concat(PiGenes, i );
+
+}
+
+
+//Calculate Conversion
+//----------------------------------
+
+Lrange = (lMax - lMin)/(lMaxR - lMinR);
+Arange =  (aMax - aMin)/(aMaxR - aMinR);
+Brange =  (bMax - bMin)/(bMaxR - bMinR);
+
+Lbase = (lMin - lMinR)/(lMaxR - lMinR);
+Abase = (aMin - aMinR)/(aMaxR - aMinR);
+Bbase = (bMin - bMinR)/(bMaxR - bMinR);
+
+//nVal = tVal*Lrange + Lbase;
+
+generationRowsNew = Array.copy(generationRows);
+
+//Convert L Values
+//----------------------------------
+for(i=1; i<generationRows.length; i++){
+tArray = split(generationRowsNew[i], "\t");
+for(j =0; j<LGenes.length; j++){
+tIndex = LGenes[j];
+oldVal = parseFloat( tArray[tIndex] );
+newVal = oldVal * Lrange + Lbase;
+if(isNaN(newVal)) newVal=0;
+tArray[tIndex] =newVal;
+} // ( j )
+tStr = String.join(tArray, "\t");
+generationRowsNew[i] = tStr;
+} // ( i )
+
+
+//Convert A Values
+//----------------------------------
+for(i=1; i<generationRows.length; i++){
+tArray = split(generationRowsNew[i], "\t");
+for(j =0; j<AGenes.length; j++){
+tIndex = AGenes[j];
+oldVal = parseFloat( tArray[tIndex] );
+newVal = oldVal * Arange + Abase;
+if(isNaN(newVal)) newVal=0;
+tArray[tIndex] =newVal;
+} // ( j )
+tStr = String.join(tArray, "\t");
+generationRowsNew[i] = tStr;
+} // ( i )
+
+
+
+//Convert B Values
+//----------------------------------
+for(i=1; i<generationRows.length; i++){
+tArray = split(generationRowsNew[i], "\t");
+for(j =0; j<BGenes.length; j++){
+tIndex = BGenes[j];
+oldVal = parseFloat( tArray[tIndex] );
+newVal = oldVal * Brange + Bbase;
+if(isNaN(newVal)) newVal=0;
+tArray[tIndex] =newVal;
+} // ( j )
+tStr = String.join(tArray, "\t");
+generationRowsNew[i] = tStr;
+} // ( i )
+
+
+//Convert Deposition Genes
+//----------------------------------
+for(i=1; i<generationRows.length; i++){
+tArray = split(generationRowsNew[i], "\t");
+for(j =0; j<DpGenes.length; j++){
+tIndex = DpGenes[j];
+oldVal = parseFloat( tArray[tIndex] );
+newVal = oldVal * Lrange + Lbase;
+if(isNaN(newVal)) newVal=0;
+tArray[tIndex] =newVal;
+} // ( j )
+tStr = String.join(tArray, "\t");
+generationRowsNew[i] = tStr;
+} // ( i )
+
+
+
+//Convert Pigment Genes
+//----------------------------------
+for(i=1; i<generationRows.length; i++){
+tArray = split(generationRowsNew[i], "\t");
+for(j =0; j<PiGenes.length; j++){
+tIndex = PiGenes[j];
+oldVal = parseFloat( tArray[tIndex] );
+newVal = oldVal * Arange + Abase;
+if(isNaN(newVal)) newVal=0;
+tArray[tIndex] =newVal;
+} // ( j )
+tStr = String.join(tArray, "\t");
+generationRowsNew[i] = tStr;
+} // ( i )
+
+
+dataFile = File.open(PopLocation +"gen_0_genes.txt");
+
+for(i=0; i<generationRowsNew.length;i++){
+print(dataFile, generationRowsNew[i]);
+}
+
+File.close(dataFile);
+
+}
+

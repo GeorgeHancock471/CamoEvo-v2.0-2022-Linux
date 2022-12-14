@@ -1,0 +1,468 @@
+/*
+____________________________________________________________________________________________________
+
+====================================================================================================
+										Compare LAB Color Distance
+====================================================================================================
+
+
+ Written By: 	George Hancock
+
+ Function: 	measures the average distance of RNL coordinates between RNL colour maps.
+				lower values equate to lower distances with zero being the lowest possible.
+				This tool can be useful for assessing how far away an object's colour is from 
+				its background.
+
+____________________________________________________________________________________________________
+*/
+
+
+setBatchMode(true);
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+
+settingsDefault=newArray(
+"1",								//0 //Threshold
+"Mean", 							//1 //Metric
+"Yes"								//2 //Frequency					
+)
+
+defaultDIR = getDirectory("plugins")+"/micaToolbox/RNL Colour Maps/RNL_Settings/DistanceMeasure.txt";
+settingsDefaultString = File.openAsString(defaultDIR);
+tempSettings = split(settingsDefaultString,"\n");
+if(tempSettings.length==settingsDefault.length) settingsDefault=tempSettings;
+
+
+
+colOptions = newArray("Colour based on map location","Lock colours between slices", "Use colour palette");
+roiManager("Show None");
+
+yesNo = newArray("No","Yes");
+metricArray=newArray("Mean","Max");
+
+Dialog.create("Colour Map Distance  Settings");
+	Dialog.addNumber("Threshold", parseFloat(settingsDefault[0]),4,6,"");
+	Dialog.addChoice("Metric", metricArray,settingsDefault[1]);
+	Dialog.addChoice("Frequency Weighting", yesNo,settingsDefault[2]);
+Dialog.show();
+
+PercentageV = Dialog.getNumber();
+metricChoice = Dialog.getChoice();
+yesNoChoice = Dialog.getChoice();
+
+
+settingsDefault[0]=PercentageV; 
+settingsDefault[1]=metricChoice;
+settingsDefault[2]=yesNoChoice; 
+
+
+File.delete(defaultDIR);
+
+for(i=0;i<settingsDefault.length;i++){
+File.append(settingsDefault[i], defaultDIR);
+}
+
+
+
+
+
+
+setBatchMode(true);
+
+
+//----------Find map images------------
+
+alreadyOpen = 0;
+imList = getList("image.titles");
+
+mapList = newArray();
+
+for(i=0; i<imList.length; i++){
+	selectImage(imList[i]);
+	if(startsWith(imList[i], "color-map-") == true)
+		mapList = Array.concat(mapList, getTitle());
+}
+
+
+
+if(mapList.length > 0)
+	alreadyOpen = 1;
+else {
+	path = getDirectory("Choose directory containing colour maps");
+	list = getFileList(path);
+
+	print("________________________________");
+	print("Colour map files:");
+
+	for(i=0; i<list.length; i++)
+	if(endsWith(list[i], ".tif") == 1){
+		print(list[i]);
+		open(path + list[i]);
+		if(startsWith( list[i], "color-map-") == true)
+			mapList = Array.concat(mapList, getTitle());
+		else close();
+	}
+	print("________________________________");
+}
+
+
+if(mapList.length == 0)
+	exit("There are no compatible maps; open all colour maps you wish to plot and compare and re-run");
+
+
+
+
+//-----------------------------------Set Zero Threshold-------------------------
+
+label=newArray(mapList.length);
+for(j=0; j<mapList.length; j++){
+			selectImage(mapList[j]);
+			run("Select None");
+			ID = "norm-"+mapList[j];
+			run("Duplicate...", "title=&ID  duplicate");
+			
+			
+			// Stack Measure
+			minMin=0;
+			maxMax=0;
+			for(S=0;S<nSlices;S++){
+			setSlice(S+1);
+			run("Select None");
+			getStatistics(area,mean,min,max,dev);
+			if(max>maxMax) maxMax=max;
+			}
+			minThresh = maxMax*(1-PercentageV);
+			
+			// Threshold
+			setOption("BlackBackground", true);
+			setThreshold(0,minThresh);
+			sumSum=0;
+					for(S=0;S<nSlices;S++){
+					setSlice(S+1);
+					run("Select None");
+					getStatistics(area,mean,min,max);
+					if(max<=minThresh){
+					run("Set...","value=0 slice");
+					}else{
+					run("Create Selection");
+					run("Set...","value=0 slice");
+					run("Select None");
+					getStatistics(area,mean);
+					sumSum+=area*mean;
+					}
+					}//(S)
+			run("Divide...","value=sumSum stack");
+			label[j]=replace(ID,"norm-color-map-","");
+			mapList[j]=ID;
+			}
+
+nID = getImageID();
+
+
+			
+//-----------------------------------Colour Overlap Measurement-------------------------
+if(mapList.length > 1){
+
+if(isOpen("Colour Distribution Overlap Measurements") == true){
+	IJ.renameResults("Colour Distribution Overlap Measurements", "Results");
+	
+	Table.setLocationAndSize(300, 300,600,200);
+	}
+	
+
+run("Clear Results");
+row = nResults;
+
+overlaps = newArray(mapList.length*mapList.length);
+
+
+for(j=0; j<mapList.length; j++){
+
+			
+			selectImage(mapList[j]);
+			run("Select None");
+			presentArray1=newArray(nSlices);
+			for(S=0;S<nSlices;S++){
+			setSlice(S+1);
+			getStatistics(area,mean,min,max);
+			if(max>0) presentArray1[S]=1;
+			}
+			
+
+	for(k=0; k<mapList.length; k++){
+
+		if(k!=j){
+		
+			selectImage(mapList[k]);
+			run("Select None");
+			presentArray2=newArray(nSlices);
+			for(S=0;S<nSlices;S++){
+			setSlice(S+1);
+			getStatistics(area,mean,min,max);
+			if(max>0) presentArray2[S]=1;
+			}
+			
+			
+		
+			run("Select None");
+			
+
+			distanceMeasureArray=newArray();
+			xpointsF=newArray();
+			ypointsF=newArray();
+			zpointsF=newArray();
+			fpointsF=newArray();
+			FBpointsF=newArray();
+			
+			areaScale=0;
+			
+			for(S=0;S<nSlices;S++){
+				if(presentArray1[S]==1){
+
+				
+				selectImage(mapList[j]);
+				setSlice(S+1);
+				run("Select None");
+				setThreshold(0,0);
+				run("Create Selection");
+				
+				run("Make Inverse");
+				if(selectionType != -1) {  
+				
+				getSelectionCoordinates(xpoints1, ypoints1);
+				getStatistics(areaScaleN);
+				areaScale+=areaScaleN;
+				
+				
+				freqArray=newArray(xpoints1.length);
+				for(f=0;f<xpoints1.length;f++){
+				freqArray[f] = getPixel(xpoints1[f],ypoints1[f]);
+				}
+				
+				
+				temp=xpoints1.length;
+				for(f=0;f<temp;f++){
+				v=temp-1-f;
+				if(freqArray[v]==0){
+				xpoints1=Array.deleteIndex(xpoints1,v);
+				ypoints1=Array.deleteIndex(ypoints1,v);
+				freqArray=Array.deleteIndex(freqArray,v);
+				}
+				}
+				
+				distanceMeasureArrayT=newArray(xpoints1.length);
+				
+				xpointsF=Array.concat(xpointsF,xpoints1);
+				ypointsF=Array.concat(ypointsF,ypoints1);
+				zpoints1=newArray(xpoints1.length);
+				FBpoints1=newArray(xpoints1.length);
+				
+				fpointsF=Array.concat(fpointsF,freqArray);
+				
+				for(i=0;i<xpoints1.length;i++){
+				zpoints1[i]=S;
+				}
+		
+				zpointsF=Array.concat(zpointsF,zpoints1);
+				
+				selectImage(mapList[k]);
+							
+					for(checkPixel=0; checkPixel<xpoints1.length; checkPixel++){
+					
+					nearestMaxFreq=0;
+						
+					w=getWidth();
+					h=getHeight();
+					
+					cap=w*h*nSlices;
+					
+					xO=xpoints1[checkPixel]-0.5;
+					yO=ypoints1[checkPixel]-0.5;
+					zO=S+1;
+					
+					setSlice(zO);
+					
+				
+					found=0;
+					radius=0.5;
+					
+					mean = getPixel(xO+0.5,yO+0.5);
+					if(mean>0){ radius=0; found=1; nearestMaxFreq=mean;}
+					
+
+						while(found==0 && radius<cap){
+						//setBatchMode("show");
+						
+						
+						
+						if(presentArray2[zO-1]==1){
+						setSlice(zO);			
+						makeOval(xO-radius,yO-radius,radius*2,radius*2);
+						getStatistics(area,mean,min,max);			
+						if(mean>0){
+						found=1; nearestMaxFreq=max;
+						}
+						}
+
+						if(nSlices>1){
+						if(found==0){
+						for(R=0;R<radius+1;R++){	
+						nS=zO-R;
+						if(nS>0){
+							if(presentArray2[nS-1]==1){
+							setSlice(nS);
+							tempR=radius-R;
+							if(tempR>0){
+							makeOval(xO-tempR,yO-tempR,tempR*2,tempR*2);
+							getStatistics(area,mean,min,max);			
+								if(mean>0){
+								found=1;  nearestMaxFreq=max;
+								R=radius;
+								}
+							} else {
+							mean = getPixel(xO,yO);
+							getStatistics(area,mean,min,max);			
+								if(mean>0){
+								found=1;  nearestMaxFreq=max;
+								R=radius;
+								}
+							}
+							}
+						}else{R=radius;}	
+						}
+						}
+
+						if(found==0){
+						for(R=0;R<radius+1;R++){	
+						nS=zO+R;
+						if(nS<=nSlices){
+							if(presentArray2[nS-1]==1){
+							setSlice(nS);
+							tempR=radius-R;
+							if(tempR>0){
+							makeOval(xO-tempR,yO-tempR,tempR*2,tempR*2);
+							getStatistics(area,mean,min,max);			
+								if(mean>0){
+								found=1;  nearestMaxFreq=max;
+								R=radius;
+								}
+							} else {
+							mean = getPixel(xO,yO);
+							getStatistics(area,mean,min,max);			
+								if(mean>0){
+								found=1;  nearestMaxFreq=max;
+								R=radius;
+								}
+							}
+							}
+						}else{R=radius;}		
+						}
+						}
+						}//nslice>1
+
+
+
+									
+						if(found==0)radius=radius+0.5;
+									
+									
+						}
+						
+					FBpoints1[checkPixel]=nearestMaxFreq;
+						
+					if(yesNoChoice=="Yes") radius=radius*freqArray[checkPixel];
+					if(isNaN(radius)) radius=0;
+					distanceMeasureArrayT[checkPixel] = radius;
+				
+					}//(Pixels)
+					
+					FBpointsF = Array.concat(FBpointsF,FBpoints1);
+					
+					distanceMeasureArray=Array.concat(distanceMeasureArray,distanceMeasureArrayT);
+			
+				}//Selection
+				else { exit("error"); }
+				}//Present
+			}//(Slices)	
+			
+			
+			if(distanceMeasureArray.length==0){
+			Array.show("Present?",presentArray1,presentArray2);
+			setBatchMode("exit and display");
+			exit
+			
+			}
+			
+
+			
+			Array.getStatistics(FBpointsF,min,max,mean);
+			
+			//Array.show(FBpointsF,fpointsF);
+			//print("Freq FB",FBpointsF.length*mean);
+
+			Array.getStatistics(fpointsF,min,max,meanF);
+			//print("Freq",fpointsF.length*meanF);
+	
+			
+			Array.getStatistics(distanceMeasureArray,min,MaxDistance,MeanDistance);
+			
+			if(metricChoice=="Mean") Measurement=MeanDistance;
+			if(metricChoice=="Max") Measurement=MaxDistance;
+			
+			if(yesNoChoice=="Yes") Measurement=Measurement*distanceMeasureArray.length/(fpointsF.length*meanF);
+			
+			setResult(label[k], j, Measurement);	
+			
+			
+			Array.getStatistics(presentArray1,min,max,MP1);
+			Array.getStatistics(presentArray2,min,max,MP2);
+			
+			/*
+			Array.show(FBpointsF,zpointsF,xpointsF,ypointsF,distanceMeasureArray);
+			print("F Leng_"+label[j]+"_"+label[k]+"= ", FBpointsF.length);
+			print("AreaScale",areaScale);
+			print("Measure",Measurement);
+			*/
+			
+			} else {
+	
+	setResult(label[k], j, 0);
+	
+	}//k!=j
+	
+	}//k
+	
+	
+}//j
+
+
+
+
+for(j=0; j<mapList.length; j++){
+	setResult("Label", j, label[j]);
+
+}//j
+
+updateResults();
+
+
+if(isOpen("LAB Measurements")) close("LAB Measurements");
+
+
+IJ.renameResults("Results","LAB Measurements");
+
+}// if more than one map measure overlaps
+
+
+

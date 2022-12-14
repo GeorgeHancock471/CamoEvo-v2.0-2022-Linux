@@ -1,0 +1,118 @@
+/*____________________________________________________________________
+
+	Title: Combine Genes and Ranks
+	Authors:  George Hancock 
+	Date: 19/04/22
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Merges all the genes and ranks files into one table
+
+*/
+
+
+
+
+currentDefault = File.getDefaultDir;
+
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+
+popDIR = getDirectory("population");
+
+setBatchMode(true);
+
+
+fileList  =  getFileList(popDIR);
+
+Leng = lengthOf(fileList );
+
+
+completedGen = newArray();
+dataSet = newArray();
+
+
+for(i=0; i<Leng; i++) { 
+		if(endsWith(fileList[i], "_ranks.txt")!=1 && startsWith(fileList[i], "gen")==1 ){
+			completedGen = Array.concat(completedGen, fileList[i]);
+		}
+	
+	}
+	
+
+
+
+saveArray=newArray();
+
+for(A=0;A<completedGen.length;A++){
+
+geneDir=popDIR+"gen_"+A+"_genes.txt";
+rankDir=popDIR+"gen_"+A+"_ranks.txt";
+
+currentGenes = File.openAsString(geneDir);
+currentRanks = File.openAsString(rankDir);
+
+geneRows = split(currentGenes, "\n");
+rankRows = split(currentRanks, "\n");
+
+if(A==0){
+titleGene = split(geneRows[0],"\t");
+titleRows = split(rankRows[0],"\t");
+
+
+titleGene = Array.deleteIndex(titleGene,0);
+
+titleRow = Array.concat("Generation",titleRows,titleGene);
+titleRow = String.join(titleRow,"\t");
+saveArray = Array.concat(saveArray,titleRow);
+}
+
+geneRows = Array.deleteIndex(geneRows,0);
+rankRows = Array.deleteIndex(rankRows,0);
+
+
+	for(j=0; j<rankRows.length; j++){
+	ranks = split(rankRows[j], "\t");
+	refID = ranks[0];
+
+	for(i=0; i<geneRows.length; i++){
+	genes = split(geneRows[i], "\t");
+	compID = genes[0];
+	genes = Array.deleteIndex(genes, 0);
+	
+		if(refID == compID){
+		
+		Row = Array.concat(A,ranks, genes);
+		Row = String.join(Row, "\t");
+		
+		saveArray = Array.concat(saveArray,Row);
+		
+		}
+
+	
+	} // (i)
+	} // (j)
+	
+
+} // (A)
+
+FolderName=File.getName(popDIR);
+
+saveDIR = popDIR + "Data_Gene&Ranks_" + FolderName +".txt";
+
+if(File.exists(saveDIR)) File.delete(saveDIR);
+
+for(i=0; i< saveArray.length; i++){
+
+
+	File.append(saveArray[i], saveDIR);
+
+
+}

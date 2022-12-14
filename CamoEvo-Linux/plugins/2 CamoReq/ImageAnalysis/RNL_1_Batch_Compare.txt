@@ -1,0 +1,120 @@
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+  
+setBatchMode(false);
+ run("ROI Manager...");
+
+setBatchMode(true);
+
+close("*");
+
+while(roiManager("count") > 0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+
+
+//Select Population
+currentDefault = File.getDefaultDir;
+
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+popDIR = getDirectory("Choose-Population");
+
+fileList  =  getFileList(popDIR);
+
+Leng = lengthOf(fileList );
+
+completedGen = newArray();
+
+
+for(i=0; i<Leng; i++) { 
+		if(startsWith(fileList[i], "GenRNL") ){
+			completedGen = Array.concat(completedGen, fileList[i]);
+		}
+	
+	}
+	
+
+
+//Select Background for Comparison
+
+backgroundFilePath = File.openDialog("Background");
+
+backgroundFileName = File.getName(backgroundFilePath);
+
+backgroundROI = replace(backgroundFileName,"CIE XYZ_","");
+backgroundROI = replace(backgroundROI,".tif","");
+backgroundROI = replace(backgroundROI,".TIF","");
+
+
+
+//Measures
+
+
+numGenArray = Array.getSequence(completedGen.length);	
+
+
+RNLdir = popDIR + "RNL_measures.txt";
+if(File.exists(RNLdir)) File.delete(RNLdir);
+
+
+tArr = newArray("Generation","ID","RNL_Match");
+tStr=String.join(tArr,"\t");
+File.append(tStr,RNLdir);
+
+
+for(B=0;B<numGenArray.length;B++){
+
+currentDIR = popDIR +"GenRNL_"+B+"/";
+
+genChoice = B;
+
+pastePath = currentDIR+"Background.tif";
+
+
+File.copy(backgroundFilePath,pastePath);
+
+
+rString="figure=[] scale=8 z-axis_resolution=1 colour=[Use colour palette] unify boundary=1 jnd=1 figure_0=20 tick=2 line=2 axis_font=4 add label=3 choose=["+currentDIR+"]";
+run("3 Plot and Compare RNL Colour Maps", rString);
+
+File.delete(pastePath);
+
+selectWindow("Colour Distribution Overlap Measurements");
+
+
+
+cLabels = split(Table.headings,"\t");
+
+lArray = Table.getColumn(cLabels[1]);
+rArray = Table.getColumn(backgroundROI);
+
+for(g=1;g<rArray.length;g++){
+tArr = newArray(B,lArray[g],rArray[g]);
+tStr=String.join(tArr,"\t");
+File.append(tStr,RNLdir);
+}
+
+
+
+close("Colour Distribution Overlap Measurements");
+}
+
+waitForUser("Done");
+

@@ -1,0 +1,147 @@
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+setBatchMode(true);
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+
+
+close("*");
+
+
+
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("Delete");
+}
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+GenStr = File.openAsString(GenNum);
+GenArr = split(GenStr, "\n");
+GenRand = newArray(GenArr.length);
+
+BgDirectory = CheckDirectory+"Backgrounds/";
+BGList  =  getFileList(BgDirectory);
+
+open(BgDirectory+BGList[0]);
+rename("BG");
+w=getWidth();
+h=getHeight();
+run("Lab Stack");
+
+
+
+
+makeRectangle(w/2-200,h/2-200,400,400);
+roiManager("Add");
+roiManager("select",roiManager("count")-1);
+roiManager("rename","BG");
+
+
+setSlice(1); getStatistics(area,bgL);
+setSlice(2); getStatistics(area,bgA);
+setSlice(3); getStatistics(area,bgB);
+
+for(i=0;i<roiManager("count");i++){
+roiManager("select",i);
+run("Generate LAB Map");
+setBatchMode("show");
+}
+close("BG");
+
+
+patDIR =CheckDirectory+"GenPat_"+GenNumber+"/";
+
+
+
+GenRand[0] = "ID"+"\t"+"Fitness";
+for(j=1;j<GenRand.length;j++){
+t = split(GenArr[j], "\t");
+
+open(patDIR+t[0]+".tif");
+run("Lab Stack");
+
+
+if(j==1){
+setSlice(1);
+setThreshold(1,100);
+run("Create Selection");
+roiManager("add");
+roiManager("select",roiManager("count")-1);
+roiManager("rename","TG");
+getStatistics(areaTG);
+} 
+gt=getTitle();
+roiManager("select",roiManager("count")-1);
+
+
+setSlice(1); getStatistics(area,tgL);
+setSlice(2); getStatistics(area,tgA);
+setSlice(3); getStatistics(area,tgB);
+
+
+run("Generate LAB Map");
+setBatchMode("show");
+close(gt);
+gt=getTitle();
+run("Compare LAB Maps", "threshold=0.9000 metric=Mean frequency=Yes");
+
+Difference = -getResult("TG",0);
+
+difL = Math.sqrt(Math.sqr(tgL-bgL));
+difA = Math.sqrt(Math.sqr(tgA-bgA));
+difB = Math.sqrt(Math.sqr(tgB-bgB));
+
+
+
+print(t[0],Difference-difL/3-difA/3-difB/3);
+GenRand[j] = t[0]+"\t"+Difference-difL/3-difA/3-difB/3;
+
+
+selectWindow("color-map-BG");
+close("\\Others");
+}
+
+
+
+
+
+	dataFile = File.open(SurvGenNum);
+	for(i=0;i<GenRand.length;i++){
+		print(dataFile, GenRand[i]);
+	}		
+	File.close(dataFile);

@@ -1,0 +1,195 @@
+/*____________________________________________________________________
+
+	Title: Measure XYZ Values
+	Authors:  George Hancock and Jolyon Troscianko
+	Date: 19/04/22
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Measures the XYZ Mean, Dev and GabRat
+
+*/
+
+
+popDIR = getDirectory("population");
+FolderName=File.getName(popDIR);
+saveDIR = popDIR + "Data_Measures_" + FolderName +".txt";
+
+
+setBatchMode(true);
+
+
+
+while(roiManager("count")>0){
+roiManager("select", 0);
+roiManager("delete");
+}
+
+selectImage("Background");
+run("Lab Stack");
+
+//setBatchMode("exit and display");
+
+
+
+
+
+//MeasureTitles
+//========================================
+
+//Make Sure to add all the titles and in the same order as the measurements.
+
+TiArray=newArray();
+
+TiArray=Array.concat(TiArray,"Target_L_Mean","Target_L_Dev");
+TiArray=Array.concat(TiArray,"Target_A_Mean","Target_A_Dev");
+TiArray=Array.concat(TiArray,"Target_B_Mean","Target_B_Dev");
+
+TiArray=Array.concat(TiArray,"BgGlobal_L_Mean","BgGlobal_L_Dev");
+TiArray=Array.concat(TiArray,"BgGlobal_A_Mean","BgGlobal_A_Dev");
+TiArray=Array.concat(TiArray,"BgGlobal_B_Mean","BgGlobal_B_Dev");
+
+TiArray=Array.concat(TiArray,"BgLocal_L_Mean","BgLocal_L_Dev");
+TiArray=Array.concat(TiArray,"BgLocal_A_Mean","BgLocal_A_Dev");
+TiArray=Array.concat(TiArray,"BgLocal_B_Mean","BgLocal_B_Dev");
+
+TiArray=Array.concat(TiArray,"Target_L_GabRat","Target_A_GabRat","Target_B_GabRat");
+
+if(File.exists(saveDIR)){
+tS=File.openAsString(saveDIR);
+tS = split(tS,"\n");
+if(tS[0]!=String.join(TiArray,"\t")) File.delete(saveDIR);
+}
+
+if(!File.exists(saveDIR)){
+File.append(String.join(TiArray,"\t"),saveDIR);
+}
+
+
+
+
+
+//Measures Array
+//========================================
+
+MsArray=newArray(); // Blank Measure Array
+
+//setBatchMode("show");
+
+
+selectImage("TargetMask");
+run("Create Selection");
+roiManager("Add");
+	roiManager("select",0);
+	run("Interpolate", "interval=1");
+	roiManager("update");
+	roiManager("select",0);
+close();
+
+selectImage("LocalMask");
+run("Create Selection");
+roiManager("Add");
+close();
+
+
+
+//TARGET
+//========================================
+selectImage("Background");
+roiManager("select",0);
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+
+//BACKGROUND GLOBAL
+//========================================
+run("Make Inverse");
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+
+
+//BACKGROUND LOCAL
+//========================================
+roiManager("select",1);
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+MsArray=Array.concat(MsArray,mean,sd); // Adds the measure to the measure array.
+
+
+
+
+//GabRat
+//========================================
+roiManager("Select", 0);
+
+
+	angles = 6;
+	sigma = 3.0;
+	gamma = 1.0;
+	freq = 2.0;
+
+
+tStr = getTitle + "_" + tStr;
+
+for(z=0;z<3;z++){
+		setSlice(z+1);
+		tStr2 = tStr + "_" + getMetadata("Label");
+		run("GabRat Disruption", "number_of_angles=&angles sigma=&sigma gamma=&gamma frequency=&freq label=&tStr2");
+}
+
+
+
+
+MsArray=Array.concat(MsArray,getResult("GabRat",nResults-3),getResult("GabRat",nResults-2),getResult("GabRat",nResults-1)); // Adds the measure to the measure array.
+
+
+close();
+
+
+//------------------------------------------------------------------------------------------------------------------
+
+//Save Measurements
+//========================================
+
+File.append(String.join(MsArray,"\t"),saveDIR);

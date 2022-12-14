@@ -1,0 +1,664 @@
+/*____________________________________________________________________
+
+	Title: ImageGA Populator
+	Authors:  George Hancock 
+	Date: 24/05/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This code relays which templates and which algorithm settings CamoEvo wants ImageGA to use.
+
+*/
+
+
+setBatchMode(true);
+
+setOption("ShowRowNumbers", false);
+
+
+//============================================================================
+// Make file names easier to handle.
+//============================================================================
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+//----------------------------------------------------------------------------
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+
+
+//===========================================================================
+// Choose Population Location
+//============================================================================
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory you would like your Generations to be stored.");
+	Dialog.show();
+
+
+popDIR = getDirectory("Select_Folder");
+
+
+
+
+
+//===========================================================================
+// Assign Algorithm Variables
+//===========================================================================
+defaultSettingsT = newArray(
+
+// Population Setup
+"0", 				// Sex
+"custom", 			// Use Template 
+"24", 				// Population Size
+"10",				// Max Number of Generations
+"random", 			// Population Genotype
+
+// Division Setup
+"fraction",			// Unit
+"0.50", 			// Deletion Pool	
+"0.50", 			// Mating Pool
+"0.0000", 			// Mutate Pool
+
+// Gametic Mutation
+"0.001",			// Gamete Point Mutation
+"0.001",			// Gamete Lvl1 Mutation
+"0.001",			// Gamete Lvl2 Mutation
+"0.001",			// Gamete Linked Mutation
+
+// Offspring Mutation
+"0.001",			// Offspring Point Mutation
+"0.001",			// Offspring Lvl1 Mutation
+"0.001",			// Offspring Lvl2 Mutation
+"0.001",			// Offspring Linked Mutation
+
+// Clonal Mutation
+"0.001",			// Clone Point Mutation
+"0.001",			// Clone Lvl1 Mutation
+"0.001",			// Clone Lvl2 Mutation
+"0.001",			// Clone Linked Mutation
+
+// Protective Mechanisms
+"false",			// Clone Best
+"false",			// Rescue Best
+
+// Adaptive Mechanisms
+"0.15",				// Displacement Mutation
+"true",				// Scale mutation with rank
+"true",				// Scale mutation with gene variance
+"true",				// Scale mutation with generation
+
+// Crossover
+"random",			//Crossover Type
+"0.80000",			//Crossover Probability
+"incomplete",		//Crossover Completeness
+
+// Mating Systems
+"ranked_choice",	//Breeding Pool 
+"random",			//Mating System
+"none");			//Poly System
+
+
+
+settingsFilePath = popDIR + "/AlgorithmSettings.txt";
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+} 
+
+
+if(File.exists(settingsFilePath) != 1){
+
+settingsFilePath = getDirectory("plugins") + "ImageGA/RequisitFunctions/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+} 
+}
+
+
+// Population Setup
+inableSex = parseFloat(defaultSettings[0]);
+populationChoice = defaultSettings[1];
+populationSize = parseFloat(defaultSettings[2]);
+generationCap = parseFloat(defaultSettings[3]);
+populationGenotype = defaultSettings[4];
+
+
+// Division Setup
+segmentationUnit = defaultSettings[5];
+segmentationDeletion = parseFloat(defaultSettings[6]);
+segmentationBreeding = parseFloat(defaultSettings[7]);
+segmentationMutate =  parseFloat(defaultSettings[8]);
+
+
+//Gametic Mutation
+pointMutationRateGamete = parseFloat(defaultSettings[9]);
+lvl1MutationRateGamete = parseFloat(defaultSettings[10]);
+lvl2MutationRateGamete = parseFloat(defaultSettings[11]);
+linkedMutationProbGamete = parseFloat(defaultSettings[12]);
+
+
+//Offspring Mutation
+pointMutationRateOffspring = parseFloat(defaultSettings[13]);
+lvl1MutationRateOffspring = parseFloat(defaultSettings[14]);
+lvl2MutationRateOffspring = parseFloat(defaultSettings[15]);
+linkedMutationProbOffspring = parseFloat(defaultSettings[16]);
+
+
+//Clonal Mutation
+pointMutationRateClone = parseFloat(defaultSettings[17]);
+lvl1MutationRateClone = parseFloat(defaultSettings[18]);
+lvl2MutationRateClone = parseFloat(defaultSettings[19]);
+linkedMutationProbClone = parseFloat(defaultSettings[20]);
+
+
+//Protective Mechanisms
+cloneBest =  defaultSettings[21];
+rescueBest = defaultSettings[22];
+
+
+//Adaptive Mechanisms
+distanceRateOffspring = parseFloat(defaultSettings[23]);
+rankedProbability = defaultSettings[24];
+varianceProbability = defaultSettings[25];
+fitnessProbability = defaultSettings[26];
+
+
+//Crossover
+crossOverType = defaultSettings[27];
+crossOverProbability = parseFloat(defaultSettings[28]);
+crossOverBalance = defaultSettings[29];
+
+
+//Mating System
+poolAssignmentSystem = defaultSettings[30];
+matingAssignmentSystem = defaultSettings[31];
+polySystem = defaultSettings[32];
+
+
+StartingGen = popDIR + "gen_0" + "_genes.txt";
+
+if(File.exists(StartingGen) != 1){
+
+//===========================================================================
+// Select Genotype Template
+//============================================================================
+
+
+Dialog.create("Choose Template");
+		Dialog.addMessage("________________Choose File___________________");
+		Dialog.addMessage("Select the file you want yo use as your template");
+	Dialog.show();
+
+
+templateDIR = File.openDialog("Select_Template");
+
+print(templateDIR);
+
+if(endsWith(templateDIR ,".csv")){
+templateGenes = File.openAsString(templateDIR);
+geneRows = split(templateGenes,"\n");
+geneNames = split(geneRows[0],",");
+templateGenes = split(geneRows[1],",");
+}
+
+if(endsWith(templateDIR ,".txt")){
+templateGenes = File.openAsString(templateDIR);
+geneRows = split(templateGenes,"\n");
+geneNames = split(geneRows[0],"\t");
+templateGenes = split(geneRows[1],"\t");
+}
+
+//===========================================================================
+// Create Starting Population
+//============================================================================
+
+
+// Existing Population
+//------------------------------------------------
+
+
+PopChoices = newArray("existing", "custom");
+if(populationChoice == "existing"){
+	
+Generation0Rows = Array.copy(geneRows);
+	if(endsWith(templateDIR ,".csv")){
+	for(i=0; i<geneRows.length; i++){
+	tArray = split(geneRows[i],",");
+	Generation0Rows[i] = String.join(tArray, "\t");
+	}
+	}
+	
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	
+	}
+
+	else
+	
+	{
+
+
+// Random Population
+//------------------------------------------------
+
+if (populationGenotype=="random")	{
+
+Generation0Rows = newArray(populationSize+1);
+
+geneNameStr = String.join(geneNames, "\t");
+Generation0Rows[0] = geneNameStr;
+
+for(i=1; i < Generation0Rows.length; i++){
+rowArray = newArray(geneNames.length);
+
+for(j=0; j < geneNames.length; j++) {
+
+if(j==0) rowArray[j] = "Gen0_Mut0_ID"+i-1; 	// ID
+
+if(j==1 || j==2) rowArray[j] = "-"; 	// Parent
+
+if(j==3){  									// Sex
+	if(inableSex==1){
+	if(parseInt(i/2) == i/2){ rowArray[j] = "m"; } else { rowArray[j] = "f"; } }
+	if(inableSex==0) rowArray[j] = "-"; 
+}
+if(j>3){									// Gene
+rowArray[j] = toString(random());
+}
+
+} // (j)
+Generation0Rows[i] = String.join(rowArray, "\t");
+} // (i)
+	
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	}
+
+
+
+// Uniform Population
+//------------------------------------------------
+
+if (populationGenotype=="uniform")	{
+
+Generation0Rows = newArray(populationSize+1);
+
+geneNameStr = String.join(geneNames, "\t");
+Generation0Rows[0] = geneNameStr;
+
+geneDistSeq = newArray(populationSize);
+
+for(i=0; i<geneDistSeq.length; i++){
+geneDistSeq[i] = (i)*(1/(populationSize-1));
+}
+
+for(j=0; j < geneNames.length; j++) {
+
+if(j==0) {
+for(i=1; i < Generation0Rows.length; i++){
+Generation0Rows[i] = "Gen0_Mut0_ID"+i-1; 		// ID
+
+} // (i)
+} // (if)
+
+if(j==1 || j==2) {
+for(i=1; i < Generation0Rows.length; i++){
+Generation0Rows[i] = Generation0Rows[i] + "\t" + "-"; 				// Parent
+} // (i)
+} // (if)
+
+
+if(j==3){ 								// Sex
+for(i=1; i < Generation0Rows.length; i++){
+	if(inableSex==1){
+	if(parseInt(i/2) == i/2) Generation0Rows[i] =  Generation0Rows[i] + "\t" + "m";
+	if(parseInt(i/2) != i/2) Generation0Rows[i] =  Generation0Rows[i] + "\t" +  "f";
+	}
+	if(inableSex==0)  Generation0Rows[i] =  Generation0Rows[i] + "\t" +  "-"; 
+	
+} // (i)
+} // (if)
+
+
+
+if(j>3){								// Gene
+
+randSeq1 = newArray(geneDistSeq.length);
+for(i=0; i<geneDistSeq.length;i++){
+randSeq1[i] = random();
+} // (i)
+randSeq2 = Array.rankPositions(randSeq1);
+
+for(i=1; i < Generation0Rows.length; i++){
+
+tIndex = randSeq2[i-1];
+tVal = geneDistSeq[tIndex];
+
+Generation0Rows[i] =  Generation0Rows[i] + "\t" + tVal;
+
+
+}
+
+
+} // (gene)
+
+} // (j)
+
+
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	}
+
+
+// Standard Population
+//------------------------------------------------
+
+if (populationGenotype=="standard")	{ 
+
+Generation0Rows = newArray(populationSize+1);
+
+geneNameStr = String.join(geneNames, "\t");
+Generation0Rows[0] = geneNameStr;
+
+for(i=1; i < Generation0Rows.length; i++){
+rowArray = newArray(geneNames.length);
+
+for(j=0; j < geneNames.length; j++) {
+
+if(j==0) rowArray[j] = "Gen0_Mut0_ID"+i-1; 	// ID
+
+if(j==1 || j==2) rowArray[j] = "-"; 	// Parent
+
+if(j==3){  									// Sex
+	if(inableSex==1){
+	if(parseInt(i/2) == i/2){ rowArray[j] = "m"; } else { rowArray[j] = "f"; } }
+	if(inableSex==0) rowArray[j] = "-"; 
+}
+if(j>3){									// Gene
+tVal = parseFloat(templateGenes[j]);
+
+rowArray[j] = tVal;
+}
+
+} // (j)
+Generation0Rows[i] = String.join(rowArray, "\t");
+} // (i)
+	
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	}
+
+
+
+
+
+
+
+
+// Gaussian Population
+//------------------------------------------------
+
+if (populationGenotype=="gaussian")	{ 
+
+Generation0Rows = newArray(populationSize+1);
+
+geneNameStr = String.join(geneNames, "\t");
+Generation0Rows[0] = geneNameStr;
+
+for(i=1; i < Generation0Rows.length; i++){
+rowArray = newArray(geneNames.length);
+
+for(j=0; j < geneNames.length; j++) {
+
+if(j==0) rowArray[j] = "Gen0_Mut0_ID"+i-1; 	// ID
+
+if(j==1 || j==2) rowArray[j] = "-"; 	// Parent
+
+if(j==3){  									// Sex
+	if(inableSex==1){
+	if(parseInt(i/2) == i/2){ rowArray[j] = "m"; } else { rowArray[j] = "f"; } }
+	if(inableSex==0) rowArray[j] = "-"; 
+}
+if(j>3){									// Gene
+tVal = parseFloat(templateGenes[j]);
+tVal2 = tVal + random("gaussian")/6;
+if(tVal2>1) tVal2=1;
+if(tVal2<0) tVal2=0;
+
+
+rowArray[j] = tVal2;
+}
+
+} // (j)
+Generation0Rows[i] = String.join(rowArray, "\t");
+} // (i)
+	
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	}
+
+
+// NormalDist Population
+//------------------------------------------------
+
+if (populationGenotype=="normal")	{
+
+Generation0Rows = newArray(populationSize+1);
+
+geneNameStr = String.join(geneNames, "\t");
+Generation0Rows[0] = geneNameStr;
+
+geneDistSeq = newArray(populationSize);
+
+for(i=0; i<geneDistSeq.length; i++){
+
+g = (i)*(1/(populationSize-1));
+
+sg = sin(g*PI);
+
+if(i<(geneDistSeq.length/2)){
+	geneDistSeq[i]  = pow(sg,0.75)*0.5;
+} else {
+	geneDistSeq[i]  = 0.5 + (1-pow(sg,0.75))*0.5;
+}
+
+}
+
+for(j=0; j < geneNames.length; j++) {
+
+if(j==0) {
+for(i=1; i < Generation0Rows.length; i++){
+Generation0Rows[i] = "Gen0_Mut0_ID"+i-1; 		// ID
+
+} // (i)
+} // (if)
+
+if(j==1 || j==2) {
+for(i=1; i < Generation0Rows.length; i++){
+Generation0Rows[i] = Generation0Rows[i] + "\t" + "-"; 				// Parent
+} // (i)
+} // (if)
+
+
+if(j==3){ 								// Sex
+for(i=1; i < Generation0Rows.length; i++){
+	if(inableSex==1){
+	if(parseInt(i/2) == i/2) Generation0Rows[i] =  Generation0Rows[i] + "\t" + "m";
+	if(parseInt(i/2) != i/2) Generation0Rows[i] =  Generation0Rows[i] + "\t" +  "f";
+	}
+	if(inableSex==0)  Generation0Rows[i] =  Generation0Rows[i] + "\t" +  "-"; 
+	
+} // (i)
+} // (if)
+
+
+
+if(j>3){								// Gene
+
+randSeq1 = newArray(geneDistSeq.length);
+for(i=0; i<geneDistSeq.length;i++){
+randSeq1[i] = random();
+} // (i)
+randSeq2 = Array.rankPositions(randSeq1);
+
+for(i=1; i < Generation0Rows.length; i++){
+
+tIndex = randSeq2[i-1];
+tVal = geneDistSeq[tIndex];
+
+Generation0Rows[i] =  Generation0Rows[i] + "\t" + tVal;
+
+
+}
+
+
+} // (gene)
+
+} // (j)
+
+
+	
+// Save the genes 
+//---------------------------------
+
+	StartingGen = popDIR + "gen_0" + "_genes.txt";
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<Generation0Rows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	}
+
+
+
+//Modify Genotype Ranges
+//=============================================================
+geneRangeDIR = popDIR+"Transform_StartGeneRanges.txt";
+
+if(File.exists(geneRangeDIR)&&populationGenotype!="standard"){
+
+geneSTR = File.openAsString(StartingGen);
+GenesRows=split(geneSTR,"\n");
+
+Temp=split(GenesRows[0]);
+
+
+geneRangeSTR = File.openAsString(geneRangeDIR );
+geneRangeARR = split(geneRangeSTR,"\n");
+geneRangeMIN =  split(geneRangeARR[1],"\t");
+geneRangeMAX =  split(geneRangeARR[2],"\t");
+
+	for(i=1;i<GenesRows.length;i++){
+	
+	tArr = split(GenesRows[i],"\t");
+
+	for(j=4;j<Temp.length;j++){
+	
+	tV = parseFloat(tArr[j]);
+	
+	tMx =  parseFloat(geneRangeMAX[j]);
+	tMn =  parseFloat(geneRangeMIN[j]);
+	
+	tArr[j] = tV *(tMx-tMn) + tMn;
+
+	}
+	
+	GenesRows[i] = String.join(tArr,"\t");
+	
+	}
+	
+
+
+genesSTR = String.join(GenesRows,"\n");
+
+File.delete(StartingGen);
+File.append(genesSTR,StartingGen);
+
+}
+
+//=============================================================
+
+
+
+

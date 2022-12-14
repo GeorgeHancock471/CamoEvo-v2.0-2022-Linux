@@ -1,0 +1,710 @@
+/*____________________________________________________________________
+
+	Title: Regenerate Stimuli
+	Authors:  George Hancock 
+	Date: 13/09/21
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Recreates the stimuli used. Allowing for it to be measured by CamoEvo.
+
+*/
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+setBatchMode(false);
+ run("ROI Manager...");
+
+setBatchMode(true);
+
+close("*");
+
+while(roiManager("count") > 0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+
+genArray=newArray();
+
+TmeanL=newArray();
+TcontrastL=newArray();
+
+TmeanA=newArray();
+TcontrastA=newArray();
+
+TmeanB=newArray();
+TcontrastB=newArray();
+
+
+BmeanL=newArray();
+BcontrastL=newArray();
+
+BmeanA=newArray();
+BcontrastA=newArray();
+
+BmeanB=newArray();
+BcontrastB=newArray();
+
+
+
+LmeanL=newArray();
+LcontrastL=newArray();
+
+LmeanA=newArray();
+LcontrastA=newArray();
+
+LmeanB=newArray();
+LcontrastB=newArray();
+
+
+
+gabRatL=newArray();
+gabRatA=newArray();
+gabRatB=newArray();
+
+
+
+// STEP 1, Select the Generation
+///==========================================================================================
+
+currentDefault = File.getDefaultDir;
+
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+
+
+
+popDIR = getDirectory("Choose-Population");
+
+fileList  =  getFileList(popDIR);
+
+Leng = lengthOf(fileList );
+
+completedGen = newArray();
+dataSet = newArray();
+
+
+for(i=0; i<Leng; i++) { 
+		if(endsWith(fileList[i], "_ranks.txt")!=1 && startsWith(fileList[i], "gen")==1 ){
+			completedGen = Array.concat(completedGen, fileList[i]);
+		}
+		
+		if(startsWith(fileList[i], "Data_Output")==1 ){
+			dataSet = Array.concat(dataSet, fileList[i]);
+		}
+	
+	}
+	
+
+numGenArray = Array.getSequence(completedGen.length);	
+
+
+useDataSetGate = 0;
+
+
+//If there are no generation .txt
+// Then recreate stimuli with the recreator.
+
+if(numGenArray.length<1){
+
+	if(dataSet.length>0){
+	
+	dataSet = File.openAsString(popDIR + dataSet[0]);
+	dataRows = split(dataSet,"\n");
+	finalGen = split(dataRows[dataRows.length-1], "\t");
+	numGenArray = Array.getSequence(finalGen[0]+1);	
+	
+	useDataSetGate = 1; 
+	}
+
+
+}
+	
+
+
+for(B=0;B<numGenArray.length;B++){
+genChoice = B;
+
+
+// STEP 2, Get the Records
+///==========================================================================================
+
+if(useDataSetGate == 0){
+
+genDIR = popDIR + "Combined_GenPat_" + genChoice + "/";
+
+recordDIR = genDIR + "Records.txt";
+
+recordText = File.openAsString(recordDIR);
+
+recordLines = split(recordText, "\n");
+
+}
+
+	popSettings = File.openAsString(popDIR + "Settings_Population.txt");
+	popRows = split(popSettings, "\n");
+	popSize = split(popRows[2], "\t");
+	popSize = popSize[1];
+	
+	numPerSlide = split(popRows[3],"\t");
+	numPerSlide = parseFloat(numPerSlide [1]);
+
+
+if(useDataSetGate == 1){
+
+
+
+	startLine = (genChoice*popSize)+1;
+	stopLine = ((genChoice+1)*popSize)+1;
+
+	recordLabels = split(dataRows[0],"\t");
+	recordLines = Array.slice(dataRows,startLine,stopLine); 
+
+
+	TargetChoice =  split(popRows[0], "\t");
+	TargetChoice =  TargetChoice[1];
+
+	TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+	TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+	TargetSettingsRows = split(TargetSettings , "\n");
+
+	for(i=0; i<TargetSettingsRows.length; i++){
+	temp = TargetSettingsRows[i];
+
+	if(startsWith(temp, TargetChoice)){
+	TargetSetting = temp;
+	}
+
+	}
+
+	TargetChoiceSettings = split(TargetSetting, "\t");
+
+	TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+	TargetPatternChoice = TargetChoiceSettings[3];
+	TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+	TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+}
+
+
+gameSet = popDIR+"Settings_Game.txt";
+gameSettings = File.openAsString(gameSet);
+gameSettings = split(gameSettings , "\n");
+tArr = split(gameSettings[0],"\t");
+TargetSize = tArr[1];
+TargetChoiceScale = replace(TargetSize,"px","");
+TargetChoiceScale = parseFloat(TargetChoiceScale);
+
+
+// If files exist
+if(useDataSetGate == 0){
+
+bgArray = newArray(recordLines.length-1);
+idArray = newArray(recordLines.length-1);
+xArray = newArray(recordLines.length-1);
+yArray = newArray(recordLines.length-1);
+fArray = newArray(recordLines.length-1);
+aArray = newArray(recordLines.length-1);
+
+for(i=0;i<recordLines.length-1;i++){
+
+tArray = split(recordLines[i+1],"\t");
+
+bgArray[i] = tArray[1];
+idArray[i] = tArray[2];
+xArray[i] = parseFloat(tArray[3]);
+yArray[i] = parseFloat(tArray[4]);
+fArray[i] = tArray[5];
+aArray[i] = parseFloat(tArray[6]);
+
+}
+}
+
+// If files don't exist
+if(useDataSetGate == 1){
+
+bgArray = newArray(recordLines.length);
+idArray = newArray(recordLines.length);
+xArray = newArray(recordLines.length);
+yArray = newArray(recordLines.length);
+fArray = newArray(recordLines.length);
+aArray = newArray(recordLines.length);
+
+
+bgIndex = index(recordLabels,"Image_ID");
+idIndex = index(recordLabels,"ID");
+xIndex = index(recordLabels,"X_Coordinate");
+yIndex = index(recordLabels,"Y_Coordinate");
+flipIndex = index(recordLabels,"Flip");
+angleIndex = index(recordLabels,"Rotation");
+
+for(i=0;i<recordLines.length;i++){
+
+tArray = split(recordLines[i],"\t");
+
+bgArray[i] = tArray[bgIndex];
+idArray[i] = tArray[idIndex];
+xArray[i] = parseFloat(tArray[xIndex]);
+yArray[i] = parseFloat(tArray[yIndex]);
+fArray[i] = tArray[flipIndex];
+aArray[i] = parseFloat(tArray[angleIndex]);
+
+}
+}
+
+
+
+
+targetROIs = newArray(bgArray.length);
+localROIs = newArray(bgArray.length);
+
+// STEP 3, Get Population Settings
+///==========================================================================================
+
+popSetDIR = popDIR + "PopulationSettings.txt";
+
+popSetText =  File.openAsString(popSetDIR);
+
+popSetList = split(popSetText, "\n");
+
+TargetSet = split(popSetList[0],"\t");
+TargetSetting = TargetSet[1];
+
+TargetChoice = TargetSetting;
+
+
+// Get Scales
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+targetDir = popDIR + "GenPat_"+genChoice+"/";
+backgroundDIR = popDIR + "Backgrounds/";
+
+
+
+// STEP 4, Create Image(s)
+///==========================================================================================
+
+for(A=0; A<bgArray.length; A++){
+
+//Values
+//-----------------
+backgroundChoice = backgroundDIR+bgArray[A];
+targetChoice = targetDir+idArray[A]+".tif";
+flipChoice = fArray[A];
+rotationChoice = aArray[A];
+xCoord = xArray[A];
+yCoord = yArray[A];
+nameNumber = A;
+
+
+//Load Bg & Target
+//-----------------
+
+
+if(A/numPerSlide == parseInt(A/numPerSlide)){ 
+open(backgroundChoice);
+rename("Background");
+}
+
+
+
+
+// If files exist
+if(File.exists(targetChoice)){
+	open(targetChoice);
+	rename("Target");
+}
+
+// If files don't exist
+if(!File.exists(targetChoice)){
+
+if(A==0){
+
+//Send Over Genes
+//----------------------------------------------------------------------------------	
+
+	titles = split(dataRows[0],"\t");
+	startIndex = index(titles, "Parent1");
+	templateRows = Array.slice(titles, startIndex, titles.length); 
+	templateRows =  Array.concat(titles[1], 	templateRows);
+	templateRows = String.join(templateRows, "\t");
+	
+	
+	dataFile = File.open(getDirectory("plugins") + "2 CamoReq/PopLocation.txt");
+	
+		print(dataFile, popDIR);
+		
+	File.close(dataFile);
+	
+
+
+popGenes = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+dataFile = File.open(popGenes);
+print(dataFile,templateRows);
+
+for(i=0; i<idArray.length; i++){
+
+	row = split(recordLines[i],"\t");
+	genes = Array.slice(row, startIndex, row.length);
+	genes = Array.concat(row[1], genes);
+	genes = String.join(genes, "\t");
+	
+	
+	standardString = 	genes;
+
+
+		print(dataFile,genes);
+		
+} // i
+
+File.close(dataFile);
+
+		if(TargetPatternChoice =="egg"){
+		run("Generate Eggs");
+		}
+
+		if(TargetPatternChoice =="animal_uni" || TargetPatternChoice =="animal_bil"){
+		run("Generate Targets");
+		}
+
+		if(TargetPatternChoice =="camo_wild"){
+		run("Camo Targets");
+		}
+
+		if(TargetPatternChoice =="advanced_bil" || TargetPatternChoice =="advanced_uni"){
+		run("Generate Animals");
+		}
+
+
+	
+	//setBatchMode("exit and display");
+		
+		
+}
+
+selectImage(idArray[A]);
+rename("Target");
+
+}
+
+
+
+
+
+
+//Adjust Target
+//-----------------
+
+
+run("Select All");
+
+if(flipChoice == "horizontal") run("Flip Horizontally");
+
+run("Rotate... ", "angle=[&rotationChoice] grid=1 interpolation=None");
+
+run("Size...", "width=&TargetChoiceScale  height=&TargetChoiceScale  depth=1 constrain interpolation=None");
+
+
+
+selectImage("Target");
+		run("Select All");
+		run("Duplicate...", "title=mask");
+		run("8-bit");
+		setThreshold(1, 255);
+		
+		run("Create Selection");
+		roiManager("Add");
+		roiManager("select", roiManager("count")-1);
+		rename("copy");
+		
+		run("Select All");
+		roiManager("Add")
+		roiManager("select", roiManager("count")-1);
+		rename("copySquare");
+		
+		roiManager("deselect");
+		
+		close("copySquare");
+		
+		selectImage("Target");
+
+		roiManager("Select", roiManager("Count")-1);
+		run("Copy");
+	
+
+
+//Paste Target
+//-----------------
+
+selectImage("Background");
+
+		roiManager("Select", roiManager("Count")-1);
+		Roi.getBounds(oldX, oldY, oldWidth, oldHeight);
+
+
+		
+		Roi.move(xCoord, yCoord);
+		roiManager("update");
+
+		setPasteMode("Transparent-zero");
+		run("Paste");
+		run("Gaussian Blur...", "sigma=0.5 slice");
+		
+
+	
+
+		roiManager("Select", roiManager("Count")-2);
+		
+		Roi.getBounds(x, y, width, height);
+		
+		targetROIx = xCoord +(x-oldX);
+		targetROIy = yCoord +(y-oldY);
+
+		Roi.move(targetROIx, targetROIy);
+		roiManager("Add");
+		
+		roiManager("select", roiManager("Count")-3);
+		roiManager("delete");
+
+// Create ROIs
+//-----------------
+
+roiManager("Select", roiManager("Count")-1);
+roiManager("rename", idArray[A]);
+roiManager("deselect");
+
+roiManager("Select", roiManager("Count")-2);
+
+run("Fit Circle");
+run("Scale... ", "x=2 y=2 centered");
+roiManager("Add");
+
+		//Save Coord
+		Roi.getBounds(x, y, width, height);
+		
+		cPoints = newArray(x,y,width,height);
+		cPoints = String.join(cPoints, "&");
+		localROIs[A] = cPoints;
+
+roiManager("Select", roiManager("Count")-3);
+roiManager("delete");
+
+
+roiManager("Select", newArray(roiManager("Count")-1, roiManager("Count")-2 ) );
+roiManager("XOR");
+roiManager("Add");
+
+
+
+run("Select All");
+roiManager("Add");
+
+roiManager("Select", newArray(roiManager("Count")-1, roiManager("Count")-2 ) );
+roiManager("AND");
+roiManager("Add");
+roiManager("Select", roiManager("Count")-1);
+roiManager("rename", "local_"+nameNumber);
+
+roiManager("Select", newArray(roiManager("Count")-2,roiManager("Count")-3, roiManager("Count")-4) );
+roiManager("delete");
+
+
+// Save ROI coordinates
+//---------------------------------
+
+//Target
+//------
+roiManager("select", roiManager("count")-2);
+Roi.getCoordinates(xpoints, ypoints);
+xPoints = String.join(xpoints, "&");
+yPoints = String.join(ypoints, "&");
+cPoints = xPoints+"_"+yPoints;
+
+targetROIs[A] = cPoints;
+
+
+
+if((A-numPerSlide+1)/numPerSlide == parseInt((A-numPerSlide+1)/numPerSlide)) rename(nameNumber);
+
+close("Target");
+
+
+roiManager("select",0);
+
+run("Lab Stack");
+
+
+//Stats
+//------------------------------------------------------------------------------------------------------------------
+
+
+
+//TARGET
+//===========
+roiManager("select",0);
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+
+TmeanL=Array.concat(TmeanL, mean);
+TcontrastL=Array.concat(TcontrastL,sd);
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+
+TmeanA=Array.concat(TmeanA, mean);
+TcontrastA=Array.concat(TcontrastA, sd);
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+
+TmeanB=Array.concat(TmeanB, mean);
+TcontrastB=Array.concat(TcontrastB, sd);
+
+
+//BACKGROUND
+//===========
+run("Make Inverse");
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+
+BmeanL=Array.concat(BmeanL, mean);
+BcontrastL=Array.concat(BcontrastL,sd);
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+
+BmeanA=Array.concat(BmeanA, mean);
+BcontrastA=Array.concat(BcontrastA, sd);
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+
+BmeanB=Array.concat(BmeanB, mean);
+BcontrastB=Array.concat(BcontrastB, sd);
+
+
+//LOCAL
+//===========
+roiManager("select",1);
+
+//L
+setSlice(1);
+getStatistics(area,mean,min,max,sd);
+
+LmeanL=Array.concat(LmeanL, mean);
+LcontrastL=Array.concat(LcontrastL,sd);
+
+//A
+setSlice(2);
+getStatistics(area,mean,min,max,sd);
+
+LmeanA=Array.concat(LmeanA, mean);
+LcontrastA=Array.concat(LcontrastA, sd);
+
+//B
+setSlice(3);
+getStatistics(area,mean,min,max,sd);
+
+LmeanB=Array.concat(LmeanB, mean);
+LcontrastB=Array.concat(LcontrastB, sd);
+
+
+
+
+
+//------------------------------------------------------------------------------------------------------------------
+
+
+//GabRat
+//------------------------------------------------------------------------------------------------------------------
+roiManager("Select", 0);
+
+
+	angles = 6;
+	sigma = 3.0;
+	gamma = 1.0;
+	freq = 2.0;
+
+
+tStr = getTitle + "_" + tStr;
+
+for(z=0;z<3;z++){
+		setSlice(z+1);
+		tStr2 = tStr + "_" + getMetadata("Label");
+		run("GabRat Disruption", "number_of_angles=&angles sigma=&sigma gamma=&gamma frequency=&freq label=&tStr2");
+}
+
+
+
+genArray=Array.concat(genArray,B);
+gabRatL=Array.concat(gabRatL,getResult("GabRat",0));
+gabRatA=Array.concat(gabRatA,getResult("GabRat",1));
+gabRatB=Array.concat(gabRatB,getResult("GabRat",2));
+
+//------------------------------------------------------------------------------------------------------------------
+
+
+Array.show("Measures",genArray,TmeanL,TmeanA,TmeanB,TcontrastL,TcontrastA,TcontrastB,LmeanL,LmeanA,LmeanB,LcontrastL,LcontrastA,LcontrastB,BmeanL,BmeanA,BmeanB,BcontrastL,BcontrastA,BcontrastB,gabRatL,gabRatA,gabRatB);
+
+run("Clear Results");
+
+while(roiManager("count")>0){
+roiManager("select", 0);
+roiManager("delete");
+
+}
+
+
+
+close("*");
+
+} // (A)
+
+
+}//(B);
+
+waitForUser("Done");

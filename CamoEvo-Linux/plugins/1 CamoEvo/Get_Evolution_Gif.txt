@@ -1,0 +1,303 @@
+/*____________________________________________________________________
+
+	Title: Gif Maker V2
+	Authors:  George Hancock 
+	Date: 26/11/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Allows the user to create a customisable plot for a CamoEvo population.
+
+*/
+if(getTitle()=="EndScreen"){
+close("\\Others");
+}else{
+close("*");
+}
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+if(isOpen("Phenotypes")){
+selectImage("Phenotypes");
+rename("OldPhenotypes");
+}
+
+while(roiManager("count") > 0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+//GET FILE DIRECTORY
+//------------------------------------------------------
+
+
+survivalDIR = getDirectory("Select_Population");
+configFilePath=survivalDIR;
+tempString = "select=["+ configFilePath+"]";
+
+survivalList  =  getFileList(survivalDIR);
+
+Leng = lengthOf(survivalList);
+
+
+//GET DEFAULTS
+//------------------------------------------------------
+
+currentDefault = File.getDefaultDir;
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+
+
+settingsFilePath = getDirectory("plugins") + "2 CamoReq/plotSettings.txt";
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString, "\n");
+} else { defaultSettings = newArray(
+
+"2",		// X interval
+"1/2",		// Y Ratio
+"1",		// Block Size
+"10",		// Column Spacing
+"10",		// Row Spacing
+"10",		// Gen Spacing
+"0",		// Start
+"20",		// End
+"none",		// Rotation
+"Fitness",	//Order
+"1",		//Ind Label
+"0"			//Gen Label
+ );  
+}
+
+survivalArray=newArray();
+dataSet = newArray();
+
+for(i=0; i<Leng; i++) { 
+	if(endsWith(survivalList[i], "_ranks.txt")!=1 && startsWith(survivalList[i], "gen")==1 ){
+
+		survivalArray = Array.concat(survivalArray, survivalList[i]);
+	}
+	
+	if(startsWith(survivalList[i], "Data_Output")==1 ){
+			dataSet = Array.concat(dataSet, survivalList[i]);
+	}
+	
+	}
+
+numGenArray=survivalArray;
+
+useDataSetGate = 0;
+
+
+//If there are no generation .txt
+// Then recreate stimuli with the recreator.
+
+if(numGenArray.length<1){
+
+	if(dataSet.length>0){
+	
+	dataSet = File.openAsString(survivalDIR + dataSet[0]);
+	dataRows = split(dataSet,"\n");
+	finalGen = split(dataRows[dataRows.length-1], "\t");
+	numGenArray = Array.getSequence(finalGen[0]+1);	
+	
+	numGen = numGenArray.length;
+	
+	useDataSetGate = 1; 
+	}
+
+
+} else {
+
+numGen = survivalArray.length-1;
+
+}
+
+
+
+//GET USER CHOICE
+//------------------------------------------------------
+
+
+	popSettings = File.openAsString(survivalDIR + "Settings_Population.txt");
+	popRows = split(popSettings, "\n");
+	popSize = split(popRows[2], "\t");
+	popSize = popSize[1];
+	
+	numPerSlide = split(popRows[3],"\t");
+	numPerSlide = parseFloat(numPerSlide [1]);
+
+	numIndv = parseFloat(popSize);;
+
+
+RatioArray = Array.getSequence(numIndv);
+for(i=0;i<RatioArray.length;i++){
+RatioArray[i] = toString( parseInt(RatioArray[i])+1);
+}
+
+
+choiceArray = newArray ("Fitness", "Inverse", "Age", "Category");
+rotationArray = newArray ("none", "right", "left", "flip"); 
+
+endGen =  parseFloat(defaultSettings[7]);
+
+
+
+if(endGen>(numGen)) endGen = numGen;
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Intervals___________________");
+		Dialog.addMessage("Select the Axis interval and proportion");
+		
+		Dialog.addNumber("Generation interval" , defaultSettings[0]);
+		Dialog.addChoice("Number of Individuals", RatioArray,  defaultSettings[1]); 
+		Dialog.addNumber("Block Size, Columns per Block",  defaultSettings[2]); 
+		Dialog.addNumber("Column Spacing",  defaultSettings[3], 0, 4, "px");
+		Dialog.addNumber("Row Spacing", defaultSettings[4], 0, 4, "px");
+		Dialog.addNumber("Generation Spacing",  defaultSettings[5], 0, 4, "px");
+		
+		Dialog.addNumber("Start",  defaultSettings[6]);
+		Dialog.addNumber("End",  endGen);
+		Dialog.addChoice("Rotation", rotationArray,  defaultSettings[8]);
+		
+		Dialog.addChoice("Ordering Method", choiceArray,  defaultSettings[9]);
+		Dialog.addCheckbox("Show Individual Lables", defaultSettings[10]);
+		Dialog.addCheckbox("Show Generation Lables", defaultSettings[11]);
+		
+		
+		
+		
+Dialog.show();
+
+intervalGap = Dialog.getNumber();
+numIndividuals = parseFloat(Dialog.getChoice());
+blockSize = Dialog.getNumber();
+
+colSpace = Dialog.getNumber();
+rowSpace = Dialog.getNumber();
+genSpace = Dialog.getNumber();
+
+startPoint  = Dialog.getNumber();
+endPoint  = Dialog.getNumber();
+rotateCheck = Dialog.getChoice();
+
+rankCheck = Dialog.getChoice();
+IDLabCheck = Dialog.getCheckbox();
+genLabCheck = Dialog.getCheckbox();
+
+
+if(rankCheck == "Categegory" && endPoint == survivalArray.length-1){
+endPoint  = endPoint;
+} else {
+
+endPoint  = endPoint+1;
+
+}
+
+
+
+//SAVE USER CHOICE
+//------------------------------------------------------
+dataFile = File.open(settingsFilePath);
+
+	print(dataFile, intervalGap);
+	print(dataFile, numIndividuals);
+	print(dataFile, blockSize);
+	print(dataFile, colSpace);
+	print(dataFile, rowSpace);
+	print(dataFile, genSpace);
+	print(dataFile, 0);
+	print(dataFile, endPoint-1);
+	print(dataFile, rotateCheck);
+	print(dataFile, rankCheck);
+	print(dataFile, IDLabCheck);
+	print(dataFile, genLabCheck);
+	
+File.close(dataFile);
+
+gifStart = startPoint;
+gifEnd = endPoint;
+
+
+for(A=gifStart; A<gifEnd/intervalGap; A++){
+
+startPoint=A*intervalGap;
+endPoint=A*intervalGap;
+
+print(startPoint);
+
+
+tStr = "select_population=["+survivalDIR+"] generation="+1+" number="+numIndividuals+" block="+blockSize+" column="+colSpace+" row="+rowSpace+" generation_0="+genSpace+" start="+startPoint+" end="+endPoint+" rotation="+rotateCheck+" ordering="+rankCheck+"";
+
+
+if(genLabCheck==1) tStr = tStr+" show_0";
+
+run("Get Phenotype Plot", tStr );
+
+rename("Generation_"+A*intervalGap);
+
+}
+
+run("Images to Stack", "name=Evolution_Gif title=[] use");
+
+setSlice(1);
+run("Copy");
+setPasteMode("Copy");
+for(i=0;i<3;i++){
+run("Add Slice");
+run("Paste");
+}
+
+setSlice(nSlices);
+run("Copy");
+setPasteMode("Copy");
+for(i=0;i<3;i++){
+run("Add Slice");
+run("Paste");
+}
+
+selectImage("Evolution_Gif");
+		setBatchMode("show");
+		run("Maximize");
+run("Animation Options...", "speed="+1);
+doCommand("Start Animation");
+
+
+dataFile = File.open(settingsFilePath);
+
+	print(dataFile, intervalGap);
+	print(dataFile, numIndividuals);
+	print(dataFile, blockSize);
+	print(dataFile, colSpace);
+	print(dataFile, rowSpace);
+	print(dataFile, genSpace);
+	print(dataFile, 0);
+	print(dataFile, endPoint);
+	print(dataFile, rotateCheck);
+	print(dataFile, rankCheck);
+	print(dataFile, IDLabCheck);
+	print(dataFile, genLabCheck);
+	
+File.close(dataFile);
+
+
+

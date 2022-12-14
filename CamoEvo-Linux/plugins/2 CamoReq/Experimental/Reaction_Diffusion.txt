@@ -1,0 +1,161 @@
+///Parameters
+//===================================
+Da = 1.0;
+Db = 1.0;
+fd = 0.055;
+kl = 0.063
+
+//Functions
+//===================================
+
+//pxValues
+//-----------------------------
+function pxV(w,h){
+tA = newArray(w*h);
+for(x=0;x<w;x++){
+       for(y=0;y<h;y++){
+	k=(w*y)+x;
+	tA[k] = getPixel(x,y);
+                                      }
+                               }
+return tA;
+}
+
+
+
+//CoordinateValue
+//-----------------------------
+function cV(a,x,y,wd){
+k=(y*wd) + x;
+v= a[k];
+return v;
+}
+
+
+//Coordinate
+//-----------------------------
+function cD(x,y,wd){
+k=(y*wd) + x;
+return k;
+}
+
+
+
+//Laplace
+//-----------------------------
+function laplace(a,x,y,w) {
+sumV = 0;
+
+sumV+= a[cD(x,y,w)] * -1;
+
+sumV+= a[cD(x-1,y,w)] * 0.2;
+sumV+= a[cD(x+1,y,w)] * 0.2;
+sumV+= a[cD(x,y-1,w)] * 0.2;
+sumV+= a[cD(x,y+1,w)] * 0.2;
+
+sumV+= a[cD(x-1,y-1,w)] * 0.05;
+sumV+= a[cD(x+1,y+1,w)] * 0.05;;
+sumV+= a[cD(x+1,y-1,w)] * 0.05;;
+sumV+= a[cD(x-1,y+1,w)] * 0.05;
+
+return sumV;
+}
+
+
+
+//genA
+//-----------------------------
+function genA(grid_a,grid_b,w,h) {
+
+next_a = newArray(w*h);
+
+for(x=1;x<w-1;x++){
+   for(y=1;y<h-1;y++){
+   a = grid_a[cD(x,y,w)];
+   b = grid_b[cD(x,y,w)];
+ 
+  next_a[cD(x,y,w)] = a +
+                                    (Da * laplace(grid_a,x,y,w) * a) -
+                                    (a*b*b) +
+                                    (fd * (1 - a));
+                                 }
+                              }  
+
+return next_a;
+}
+
+
+
+
+//genB
+//-----------------------------
+function genB(grid_a,grid_b,w,h) {
+
+next_b = newArray(w*h);
+
+for(x=1;x<w-1;x++){
+   for(y=1;y<h-1;y++){
+   a = grid_a[cD(x,y,w)];
+   b = grid_b[cD(x,y,w)];
+ 
+  next_b[cD(x,y,w)] = b +
+                                    (Db * laplace(grid_b,x,y,w) * b) +
+                                    (a*b*b) -
+                                    (b * (kl + fd));
+                                 }
+                              }  
+
+return next_b;
+}
+
+
+
+///Reaction-Diffusion
+//===================================
+
+//Clean
+if(isOpen("grid-c")) close("grid-c");
+
+
+selectImage("grid-a");
+w=getWidth();
+h=getHeight();
+
+grid_a = pxV(w,h);
+
+selectImage("grid-b");
+grid_b = pxV(w,h);
+
+
+newImage("grid-c", "RGB black", w, h, 1);
+run("RGB Stack");
+
+for(i=0;i<10;i++){
+next_a = genA(grid_a,grid_b,w,h);
+next_b = genA(grid_a,grid_b,w,h);
+grid_a=next_a;
+grid_b=next_b;
+}
+
+setSlice(1);
+
+for(x=0;x<w;x++){
+for(y=0;y<h;y++){
+v= cV(next_a,x,y,w)*255;
+setPixel(x,y,v);
+}
+}
+
+
+setSlice(3);
+
+for(x=0;x<w;x++){
+for(y=0;y<h;y++){
+v= cV(next_b,x,y,w)*255;
+setPixel(x,y,v);
+}
+}
+
+run("RGB Color");
+
+

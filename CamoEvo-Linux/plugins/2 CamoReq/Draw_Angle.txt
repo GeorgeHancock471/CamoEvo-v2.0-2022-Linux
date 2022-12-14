@@ -1,0 +1,62 @@
+//Instructions
+
+//1. Open a .png image.
+
+//2. Run -> run("RGB Stack");
+
+//3. Set slices 1 and 2 as 0.
+
+//4. Draw lines on slice 3 and hit run after you draw each line. If the lines are too thick or 
+//     too thin adjust the line width by changing the number.
+
+//5. When complete. Run -> run("RGB Color"); - and save as .png image with same name
+//     as original image but in a different folder.
+
+if(nSlices<3){
+
+run("RGB Stack");
+
+setSlice(1); run("Set...","value=0");
+setSlice(2); run("Set...","value=0");
+
+}
+
+//....................................................................................................................
+
+// TOO ADJUST THE LINE
+
+	//
+	//
+	//
+	//
+	//
+         ///////
+           ///
+
+LINE_WIDTH = 6;  //<- Edit this number to change line width.
+
+//....................................................................................................................
+
+setSlice(3);
+setTool("line");
+
+if(selectionType != 5) waitForUser("Draw Line");
+
+angle = 90-getValue("Angle");
+
+if(angle<0) angle=180+angle;
+
+run("Line to Area");
+run("Enlarge...", "enlarge=&LINE_WIDTH");
+setSlice(2);
+run("Set...","value=angle");
+
+setSlice(1);
+run("Enlarge...", "enlarge=-2");
+run("Set...","value=255");
+
+setSlice(3);
+run("Set...","value=255");
+run("Select None");
+
+

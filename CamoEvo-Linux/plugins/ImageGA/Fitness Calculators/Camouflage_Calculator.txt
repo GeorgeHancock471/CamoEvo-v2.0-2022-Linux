@@ -1,0 +1,558 @@
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+setBatchMode(true);
+
+while(roiManager("count")>0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+
+MatchFolder =  getDirectory("plugins")+"ImageGA/Fitness Calculators/Match_Demo/";
+
+
+//===========================================================================
+// 0) Get the Current Generation
+//===========================================================================
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Get the Directory
+//'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+generationDir = getDirectory("Select folder you wish to use.");
+
+generationList  =  getFileList(generationDir);
+generationArray = newArray();
+genFitnessArray  = newArray();
+
+for(i=0; i<generationList .length; i++) {
+
+	if(endsWith(generationList [i], "_genes.txt")==1){
+		generationArray = Array.concat(generationArray, generationList [i]);
+	}	
+
+	if(endsWith(generationList [i], "_ranks.txt")==1){
+		genFitnessArray  = Array.concat(genFitnessArray , generationList [i]);
+	}	
+	
+		
+} // ( i )
+
+
+
+
+// Check if there isn't already a fitness file
+//------------------------------------------------------------
+if(generationArray.length == genFitnessArray.length){
+print("Fitness has already been calculated");
+exit
+}
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Output the Genes
+//'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+currentGeneration = generationDir + "gen_" + generationArray.length-1 + "_genes.txt";
+currentPhenotypes = generationDir + "gen_" +generationArray.length-1 + "_phenotypes/";
+currentFitness = generationDir + "gen_" + generationArray.length-1 + "_ranks.txt";
+
+GenNumber = generationArray.length-1;
+
+
+genesString=File.openAsString(currentGeneration );	// open txt data file
+genesRows=split(genesString , "\n");
+
+idArray = newArray(genesRows.length-1);
+
+	for(i=1; i<genesRows.length; i++) {
+	
+	temp1 = split(genesRows[i], "\t");
+
+	idArray[i-1] = temp1[0];
+
+	}
+
+
+//===========================================================================
+// 1) If the file doesn't exist / generation = 0 build fitness
+//===========================================================================
+
+/*
+close("*");
+
+bgRecordLumDIR = generationDir+"/Background/lumRecord.txt";
+bgRecordADIR = generationDir+"/Background/aRecord.txt";
+bgRecordBDIR = generationDir+"/Background/bRecord.txt";
+
+
+if(GenNumber == 0){
+open(generationDir+"/Background/image.jpg");
+setBatchMode("show");
+
+nW = floor(getWidth / 200);
+nH = floor(getHeight / 200);
+
+spX = (getWidth-(200*nW))/(nW+1);
+spY = (getHeight-(200*nH))/(nH+1);
+
+for(i=0;i<nW;i++){
+for(j=0;j<nH;j++){
+
+xC = ((200+spX)*i)+spX;
+yC = ((200+spY)*j)+spY;
+
+makeRectangle(xC,yC,200,200);
+roiManager("add");
+
+} // (j)} // (i)
+
+run("Select All");
+
+}
+
+
+
+lBArray = newArray(nW*nH);
+aBArray = newArray(nW*nH);
+bBrray = newArray(nW*nH);
+
+run("Lab Stack");
+
+lumBArray = newArray(nW*nH);
+aBArray = newArray(nW*nH);
+bBArray = newArray(nW*nH);
+
+//LUMINANCE
+dataFile = File.open(bgRecordLumDIR);
+	setSlice(1);
+	for(i=0;i<nW*nH;i++){
+	roiManager("select", i);
+	getHistogram(bValues, bCounts, 100,0,100);
+	tString = String.join(bCounts,"\t"); 
+	lBArray[i] = tString;
+	print(dataFile, tString);
+	}
+File.close(dataFile);
+
+//A*
+dataFile = File.open(bgRecordADIR);
+	setSlice(2);
+	for(i=0;i<nW*nH;i++){
+	roiManager("select", i);
+	getHistogram(bValues, bCounts, 100,-100,100);
+	tString = String.join(bCounts,"\t"); 
+	aBArray[i] = tString;
+	print(dataFile, tString);
+	}
+File.close(dataFile);
+
+
+//B*
+dataFile = File.open(bgRecordBDIR);
+	setSlice(3);
+	for(i=0;i<nW*nH;i++){
+	roiManager("select", i);
+	getHistogram(bValues, bCounts, 100,-100,100);
+	tString = String.join(bCounts,"\t"); 
+	bBArray[i] = tString;
+	print(dataFile, tString);
+	}
+File.close(dataFile);
+
+close();
+
+} // (if gen 0 )
+
+
+if(GenNumber > 0){
+lBArrayString = File.openAsString(bgRecordLumDIR);
+lBArray = split(lBArrayString,"\n");
+
+aBArrayString = File.openAsString(bgRecordADIR);
+aBArray = split(aBArrayString,"\n");
+
+bBArrayString = File.openAsString(bgRecordBDIR);
+bBArray = split(bBArrayString,"\n");
+
+Array.show(lBArray,aBArray,bBArray);
+
+
+
+}// (if gen 1+ )
+
+*/
+
+
+//===========================================================================
+// 2) Population Settings
+//===========================================================================
+
+
+patternSettingDirectory = generationDir + "PopulationSettings.txt";
+
+if(!File.exists( patternSettingDirectory ) ) {
+
+dataFile = File.open(patternSettingDirectory); 
+
+	print(dataFile, "Target = 	Default_Circle");
+	print(dataFile, "Generation = 	NA");
+	print(dataFile, "popSize = 	NA");
+	print(dataFile, "NumSlide = 	NA");
+	print(dataFile, "TimeOutTime = 	NA");
+	print(dataFile, "StartSpace = 	0	100	-60	60	-10	70");
+	print(dataFile, "ColourSpace = 	0	100	-60	60	-10	70");
+	print(dataFile, "FitnessValue = 	Camouflage");
+	
+	File.close(dataFile);
+
+}
+
+
+targetSize = 170;
+
+//===========================================================================
+// 3) Generate Phenotypes
+//===========================================================================
+
+
+fold = "GenPat_" + GenNumber;
+foldOld = "GenPat_" + GenNumber-1;
+PatternPath = generationDir + fold;
+PriorPath = generationDir + foldOld;
+
+popSize = genesRows.length-1;
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+
+//Work out existing patterns
+//---------------------------------
+//IF there is already patterns for that Generation,don't remake them.
+// If the file already exists and its size == the desired pop size then don't make pattersn.
+
+
+CheckLength = getFileList(PatternPath);
+
+if(CheckLength.length<popSize || !File.exists(PatternPath)) {
+File.makeDirectory(PatternPath );
+
+
+//Temporary
+if(GenNumber>0){ 	 // if it is generation 1 or higher it will check which individuals have survived without mutating, and save them without remaking them. 
+					 // this preserves the exact same phenotype.
+				
+				
+notMade=newArray();
+
+for(i=1; i<genesRows.length; i++){
+Temp = split(genesRows[i], "\t");
+Temp = Temp[0];
+patternGet = PriorPath + "/" + Temp + ".jpg";
+
+
+if(File.exists(patternGet) == 1){
+	while(!isOpen(Temp + ".jpg")){
+	open(patternGet);
+}
+
+selectImage(Temp + ".jpg");
+
+title = getTitle();
+newName = replace (title, ".jpg", "");
+rename(newName);
+
+
+} else {
+	str=genesRows[i];
+	notMade=Array.concat(notMade,str);
+}
+
+
+
+}
+
+
+dataFile = File.open(PatternTemplate);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+	print(dataFile, genesRows[0]);
+	
+	for(i=0; i<notMade.length; i++){
+	print(dataFile, notMade[i]);
+	
+	}
+	File.close(dataFile);
+
+}
+
+
+
+//Copy all if Gen = 0
+//---------------------------------
+
+if(GenNumber==0){ // if it is generation 0 it will need to generate all the patterns no matter what.
+
+	dataFile = File.open(PatternTemplate);
+	
+	for(i=0; i<genesRows.length; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+	
+	print(dataFile, genesRows[i]);
+	
+	}
+	File.close(dataFile);
+	
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+
+dataFile = File.open(PopLocal);
+print(dataFile,  generationDir);
+File.close(dataFile);
+	
+
+	
+}
+
+close("*");
+
+run("Generate Targets");
+
+
+
+//===========================================================================
+// 4) Calculate Fitness
+//===========================================================================
+
+
+
+gabRatL = newArray(idArray.length);
+gabRatA = newArray(idArray.length);
+gabRatB = newArray(idArray.length);
+
+
+meanL = newArray(idArray.length);
+stdvL = newArray(idArray.length);
+edgeL = newArray(idArray.length);
+
+meanA = newArray(idArray.length);
+stdvA = newArray(idArray.length);
+edgeA = newArray(idArray.length);
+
+meanB = newArray(idArray.length);
+stdvB = newArray(idArray.length);
+edgeB = newArray(idArray.length);
+
+
+salienceL = newArray(idArray.length);
+salienceA = newArray(idArray.length);
+salienceB = newArray(idArray.length);
+
+
+fitnessArray = newArray(idArray.length);
+
+for(i=0 ; i<idArray.length; i++) {
+
+run("Clear Results");
+
+if(!isOpen(idArray[i])){
+open(PriorPath + "/" + idArray[i] + ".png");
+rename(idArray[i]);
+}
+selectImage(idArray[i]);
+run("Select None");
+run("Size...", "width=&targetSize height=&targetSize depth=1 average interpolation=None");
+
+pat = "/" + idArray[i] + ".png";
+PatternPath = generationDir  + fold + pat;
+
+open(MatchFolder+"Mask.png");
+run("8-bit");
+run("Size...", "width=&targetSize height=&targetSize depth=1 average interpolation=None");
+setOption("BlackBackground", true);
+setThreshold(0, 200);
+
+run("Create Selection");
+run("Make Inverse");
+roiManager("Add");
+close();
+roiManager("select", roiManager("count")-1);
+
+roiManager("select", roiManager("count")-1);
+run("Make Inverse");
+run("Set...", "value=0");
+
+saveAs("PNG", PatternPath); 
+
+roiManager("select", roiManager("count")-1);
+run("Copy");
+setPasteMode("Transparent-Black");
+
+
+open(MatchFolder+"background.jpg");
+rename("background");
+
+
+x= 200+random()*(getWidth()-400);
+y=  200+random()*(getHeight()-400);
+
+
+roiManager("select", roiManager("count")-1);
+Roi.move(x,y);
+roiManager("Update");
+
+setPasteMode("Copy");
+run("Paste");
+
+wait(10);
+run("Lab Stack");
+setBatchMode("show");
+
+
+	angles = 6;
+	sigma = 3.0;
+	gamma = 1.0;
+	freq = 2.0;
+
+roiManager("Select", 0);
+
+
+//GabRat
+//------------------------------------------------------------------------------------------------------------------
+tStr = getTitle + "_" + tStr;
+
+for(z=0;z<3;z++){
+		setSlice(z+1);
+		tStr2 = tStr + "_" + getMetadata("Label");
+		run("GabRat Disruption", "number_of_angles=&angles sigma=&sigma gamma=&gamma frequency=&freq label=&tStr2");
+}
+
+
+gabRatL[i] = parseFloat(getResult("GabRat",0));
+gabRatA[i] = parseFloat(getResult("GabRat",1));
+gabRatB[i] = parseFloat(getResult("GabRat",2));
+
+
+
+run("Clear Results");
+
+
+//Difference
+//------------------------------------------------------------------------------------------------------------------
+
+//L*
+roiManager("Select", 0);
+setSlice(1);
+run("New Camo Test 5");
+close("GaussianStack");
+
+meanL[i] = parseFloat(getResult("difMean", 0));
+stdvL[i] = parseFloat(getResult("difDev", 0));
+edgeL[i] = parseFloat(getResult("difEdge", 0));
+
+
+//A*
+roiManager("Select", 0);
+setSlice(2);
+run("New Camo Test 5");
+close("GaussianStack");
+
+meanA[i] = parseFloat(getResult("difMean", 1));
+stdvA[i] = parseFloat(getResult("difDev", 1));
+edgeA[i] = parseFloat(getResult("difEdge", 1));
+
+//B*
+roiManager("Select", 0);
+
+setSlice(3);
+run("New Camo Test 5");
+close("GaussianStack");
+
+meanB[i] = parseFloat(getResult("difMean", 2));
+stdvB[i] = parseFloat(getResult("difDev", 2));
+edgeB[i] = parseFloat(getResult("difEdge", 2));
+
+
+/*
+//Salience
+//------------------------------------------------------------------------------------------------------------------
+
+//L*
+roiManager("Select", 0);
+setSlice(1);
+run("New Camo Test 5");
+close("GaussianStack");
+salienceL[i] = parseFloat(getResult("sumSalience", nResults-1));
+
+
+//A*
+roiManager("Select", 0);
+setSlice(2);
+run("New Camo Test 5");
+close("GaussianStack");
+salienceA[i]  = parseFloat(getResult("sumSalience", nResults-1));
+
+
+
+//B*
+roiManager("Select", 0);
+
+setSlice(3);
+run("New Camo Test 5");
+close("GaussianStack");
+salienceB[i] = parseFloat(getResult("sumSalience", nResults-1));
+
+
+run("Clear Results");
+
+//------------------------------------------------------------------------------------------------------------------
+*/
+
+roiManager("select", 0);
+roiManager("delete");
+
+
+fitnessArray[i]  =  -meanL[i]- stdvL[i]- meanA[i]- stdvA[i]*1- meanB[i]- stdvB[i];
+
+
+
+close(idArray[i] + ".png");
+close("background");
+
+}
+
+
+
+
+
+
+//===========================================================================
+// 5) Save Fitness
+//===========================================================================
+
+
+if(File.exists(currentFitness)==1){
+File.delete(currentFitness);
+}
+
+survivalString  = newArray("ID", "Fitness","Lmean","Ldev","Ledge","Amean","Adev","Aedge","Bmean","Bdev","Bedge","lGabRat","aGabRat","bGabRat");
+survivalString  = String.join(survivalString , "\t");
+
+File.append(survivalString , currentFitness);
+
+for(i=0; i<fitnessArray.length; i++){
+
+survivalString  = Array.concat(idArray[i], fitnessArray[i], meanL[i], stdvL[i], edgeL[i],  meanA[i], stdvA[i], edgeA[i], meanB[i], stdvB[i], edgeB[i], gabRatL[i], gabRatA[i], gabRatB[i]);
+
+survivalString  = String.join(survivalString , "\t");
+
+File.append(survivalString , currentFitness);
+
+} // ( i )
+
+
+

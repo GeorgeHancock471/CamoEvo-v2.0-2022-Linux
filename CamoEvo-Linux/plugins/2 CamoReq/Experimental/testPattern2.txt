@@ -1,0 +1,347 @@
+
+
+
+
+if(isOpen("Test")) close("Test");
+if(isOpen("Test1")) close("Test1");
+if(isOpen("Test2")) close("Test2");
+
+selectImage("pattern3000.png");
+
+
+patB = random();
+patX =  random();
+patY =  random();
+
+bounds = 100 + patB*800;
+
+x= 10 + patX*(3000-bounds-20);
+y= 10 + patY*(3000-bounds-20);
+
+makeRectangle(x, y, bounds, bounds);
+
+
+setBatchMode(true);
+run("Duplicate...", "title=Test");
+
+cW = 400;
+run("Size...", "width=cW  height=cW  depth=1 average interpolation=Bilinear");
+
+
+setPasteMode("Copy");
+
+
+run("Select None");
+
+
+
+
+// Stretch X
+//-------------------------------
+
+//Repeat 1
+//================
+
+scMax=pow(random(),3)*20;
+pV = 4*random();
+int=5;
+
+instances=0;
+x=0;
+while(x<cW){
+
+
+rectW = cW-(x+1);
+makeRectangle(x+1,0,cW-(x+1),cW);
+
+scV = rectW + (1-pow(x/cW,pV))*scMax;
+
+run("Scale...", "x=- y=- width=&scV height=&cW interpolation=Bilinear fill create");
+
+makeRectangle(0,0,cW-(x+1),cW);
+run("Copy");
+close();
+
+makeRectangle(x+1,0,cW-(x+1),cW);
+
+selectImage("Test");
+run("Paste");
+
+x=x+int;
+instances+1;
+}
+
+
+
+
+run("Select None");
+
+
+
+
+
+
+run("Select None");
+run("Flip Horizontally");
+
+run("Rotate... ", "angle=90 grid=1 interpolation=Bilinear");
+
+
+
+
+
+// Stretch Y
+//-------------------------------
+
+max=30;
+
+inflect=400;
+
+patSmax = random();
+patSmin = random();
+patSinf = random();
+
+pV=parseInt(random()*5)*2;
+if(pV==0) pV=1;
+
+aWmin =pow(patSmin,4)*max;
+
+aWmax =(pow(patSmax ,4)*max)-aWmin;
+
+inf = patSinf;
+
+for(i=0;i<cW;i++){
+makeRectangle(i,0,1,cW);
+
+sW=2;
+
+ramp=pow(i/inflect,pV);
+
+if(ramp>1) ramp=pow((cW-i)/inflect,pV);
+
+if(ramp<0) ramp=0;
+
+sH=cW+(cW*aWmin)+(ramp*cW*aWmax);
+
+run("Scale...", "x=- y=- width=&sW height=&sH interpolation=Bilinear average");
+
+}
+
+
+
+run("Rotate... ", "angle=-90 grid=1 interpolation=Bilinear");
+
+ang=parseInt(random()*4)*90;
+
+
+run("Rotate... ", "angle=&ang grid=1 interpolation=Bilinear");
+
+
+
+//Wave
+//----------------------------------------
+run("32-bit");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+run("Copy");
+setPasteMode("Add");
+
+mStr = "code=v=sin(v*PI*"+0.5+1+")";
+run("Macro...", mStr);
+
+run("Paste");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+run("Multiply...","value=0.8");
+
+run("Add...","value=0.05");
+
+run("Select None");
+
+
+run("32-bit");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+
+//Shading
+//----------------------------------------
+newImage("Shade", "32-bit black", cW, cW, 1);
+run("Set...","value=1");
+
+run("Select All");
+
+shadeW = 10+cW*random();
+shadeH = 10+cW*random();
+
+shadeY = cW/2*random();
+shadeX = cW/2*random();
+
+shadeSig = random()*cW;
+shadeV = 0.2+0.5*random();
+
+makeOval(shadeX -shadeW/2, shadeY-shadeH/2, shadeW, shadeH);
+
+run("Set...","value=shadeV");
+
+run("Select None");
+
+run("Gaussian Blur...", "sigma=shadeSig");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+getStatistics(area,mean,min,max);
+if(max==0) run("Invert");
+
+run("Copy");
+
+close();
+
+setPasteMode("Multiply");
+run("Paste");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+//Noise
+//----------------------------------------
+run("Copy");
+
+newImage("Noise", "32-bit black", cW, cW, 1);
+run("Select All");
+
+noi=3;
+sig = random()*2;
+intV = random()*0.8;
+
+run("Add Specified Noise...", "standard=noi");
+
+run("Gaussian Blur...", "sigma=sig ");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+run("Multiply...","value=&intV");
+
+
+run("Copy");
+setPasteMode("Add");
+close();
+
+run("Paste");
+
+
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+
+
+
+
+
+
+
+
+
+inflect=200;
+
+
+
+
+
+
+
+
+
+//Mirror
+//----------------------------------------
+
+makeRectangle(0,0,inflect,400);
+run("Copy");
+setPasteMode("Paste");
+makeRectangle(inflect,0,inflect,400);
+run("Paste");
+run("Flip Horizontally");
+
+run("Select None");
+
+run("Gaussian Blur...", "sigma=2");
+
+
+
+
+
+
+/*
+//Asymmetry
+//----------------------------------------
+
+x=random()*20;
+y=0;
+
+asP = 1+random()*3;
+
+asP=1;
+
+asM = random()*10;
+sp =-2 + random()*10;
+
+while(y<=cW){
+
+yLeng = 30+random()*asM;
+
+while(x<=cW) {
+
+sW1 = 10+random()*5;
+
+makeOval(x,y,sW1,yLeng);
+
+sW2=sW1+pow(random(),asP)*asM;
+sH=yLeng+random()*asM;
+
+if(sW2<=1) sW=1;
+if(sH<=2) sH=2;
+
+run("Scale...", "x=- y=- width=&sW2 height=&sH interpolation=Bilinear average");
+
+
+x=x+sW2+sp;
+
+
+
+} //(x) 
+
+y=y+10+sp;
+x=random()*20;
+
+} //(y)
+*/
+
+
+
+
+run("Mean...", "radius=1");
+run("Gaussian Blur...", "sigma=1");
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+//Scale
+//----------------------------------------
+run("Scale...", "x=- y=- width=130 height=400 interpolation=Bilinear");
+
+run("Gaussian Blur...", "sigma=1.5");
+
+run("Sharpen");
+run("Sharpen");
+
+
+setBatchMode("show");
+run("Copy to System");
+
+
+

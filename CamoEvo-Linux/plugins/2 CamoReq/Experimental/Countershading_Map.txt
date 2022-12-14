@@ -1,0 +1,224 @@
+//Countershading From Map
+//---------------------------------------
+setBatchMode(true);
+
+csHeight = random();
+csSmooth = random();
+
+csSmooth = pow(csSmooth,2)*200;
+
+if(isOpen("Test")) close("Test");
+run("Select None");
+
+selectImage("gradient");
+run("Duplicate...", "title=Test");
+
+
+roiManager("Select", 0);
+run("32-bit");
+run("Make Inverse");
+run("Set...","value=0");
+run("Make Inverse");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+run("Select None");
+
+
+setThreshold(0, csHeight);
+run("Create Selection");
+
+run("Set...","value=0");
+
+run("Make Inverse");
+
+run("Set...","value=1");
+
+run("Select None");
+
+roiManager("Select", 0);
+run("Make Inverse");
+run("Set...","value=0");
+
+run("Select All");
+run("Gaussian Blur...", "sigma=6");
+
+setThreshold(0.1,2);
+run("Create Selection");
+
+
+setBatchMode("show");
+
+
+en=50;
+run("Enlarge...", "enlarge=en");
+
+Roi.getBounds(x, y, width, height);
+
+run("Interpolate", "interval=10 smooth");
+
+Roi.move(x,y-en);
+run("Set...","value=1");
+
+run("Select None");
+run("Gaussian Blur...", "sigma=csSmooth");
+
+roiManager("Select", 0);
+run("Make Inverse");
+run("Set...","value=0");
+
+run("Select All");
+
+
+
+exit
+
+
+rV=csHeight ;
+rV=-1.1 + rV*2.2;
+run("Add...","value=rV");
+
+
+run("Max...","value=1");
+run("Min...","value=0");
+
+
+getStatistics(area1,mean1,min1,max1);
+
+dif=0.5-mean1;
+run("Add...","value=dif");
+
+run("Max...","value=1");
+run("Min...","value=0");
+
+
+setBatchMode("show");
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+getStatistics(area1,mean1,min1,max1);
+
+m = 0.2+random()*3;
+mStr = "code=v=1-pow(1-v,"+m+")";
+run("Macro...", mStr);
+
+run("Gaussian Blur...", "sigma=1");
+
+
+getStatistics(area2,mean2,min2,max2);
+
+dif=mean1-mean2;
+
+run("Add...","value=dif");
+
+
+run("Max...","value=1");
+run("Min...","value=0");
+
+exit
+
+
+
+
+setBatchMode("show");
+exit
+
+
+
+
+
+run("Make Inverse");
+run("Set...","value=0");
+
+
+run("Select None");
+
+
+
+
+
+setBatchMode("show");
+
+
+
+exit
+
+csHeight=csHeight*2.15 -1.15;
+
+
+run("Add...","value=csHeight");
+
+
+run("Min...","value=0");
+run("Max...","value=1");
+run("Gaussian Blur...", "sigma=1");
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+getStatistics(area1,mean1,min1,max1);
+
+setBatchMode("show");
+
+
+if(csSmooth<1){
+minC=0.5*(1-csSmooth);
+maxC=1-0.5*(1-csSmooth);
+}
+
+if(csSmooth>=1){
+minC= -csSmooth;
+maxC= csSmooth;
+}
+
+
+setMinAndMax(minC, maxC);
+
+
+
+run("8-bit");
+run("32-bit");
+
+run("Select All");
+run("Divide...", "value=255");
+
+
+getStatistics(area2,mean2,min2,max2);
+
+difV=mean1-mean2;
+
+//run("Add...","value=difV");
+
+
+getStatistics(area3,mean3,min3,max3);
+
+print(mean1,mean2,mean3);
+
+
+run("Min...","value=0");
+run("Max...","value=1");
+
+run("Copy");
+close();
+setPasteMode("Multiply");
+
+
+//Test
+
+newImage("Untitled", "RGB white", 400, 400, 1);
+run("RGB Stack");
+
+setSlice(1);
+run("Paste");
+setSlice(2);
+run("Paste");
+setSlice(3);
+run("Paste");
+
+run("RGB Color");
+rename("Test");
+setBatchMode("show");

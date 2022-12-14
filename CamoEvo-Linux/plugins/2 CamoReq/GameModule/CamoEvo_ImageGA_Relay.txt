@@ -1,0 +1,1311 @@
+/*____________________________________________________________________
+
+	Title: ImageGA CamoEvo Relay
+	Authors:  George Hancock 
+	Date: 07/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This code relays which templates and which algorithm settings CamoEvo wants ImageGA to use.
+
+*/
+
+
+setBatchMode(true);
+
+setOption("ShowRowNumbers", false);
+
+
+//===========================================================================
+//Get the File Path
+//============================================================================
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+File0=PopLocation;
+
+
+imageDIR = File0;
+configFilePath=imageDIR;
+tempString = "select=["+ configFilePath+"]";
+//print(configFilePath);
+
+
+PopulationLocation = getDirectory("plugins") + "Tools/PopulationLocation.txt";
+
+// SAVE PATH
+
+dataFile = File.open(PopulationLocation);
+
+	print(dataFile, imageDIR);
+
+File.close(dataFile);
+
+
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+GenerationSet = split(PopulationSettings[1],"\t");
+GenerationSet = GenerationSet[1];
+
+PopSizeSet = split(PopulationSettings[2],"\t");
+PopSizeSet = PopSizeSet[1];
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet [1];
+
+TargetChoice = TargetSetting;
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoicePattern = TargetChoiceSettings[3];
+
+
+
+if(TargetChoicePattern =="egg"){
+File1=getDirectory("plugins")+"2 CamoReq/Egg_Gene_Template.txt";
+}else{
+File1=getDirectory("plugins")+"2 CamoReq/Gene_Template.txt";
+}
+
+
+
+//============================================================================
+// Make file names easier to handle.
+//============================================================================
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+//----------------------------------------------------------------------------
+
+
+
+
+//============================================================================
+// FUNCTIONS
+//============================================================================
+setOption("ShowRowNumbers", false);
+setOption("ShowRowIndexes", false);
+
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+// Obtain SubArray
+//---------------------------------------------------
+// Allows you to obtain a SubArray of a given Name and Length, where a is the array and b is the original number of rows.
+
+ function subArray(a, value, b) {
+	IndexLab = index(a, value);
+	Start = IndexLab + 1;
+	End = IndexLab  + b;
+	return Array.slice(a, Start, End);
+}
+
+// Obtain Table Names Array
+//---------------------------------------------------
+// Allows you to obtain an array of all the table column names
+
+ function getColumnNames(name) {
+	selectWindow(name);
+	Table.showRowNumbers(false);
+	name = Table.headings;
+	name = split(name, "\t");
+	Table.showRowNumbers(false);
+	return name; 
+}
+
+// Obtain Row Length
+//---------------------------------------------------
+// Allows you to obtain the length of a row in a table.
+
+ function getRowLength(name) {
+
+	Nam = getColumnNames(name);
+	strCol = Table.getColumn(Nam[0]);
+	length = lengthOf (strCol);
+	return length; 
+}
+
+
+
+//Table to Array
+//--------------------------------------------------
+// Converts a Table into a Super Array, dividing them by the column titles.
+
+ function tableArrayConvert(TableName) {
+	selectWindow(TableName);
+	Table.showRowNumbers(false);
+	ColNams = Table.headings;
+	ColNams = split(ColNams, "\t");
+
+	Tp = newArray();
+	
+	 for (i=0; i<ColNams.length; i++){
+
+	Tm = ColNams[i];
+
+	Tp2 = newArray(Tm);
+
+	Tp3 = Table.getColumn(Tm);
+
+	Tp = Array.concat(Tp, Tp2, Tp3);
+	
+	}
+        	
+	Table.showRowNumbers(false);
+	return Tp;
+	
+	}
+
+//Rotate Super Array
+//--------------------------------------------------
+
+function rotateSuperArray (a, Titles) {
+
+	M1 = Titles[1];
+
+	labelA = Titles[0];
+
+	M3 =  index(a, M1)-1;
+	
+	b=Array.copy(a);
+
+	for (i=0; i<Titles.length; i++){
+		b = Array.deleteValue(b, Titles[i]);
+	}
+
+	arrTemp = newArray();
+
+		for (i=0; i<M3; i++){
+
+		arrTemp2 = newArray();
+	
+		for(j=0; j<Titles.length; j++){
+
+		mod = i +(j*M3);
+
+		arrTemp2 = Array.concat(arrTemp2, b[mod]);
+
+			}
+
+			labelB =labelA + i;
+			labelC= newArray(labelB);
+
+			arrTemp = Array.concat(arrTemp, arrTemp2);
+
+
+			} 
+	
+	return arrTemp;
+	
+			}
+
+
+//Reverse Rotate Super Array
+//--------------------------------------------------
+
+// Undoes the rotation of the super Array.
+
+function rotateRevSuperArray (a, Titles, rowLength) {
+	
+		rowL= rowLength;
+		
+		titleL= Titles.length;
+	
+	//Array.show(a);
+
+	arrTemp = newArray();
+
+		for (i=1; i<titleL; i++){
+
+		arrTemp2 = newArray("Nan");
+	
+		for(j=0; j<rowL; j++){
+
+			mod = i +(j*(titleL));
+
+			arrTemp2 = Array.concat(arrTemp2, a[mod]);
+
+			}
+
+			arrTemp2[0] = Titles[i];
+
+			//Array.print(arrTemp2);
+
+			arrTemp = Array.concat(arrTemp,arrTemp2);
+
+
+			} 
+
+	arrTemp3 = newArray();
+
+	for (i=0; i<rowL; i++){
+
+		Mult = i*(Titles.length);
+
+		Nam = a[Mult];
+		
+		arrTemp3 = Array.concat(arrTemp3, Nam );
+
+					}
+
+	
+	arrTemp3 = Array.concat(Titles[0], arrTemp3);
+
+	arrTemp = Array.concat(arrTemp3, arrTemp);
+	
+	return arrTemp;
+	
+			}
+
+
+//Rotate Table
+//--------------------------------------------------
+
+// Flips the axis of a Table.
+
+function tableRotateVertical(TableOld, TableNew) {
+
+	Table.create(TableNew);
+	Table.showRowNumbers(false);
+
+	arrRow = getColumnNames(TableOld);
+
+	strCol = getRowLength(TableOld);
+
+	outputArray = newArray(arrRow.length-1);
+
+	for(j=0; j<strCol; j++){
+
+	selectWindow(TableOld);
+
+	for(k=1; k<arrRow.length; k++){
+			T = k;
+			CN = arrRow[T];
+			outputArray[k-1] = getResult(CN, j);
+		}
+
+	selectWindow(TableNew);
+	
+	Label = arrRow[0] + "_" +  (j);
+
+	Table.setColumn(Label, outputArray);
+
+	}
+	
+	}
+
+
+//Super Array to Table
+//--------------------------------------------------
+// Converts a Super Array back into a table using the Array of original titles.
+
+function tableArrayRevert (TableName, a, Titles) {
+
+	Table.create(TableName);
+	Table.showRowNumbers(false);
+
+	M1 = index(a, Titles[0]);
+
+	M2 = index(a, Titles[1]);
+
+	M3 = M2 - M1;
+
+	for (i=0; i<Titles.length; i++){
+
+	columnName = Titles[i];
+	
+	array = subArray(a, columnName, M3);
+
+	Table.setColumn(columnName, array);
+
+	}
+
+}
+
+//----------------------------------------------------------------------------
+
+
+//===========================================================================
+// Choose Population Location
+//============================================================================
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory you would like your Generations to be stored.");
+	Dialog.show();
+
+
+popDIR = getDirectory("Select_Folder");
+
+
+
+
+
+//===========================================================================
+// Assign Algorithm Variables
+//===========================================================================
+defaultSettingsT = newArray(
+
+// Population Setup
+"0", 				// Sex
+"custom", 			// Use Template 
+"24", 				// Population Size
+"10",				// Max Number of Generations
+"random", 			// Population Genotype
+
+// Division Setup
+"fraction",			// Unit
+"0.50", 			// Deletion Pool	
+"0.50", 			// Mating Pool
+"0.0000", 			// Mutate Pool
+
+// Gametic Mutation
+"0.001",			// Gamete Point Mutation
+"0.001",			// Gamete Lvl1 Mutation
+"0.001",			// Gamete Lvl2 Mutation
+"0.001",			// Gamete Linked Mutation
+
+// Offspring Mutation
+"0.001",			// Offspring Point Mutation
+"0.001",			// Offspring Lvl1 Mutation
+"0.001",			// Offspring Lvl2 Mutation
+"0.001",			// Offspring Linked Mutation
+
+// Clonal Mutation
+"0.001",			// Clone Point Mutation
+"0.001",			// Clone Lvl1 Mutation
+"0.001",			// Clone Lvl2 Mutation
+"0.001",			// Clone Linked Mutation
+
+// Protective Mechanisms
+"false",			// Clone Best
+"false",			// Rescue Best
+
+// Adaptive Mechanisms
+"0.15",				// Displacement Mutation
+"true",				// Scale mutation with rank
+"true",				// Scale mutation with gene variance
+"true",				// Scale mutation with generation
+
+// Crossover
+"random",			//Crossover Type
+"0.80000",			//Crossover Probability
+"incomplete",		//Crossover Completeness
+
+// Mating Systems
+"ranked_choice",	//Breeding Pool 
+"random",			//Mating System
+"none");			//Poly System
+
+
+
+settingsFilePath = getDirectory("plugins") + "2 CamoReq/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+} 
+
+
+
+// Population Setup
+inableSex = parseFloat(defaultSettings[0]);
+populationChoice = defaultSettings[1];
+populationSize = PopSizeSet;
+generationCap = GenerationSet;
+populationGenotype = defaultSettings[4];
+
+
+// Division Setup
+segmentationUnit = defaultSettings[5];
+segmentationDeletion = parseFloat(defaultSettings[6]);
+segmentationBreeding = parseFloat(defaultSettings[7]);
+segmentationMutate =  parseFloat(defaultSettings[8]);
+
+
+//Gametic Mutation
+pointMutationRateGamete = parseFloat(defaultSettings[9]);
+lvl1MutationRateGamete = parseFloat(defaultSettings[10]);
+lvl2MutationRateGamete = parseFloat(defaultSettings[11]);
+linkedMutationProbGamete = parseFloat(defaultSettings[12]);
+
+
+//Offspring Mutation
+pointMutationRateOffspring = parseFloat(defaultSettings[13]);
+lvl1MutationRateOffspring = parseFloat(defaultSettings[14]);
+lvl2MutationRateOffspring = parseFloat(defaultSettings[15]);
+linkedMutationProbOffspring = parseFloat(defaultSettings[16]);
+
+
+//Clonal Mutation
+pointMutationRateClone = parseFloat(defaultSettings[17]);
+lvl1MutationRateClone = parseFloat(defaultSettings[18]);
+lvl2MutationRateClone = parseFloat(defaultSettings[19]);
+linkedMutationProbClone = parseFloat(defaultSettings[20]);
+
+
+//Protective Mechanisms
+cloneBest =  defaultSettings[21];
+rescueBest = defaultSettings[22];
+
+
+//Adaptive Mechanisms
+distanceRateOffspring = parseFloat(defaultSettings[23]);
+rankedProbability = defaultSettings[24];
+varianceProbability = defaultSettings[25];
+fitnessProbability = defaultSettings[26];
+
+
+//Crossover
+crossOverType = defaultSettings[27];
+crossOverProbability = parseFloat(defaultSettings[28]);
+crossOverBalance = defaultSettings[29];
+
+
+//Mating System
+poolAssignmentSystem = defaultSettings[30];
+matingAssignmentSystem = defaultSettings[31];
+polySystem = defaultSettings[32];
+
+
+
+
+//===========================================================================
+// Select Genotype Template
+//============================================================================
+
+
+templateGenes=File1;
+
+if(endsWith(templateGenes,".csv")){
+
+open(templateGenes);
+Template = File.name;
+selectWindow(Template); 
+
+FileType = split(Template, ".");
+FileType = ".csv";
+ 
+
+Table.rename(Template,"Results"); 
+Table.showRowNumbers(false);
+
+
+Template_Titles = Table.headings; // Obtains the number of titles.
+	
+Template_Array = split(Template_Titles, "\t");
+Template_Array2 = Array.copy(Template_Array);
+TLeng = lengthOf(Template_Array);
+TLeng = parseInt(TLeng);
+CLeng = Table.getColumn("ID");
+CLeng = CLeng.length;
+
+selectWindow("Results"); 
+run("Close");
+
+} 
+
+if(endsWith(templateGenes,".txt")){
+
+TemplateString=File.openAsString(templateGenes);	// open txt data file
+TemplateRows=split(TemplateString, "\n");
+
+Template_Array = split(TemplateRows[0], "\t");
+Template_Array2 = Array.copy(Template_Array);
+
+TLeng = lengthOf(Template_Array);
+TLeng = parseInt(TLeng);
+CLeng = TemplateRows.length-1;
+
+
+FileType = ".txt";
+}
+
+
+
+
+//===========================================================================
+// Create Starting Population
+//============================================================================
+
+PopChoices = newArray("Use Existing", "Create Custom");
+if(popChoice == PopChoices[0]){
+
+	if(FileType==csv){
+	open(templateGenes);
+	
+	Gen0Lables = newArray();
+	ParentLables = newArray();
+	ColumnNone = newArray();
+	for(i=0; i<CLeng; i++){
+	
+		sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+		
+	Gen0Lables = Array.concat(Gen0Lables, "Gen0_Mut0_ID"+i+sex);
+	ParentLables = Array.concat(Gen0Lables, "none");
+
+	ColumnNone= Array.concat(ColumnNone, "none");
+	}
+	Table.setColumn("ID", Gen0Lables);
+	Table.setColumn("Parent1", ParentLables);
+	Table.setColumn("Parent2", ParentLables);
+	
+	StartingGen = configFilePath + "generation_0" + txt;
+	saveAs("Results",StartingGen);
+	
+	selectWindow("generation_0" + txt); //-------------Cull the uneeded tables.
+		run("Close");
+	}
+	
+	if(FileType==txt){
+	
+	Gen0Lables = newArray();
+	for(i=0; i<CLeng; i++){
+	
+		sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+		
+	Gen0Lables = Array.concat(Gen0Lables, "Gen0_Mut0_ID"+i+sex);
+	}
+	
+	
+	TemplateString=File.openAsString(templateGenes);	// open txt data file
+	TemplateRows=split(TemplateString, "\n");
+	
+	Generation0Rows = newArray();
+	
+	//Parent Check
+	LastTitle=split(TemplateRows[0],"\t");
+	LastTitle=LastTitle[LastTitle.length-1];
+	if( LastTitle != "Parent2"){
+	appendParents=newArray("Parent1","Parent2");
+	appendEntry=newArray("none","none");
+	}else{
+	appendParents=newArray();
+	appendEntry=newArray();
+	}
+	
+	for(i=0; i<TemplateRows.length; i++){
+	if(i==0){
+	temp = split(TemplateRows[i], "\t");
+	temp = Array.concat(temp,appendParents);
+	temp = String.join(temp,"\t");
+	Generation0Rows=Array.concat(Generation0Rows, temp);
+	}
+	if(i>0){
+	temp = split(TemplateRows[i], "\t");
+	temp[0] = Gen0Lables[i-1];
+	temp = Array.concat(temp,appendEntry);
+	temp = String.join(temp,"\t");
+	Generation0Rows=Array.concat(Generation0Rows, temp);
+	}
+	}
+	StartingGen = configFilePath + "generation_0" + txt;
+	
+	dataFile = File.open(StartingGen);
+	
+	for(i=0; i<TemplateRows.length; i++){
+	print(dataFile, Generation0Rows[i]);
+	}
+	File.close(dataFile);
+
+	
+	}
+
+				
+		
+	
+		}else{
+
+popTypes = newArray("random","uniform", "gaussian", "standard", "mutant");
+popSizes = newArray();
+for(i=1; i<50; i++){
+pop = i*12;
+popSizes = Array.concat(popSizes, pop);
+}
+
+
+
+
+popSize = parseInt(popSizeChoice);
+TLeng =parseInt(TLeng);
+
+//--------------------------------------------------------------------------
+
+
+/*
+Table.create("generation_0");
+Table.showRowNumbers(false);
+Table.rename("generation_0","Results");  //RENAME
+Table.showRowNumbers(false);
+selectWindow("Results"); 
+*/
+
+
+
+//------------- IF RANDOM -----------------------------------
+
+if (popTypeChoice=="random")	{
+generation_0 = newArray (popSize+1);
+generation_0[0]= String.join(Template_Array, "\t");
+
+lengCheck=3;
+
+if(!endsWith(generation_0[0], "Parent2")){
+tempA = Array.concat(Template_Array, "Parent1","Parent2");
+
+generation_0[0]= String.join(tempA, "\t");
+
+lengCheck=1;
+
+}
+
+
+for(i=0; i<popSize; i++){
+
+			sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+	
+
+tempA=newArray("Gen0_Mut0_ID"+i+sex);
+
+for(j=0;j<Template_Array.length-lengCheck;j++){
+tempA=Array.concat(tempA, random());
+}
+
+tempA=Array.concat(tempA, "none", "none");
+stringA = String.join(tempA, "\t");
+
+
+generation_0[i+1] = stringA;
+
+}
+
+
+
+
+
+				} 
+				
+				
+if (popTypeChoice=="gaussian")	{
+generation_0 = newArray (popSize+1);
+generation_0[0]= String.join(Template_Array, "\t");
+
+lengCheck=3;
+
+if(!endsWith(generation_0[0], "Parent2")){
+tempA = Array.concat(Template_Array, "Parent1","Parent2");
+
+generation_0[0]= String.join(tempA, "\t");
+
+lengCheck=1;
+
+}
+
+placeholderArray = newArray(Template_Array.length-lengCheck);
+for(j=0;j<placeholderArray.length;j++){
+placeholderArray[j] = random();
+}
+
+for(i=0; i<popSize; i++){
+
+			sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+		
+
+
+
+	
+
+tempA=newArray("Gen0_Mut0_ID"+i+sex);
+
+for(j=0;j<Template_Array.length-lengCheck;j++){
+val = placeholderArray[j] +random("gaussian")/5;
+if (val<0){
+val=0;
+}
+if (val>1){
+val=1;
+}
+
+tempA=Array.concat(tempA, val);
+}
+
+tempA=Array.concat(tempA, "none", "none");
+stringA = String.join(tempA, "\t");
+
+
+generation_0[i+1] = stringA;
+
+}
+
+
+
+
+
+				} 				
+
+
+				
+
+
+
+if (popTypeChoice=="uniform")	{
+generation_0 = newArray (popSize+1);
+generation_0[0]= String.join(Template_Array, "\t");
+
+lengCheck=3;
+
+if(!endsWith(generation_0[0], "Parent2")){
+tempA = Array.concat(Template_Array, "Parent1","Parent2");
+
+generation_0[0]= String.join(tempA, "\t");
+
+lengCheck=1;
+
+}
+
+randomSeq = newArray();
+
+for(j=0;j<Template_Array.length-lengCheck;j++){
+tempR = newArray(popSize);
+for(i=0; i<popSize; i++){
+tempR[i] = random();
+}
+tempR = Array.rankPositions(tempR);
+randomSeq = Array.concat(randomSeq,tempR);
+}
+
+for(i=0; i<popSize; i++){
+
+			sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+
+tempA=newArray("Gen0_Mut0_ID"+i+sex);
+
+for(j=0;j<Template_Array.length-lengCheck;j++){
+tempA=Array.concat(tempA, (1/(popSize+1))*(randomSeq[(j*popSize)+i]+1));
+}
+
+tempA=Array.concat(tempA, "none", "none");
+stringA = String.join(tempA, "\t");
+
+
+generation_0[i+1] = stringA;
+
+}
+
+
+
+
+
+				} 
+				
+				
+
+//------------- IF STANDARD -----------------------------------
+
+if (popTypeChoice=="standard")	{
+	column = newArray (popSize);
+
+	if(TLeng <= 27){
+	
+	//ONLY NEEDS PART 1
+	Dialog.create("Set Values");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	for(k=1; k<TLeng; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	StandardVal = newArray(TLeng);
+	for(k=1; k<TLeng; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+
+	///NEEDS 2 PARTS
+	} else {
+	
+	//PART 1
+	Dialog.create("Set Values Part 1");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	
+	for(k=1; k<27; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	StandardVal = newArray(TLeng);
+	for(k=1; k<27; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+	
+	// PART 2
+	Dialog.create("Set Values Part 2");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	for(k=27; k<TLeng; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	for(k=27; k<TLeng; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+		}
+	
+	//Array.show (StandardVal);
+	
+
+	
+	for(i=0; i<popSize; i++){
+	Label = "ID";
+				sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+	
+	column[i] = "Gen0_Mut0_ID"+i+sex;
+	Table.setColumn(Label, column);
+	
+	
+				}
+
+	
+	for(i=0; i<popSize; i++)	{
+
+		for(k=1; k<TLeng; k++)	{
+				column = newArray (popSize);
+				row = i;
+				Value = StandardVal[k];
+				Label = Template_Array[k];
+				Table.set(Label, row, Value);
+						}
+					} // loop end	
+	
+	for(i=0; i<popSize; i++){
+	column[i] = "none";
+	Table.setColumn("Parent1", column);
+	Table.setColumn("Parent2", column);
+				}
+
+
+				} 
+
+
+//------------- IF MUTANT -----------------------------------
+
+if (popTypeChoice=="mutant")	{
+
+column = newArray (popSize);
+
+	if(TLeng <= 27){
+	
+	//ONLY NEEDS PART 1
+	Dialog.create("Set Values");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	for(k=1; k<TLeng; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	StandardVal = newArray(TLeng);
+	for(k=1; k<TLeng; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+
+	///NEEDS 2 PARTS
+	} else {
+	
+	//PART 1
+	Dialog.create("Set Values Part 1");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	Dialog.addMessage("For each individuals genes will undergo random gaussian mutation");
+	
+	for(k=1; k<27; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	StandardVal = newArray(TLeng);
+	for(k=1; k<27; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+	
+	// PART 2
+	Dialog.create("Set Values Part 2");
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	Dialog.addMessage("For each individuals genes will undergo random gaussian mutation");
+
+	for(k=27; k<TLeng; k++)	{
+	Label = Template_Array[k];
+	Dialog.addNumber(Label, 0.5);
+					}
+	Dialog.show();
+
+	for(k=27; k<TLeng; k++)	{
+	StandardVal[k] = Dialog.getNumber();
+	}
+		}
+
+	//MUTATION STR
+	Dialog.create("Set Mutation Strength");
+	Dialog.addMessage("Set the strength of mutation, (all mutations below or above 0 and 1 respectively will default to 0 if below and 1 if above.");
+	Dialog.addMessage("Mutation Strength = random(gaussian)  / X");
+	Dialog.addNumber("X  =", 6);
+	Dialog.show();
+
+	popMutStr = Dialog.getNumber();
+
+	
+		for(i=0; i<popSize; i++){
+	Label = "ID";
+				sex="";
+		if(SexType==1){
+		vr1 = i/2;
+		vr2 = parseInt(i/2);
+		if (vr1 == vr2){
+		sex="_M";
+		} else {
+		sex="_F";
+		}
+
+		}
+	
+	column[i] = "Gen0_Mut0_ID"+i+sex;
+	Table.setColumn(Label, column);
+	
+	
+				}
+
+	
+	for(i=0; i<popSize; i++)	{
+
+		for(k=1; k<TLeng; k++)	{
+				column = newArray (popSize);
+				row = i;
+				Value = StandardVal[k];
+
+				//MUTATION
+				Value = Value + ( random("gaussian")  /   popMutStr  );
+				
+					if (Value>1) { // Can't go above 1.
+					Value  = 1;
+						}
+					if (Value<0) { // Can't go below 0.
+					Value = 0;
+						}		
+
+				Label = Template_Array[k];
+				Table.set(Label, row, Value);
+						}
+					} // loop end	
+	
+	
+	for(i=0; i<popSize; i++){
+	column[i] = "none";
+	Table.setColumn("Parent1", column);
+	Table.setColumn("Parent2", column);
+				}
+
+
+	
+	
+	
+				} 
+
+
+
+//-----------------------------------------------------------------------
+// Save Generation_0
+//------------------------------------------------------------------------
+if (popTypeChoice=="random" || popTypeChoice=="uniform" || popTypeChoice=="gaussian")	{
+StartingGen = configFilePath + "generation_0" + txt;
+dataFile = File.open(StartingGen);
+
+for(i=0; i<generation_0.length;i++){
+
+print(dataFile, generation_0[i]);
+
+}
+
+
+File.close(dataFile);
+
+
+}else{
+
+Table.rename("Results","generation_0");  //RENAME
+Table.showRowNumbers(false);
+
+StartingGen = configFilePath + "generation_0" + txt;
+saveAs("Results",StartingGen);
+
+
+
+
+selectWindow("generation_0" + txt); //-------------Cull the uneeded tables.
+		run("Close");
+
+}
+
+if(isOpen("generation_0" + txt)){
+selectWindow("generation_0" + txt); //-------------Cull the uneeded tables.
+		run("Close");
+}
+
+}
+
+
+
+
+
+
+// SAVE PREVIOUSLY USED SETTINGS
+
+
+dataFile = File.open(settingsFilePath);
+
+
+// Population Setup
+	print(dataFile, inableSex);
+	print(dataFile, populationChoice);
+	print(dataFile, populationSize);
+	print(dataFile, generationCap);
+	print(dataFile, populationGenotype);
+
+// Division Setup	
+	print(dataFile, segmentationUnit);	
+	print(dataFile, segmentationDeletion);
+	print(dataFile, segmentationBreeding);
+	print(dataFile, segmentationMutate);	
+	
+//Gametic Mutation
+	print(dataFile, pointMutationRateGamete);
+	print(dataFile, lvl1MutationRateGamete);
+	print(dataFile, lvl2MutationRateGamete);
+	print(dataFile, linkedMutationProbGamete);
+	
+//Offspring Mutation
+	print(dataFile, pointMutationRateOffspring);
+	print(dataFile, lvl1MutationRateOffspring);
+	print(dataFile, lvl2MutationRateOffspring);
+	print(dataFile, linkedMutationProbOffspring);
+	
+//Clone Mutation	
+	print(dataFile, pointMutationRateClone);
+	print(dataFile, lvl1MutationRateClone);
+	print(dataFile, lvl2MutationRateClone);
+	print(dataFile, linkedMutationProbClone);
+	
+	
+//Protective Mechanisms
+	print(dataFile, cloneBest);
+	print(dataFile, rescueBest);
+		
+	
+//Adaptive Mechanisms
+	print(dataFile, distanceRateOffspring);
+	print(dataFile, rankedProbability);
+	print(dataFile, varianceProbability);
+	print(dataFile, fitnessProbability);
+		
+//Crossover	
+	print(dataFile, crossOverType);
+	print(dataFile, crossOverProbability);	
+	print(dataFile, crossOverBalance);
+
+
+//Mating System	
+	print(dataFile, poolAssignmentSystem);
+	print(dataFile, matingAssignmentSystem);
+	print(dataFile, polySystem);
+	
+
+
+
+File.close(dataFile);
+
+
+
+
+
+dataFile = File.open(imageDIR + "/AlgorithmSettings.txt");
+
+
+// Population Setup
+	print(dataFile, inableSex);
+	print(dataFile, populationChoice);
+	print(dataFile, populationSize);
+	print(dataFile, generationCap);
+	print(dataFile, populationGenotype);
+
+// Division Setup	
+	print(dataFile, segmentationUnit);	
+	print(dataFile, segmentationDeletion);
+	print(dataFile, segmentationBreeding);
+	print(dataFile, segmentationMutate);	
+	
+//Gametic Mutation
+	print(dataFile, pointMutationRateGamete);
+	print(dataFile, lvl1MutationRateGamete);
+	print(dataFile, lvl2MutationRateGamete);
+	print(dataFile, linkedMutationProbGamete);
+	
+//Offspring Mutation
+	print(dataFile, pointMutationRateOffspring);
+	print(dataFile, lvl1MutationRateOffspring);
+	print(dataFile, lvl2MutationRateOffspring);
+	print(dataFile, linkedMutationProbOffspring);
+	
+//Clone Mutation	
+	print(dataFile, pointMutationRateClone);
+	print(dataFile, lvl1MutationRateClone);
+	print(dataFile, lvl2MutationRateClone);
+	print(dataFile, linkedMutationProbClone);
+	
+	
+//Protective Mechanisms
+	print(dataFile, cloneBest);
+	print(dataFile, rescueBest);
+		
+	
+//Adaptive Mechanisms
+	print(dataFile, distanceRateOffspring);
+	print(dataFile, rankedProbability);
+	print(dataFile, varianceProbability);
+	print(dataFile, fitnessProbability);
+		
+//Crossover	
+	print(dataFile, crossOverType);
+	print(dataFile, crossOverProbability);	
+	print(dataFile, crossOverBalance);
+
+
+//Mating System	
+	print(dataFile, poolAssignmentSystem);
+	print(dataFile, matingAssignmentSystem);
+	print(dataFile, polySystem);
+	
+
+
+
+File.close(dataFile);
+
+
+
+
+
+
+
+
+
+
+

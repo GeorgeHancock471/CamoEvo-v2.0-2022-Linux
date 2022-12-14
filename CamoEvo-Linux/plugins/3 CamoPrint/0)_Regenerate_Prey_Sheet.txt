@@ -1,0 +1,13 @@
+
+Dialog.create("");
+	Dialog.addMessage("Step 1, Select Population");
+Dialog.show();
+
+populationDir = getDirectory("Select the Population you wish to upload the rankings to");
+
+dataFile = File.open(getDirectory("plugins") +"2 CamoReq/PopLocation.txt");
+print(dataFile, populationDir);
+File.close(dataFile);
+
+
+run("Generate Prey Sheet");

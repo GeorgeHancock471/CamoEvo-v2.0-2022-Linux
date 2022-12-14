@@ -1,0 +1,62 @@
+setBatchMode(true);
+
+while(roiManager("count")>0){
+roiManager("Select",0); roiManager("delete");
+}
+
+
+
+if(isOpen("t")) close("t");
+
+run("Select None");
+
+run("Duplicate...", "title=t");
+
+run("Duplicate...", "title=Mask");
+run("8-bit");
+setThreshold(1, 255);
+run("Convert to Mask");
+run("Create Selection");
+roiManager("Add");
+close();
+
+n=30;
+
+mArray=newArray(n);
+
+for(i=0;i<n;i++){
+makeRectangle(0,i*(400/n),400,(400/n));
+
+
+roiManager("Add");
+roiManager("select",newArray(0,1));
+roiManager("AND");
+if(selectionType != -1){
+roiManager("Add");
+roiManager("Select", roiManager("count")-1);
+
+getStatistics(area,mean);
+run("Set...","value=mean");
+
+mArray[i]=mean;
+roiManager("deselect");
+roiManager("select",newArray(1,2));
+roiManager("delete");
+}else{
+roiManager("deselect");
+roiManager("select",1);
+roiManager("delete");
+}
+}
+
+repL = mArray.length;
+for(i=0;i<repL;i++){
+v=repL-1-i;
+if(mArray[v]<1){
+mArray=Array.deleteIndex(mArray,v);
+}
+}
+
+setBatchMode("show");
+
+Array.show(mArray);

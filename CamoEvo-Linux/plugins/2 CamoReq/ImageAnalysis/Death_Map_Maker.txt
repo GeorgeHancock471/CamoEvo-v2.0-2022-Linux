@@ -1,0 +1,239 @@
+/*____________________________________________________________________
+
+	Title: Regenerate Stimuli
+	Authors:  George Hancock 
+	Date: 13/09/21
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Recreates the stimuli used. Allowing for it to be measured by CamoEvo.
+
+*/
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+setBatchMode(false);
+ run("ROI Manager...");
+
+setBatchMode(true);
+
+close("*");
+
+while(roiManager("count") > 0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+
+
+
+
+
+// STEP 1, Select the Generation
+///==========================================================================================
+
+currentDefault = File.getDefaultDir;
+
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+
+
+
+popDIR = getDirectory("Population");
+
+fileList  =  getFileList(popDIR);
+
+Leng = lengthOf(fileList );
+
+completedGen = newArray();
+dataSet = newArray();
+
+
+for(i=0; i<Leng; i++) { 
+		if(endsWith(fileList[i], "_ranks.txt")!=1 && startsWith(fileList[i], "gen")==1 ){
+			completedGen = Array.concat(completedGen, fileList[i]);
+		}
+		
+		if(startsWith(fileList[i], "Data_Output")==1 ){
+			dataSet = Array.concat(dataSet, fileList[i]);
+		}
+	
+	}
+	
+	
+	
+	
+	
+//Only Operate if Data Set exists
+if(dataSet.length>0){
+
+	dataSet = File.openAsString(popDIR + dataSet[0]);
+	dataRows = split(dataSet,"\n");
+	finalGen = split(dataRows[dataRows.length-1], "\t");
+	titles = split(dataRows[0], "\t");
+	
+	
+	captureColumn = index(titles,"Capture_time");
+	bgColumn = index(titles,"Image_ID");
+	xColumn = index(titles,"X_Coordinate");
+	yColumn = index(titles,"Y_Coordinate");
+	
+	backgroundIDs =  getFileList(popDIR+"Backgrounds/");
+	
+
+	ovalD = 50;
+	
+	
+	
+
+// STEP 2, Population Settings
+///==========================================================================================
+	
+	
+popSetDIR = popDIR + "Settings_Population.txt";
+
+popSetText =  File.openAsString(popSetDIR);
+
+popSetList = split(popSetText, "\n");
+
+TargetSet = split(popSetList[0],"\t");
+TargetSetting = TargetSet[1];
+
+TargetChoice = TargetSetting;
+
+
+// Get Scales
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+	
+	
+	
+	
+	
+	
+// STEP 3, Generate Maps
+///==========================================================================================
+	
+	
+captureArray = newArray();
+
+for(L=1;L<dataRows.length;L++){
+
+data = split(dataRows[L], "\t");
+captureArray = Array.concat(captureArray,data[captureColumn]);
+
+}
+	
+
+Array.getStatistics(captureArray, min, max, mean, stdDev);
+	
+	
+
+	
+//Add Points Background by Background
+
+for(A=0;A<backgroundIDs.length;A++){
+
+open(popDIR +"Backgrounds/" + backgroundIDs[A]);
+
+	xArray = newArray();
+	yArray = newArray();
+	timeArray = newArray();
+
+
+	for(L=0;L<dataRows.length;L++){
+
+	data = split(dataRows[L], "\t");
+	
+	background=data[bgColumn];
+	
+		// Add point
+		if(background==backgroundIDs[A]){
+		
+		xArray = Array.concat(xArray, parseFloat(data[xColumn]) );
+		yArray = Array.concat(yArray, parseFloat(data[yColumn]) );
+		timeArray = Array.concat(timeArray, parseFloat(data[captureColumn]) );
+	
+		} // correct bg
+
+
+	} // (L):
+	
+
+	
+	for(L=0; L<timeArray.length; L++){
+	
+	
+	x = xArray[L];
+	y = yArray[L];
+	
+	c = 255 * Math.pow(  (timeArray[L]-min)/(max-min),   stdDev/mean);
+	
+	setColor(c, c, c);
+	
+	fillOval(x+TargetChoiceScale/2-ovalD/2, y+TargetChoiceScale/2-ovalD/2, ovalD,ovalD);
+	
+	setColor("white");
+	
+	drawOval(x+TargetChoiceScale/2-ovalD/2, y+TargetChoiceScale/2-ovalD/2, ovalD,ovalD);
+	
+	
+	}
+		
+	
+
+
+
+} // (A):
+
+WinNam = getList("image.titles");
+
+if(WinNam.length>1){
+run("Images to Stack", "name=Gallery title=[] use");
+}
+
+setBatchMode("exit and display");
+
+
+} else {
+
+exit("NO DATASET");
+
+}
+	
+exit

@@ -1,0 +1,133 @@
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+//setBatchMode(true);
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+
+
+close("*");
+
+
+
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("Delete");
+}
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+GenStr = File.openAsString(GenNum);
+GenArr = split(GenStr, "\n");
+GenRand = newArray(GenArr.length);
+
+BgDirectory = CheckDirectory+"Backgrounds/";
+BGList  =  getFileList(BgDirectory);
+
+open(BgDirectory+BGList[0]);
+rename("BG");
+w=getWidth();
+h=getHeight();
+run("Lab Stack");
+
+
+
+
+makeRectangle(w/2-200,h/2-200,400,400);
+roiManager("Add");
+roiManager("select",roiManager("count")-1);
+roiManager("rename","BG");
+
+
+setSlice(1); getStatistics(area,bgL,min,max,bgP);
+setSlice(2); getStatistics(area,bgA);
+setSlice(3); getStatistics(area,bgB);
+
+close("BG");
+
+
+patDIR =CheckDirectory+"GenPat_"+GenNumber+"/";
+
+
+
+GenRand[0] = "ID"+"\t"+"Fitness";
+for(j=1;j<GenRand.length;j++){
+t = split(GenArr[j], "\t");
+
+open(patDIR+t[0]+".tif");
+run("Lab Stack");
+
+
+if(j==1){
+setSlice(1);
+setThreshold(1,100);
+run("Create Selection");
+roiManager("add");
+roiManager("select",roiManager("count")-1);
+roiManager("rename","TG");
+getStatistics(areaTG);
+} 
+
+
+setSlice(1); getStatistics(area,tgL,min,max,tgP);
+setSlice(2); getStatistics(area,tgA);
+setSlice(3); getStatistics(area,tgB);
+
+
+
+difL = Math.pow(Math.sqrt(Math.sqr(tgL-bgL))/100,2)*3;
+difA = Math.sqrt(Math.sqr(tgA-bgA))/200;
+difB = Math.sqrt(Math.sqr(tgB-bgB))/200;
+difP = Math.sqrt(Math.sqr(tgP-bgP))/50;
+
+
+
+print(t[0],difL/3-difA/3-difB/3);
+GenRand[j] = t[0]+"\t"+-difL-difA-difB-difP;
+
+
+close("*");
+}
+
+
+
+
+
+	dataFile = File.open(SurvGenNum);
+	for(i=0;i<GenRand.length;i++){
+		print(dataFile, GenRand[i]);
+	}		
+	File.close(dataFile);

@@ -1,0 +1,214 @@
+/*____________________________________________________________________
+
+	Title: Fitness_Plotter
+	Authors:  George Hancock 
+	Date: 05/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Generates scatter and line plots for fitness and generates the concatenated .csv file at the end of running ImageGA_Demo.
+
+*/
+
+
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+// Obtain Table Names Array
+//---------------------------------------------------
+// Allows you to obtain an array of all the table column names
+
+ function getColumnNames(name) {
+	selectWindow(name);
+	Table.showRowNumbers(false);
+	name = Table.headings;
+	name = split(name, "\t");
+	Table.showRowNumbers(false);
+	return name; 
+}
+
+
+// Obtain Row Length
+//---------------------------------------------------
+// Allows you to obtain the length of a row in a table.
+
+ function getRowLength(name) {
+
+	Nam = getColumnNames(name);
+	strCol = Table.getColumn(Nam[0]);
+	length = lengthOf (strCol);
+	return length; 
+}
+
+
+
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory with the fitness values of interest");
+	Dialog.show();
+
+
+survivalDIR = getDirectory("Select folder you wish to use.");
+configFilePath=survivalDIR;
+tempString = "select=["+ configFilePath+"]";
+
+survivalArray = newArray();
+
+survivalList  =  getFileList(survivalDIR);
+
+Leng = lengthOf(survivalList);
+
+for(i=0; i<Leng; i++) { 
+	if(endsWith(survivalList[i], "_ranks.txt")==1){
+
+		survivalArray = Array.concat(survivalArray, survivalList[i]);
+	}}
+
+
+GenArray = newArray();
+IDarray = newArray();
+FitnessArray = newArray();
+FitnessMean=newArray();
+
+shortGenArray = newArray();
+FitnessMeanArray = newArray();
+FitnessErrorArray = newArray();
+TimeoutArray = newArray();
+
+
+for (i=0; i<survivalArray.length; i++){
+
+GenNum = survivalDIR + "gen_" + i + "_ranks" + txt;
+GenName = "gen_" + i + "_ranks" + txt;
+
+referenceString=File.openAsString(GenNum);	// open txt data file
+referenceRows=split(referenceString, "\n");
+
+
+L = referenceRows.length-1;
+
+
+IDs = newArray(L-1);
+Fitness = newArray(L-1);
+Real=newArray(L-1);
+TimeOut = 0;
+
+for(f=0; f<L-1; f++){
+Temp=split(referenceRows[f+1], "\t");
+GenArray = Array.concat(GenArray, i);
+IDs[f] = Temp[0];
+Fitness[f]= Temp[1];
+
+if(Fitness[f]==15000){
+TimeOut = TimeOut+1;
+}
+
+
+if(Temp.length==3){
+Real[f] = Temp[2];
+}else{
+Real[f] = "";
+}
+}
+
+shortGenArray = Array.concat(shortGenArray, i);
+
+
+
+TimeoutArray = Array.concat(TimeoutArray, TimeOut);
+
+Array.getStatistics(Fitness, min, max, mean, stdDev);
+
+FitnessMeanArray = Array.concat(FitnessMeanArray, mean);
+FitnessErrorArray =  Array.concat(FitnessErrorArray, stdDev/Math.sqrt(Fitness.length));
+
+FitnessArray = Array.concat(FitnessArray, Fitness);
+RealArray = Array.concat(RealArray, Real);
+IDarray = Array.concat(IDarray, IDs);
+
+}
+
+
+
+
+
+ 
+
+		//  Line Plot
+		 
+		Array.getStatistics( shortGenArray, min, max, mean, stdDev);
+		xMax = max;
+		Array.getStatistics( FitnessMeanArray, min, max, mean, stdDev);
+		yMax = max;
+
+		yMax = yMax + max + max/5;
+
+        Plot.create("Line Plot", "Generation", "Fitness", shortGenArray, FitnessMeanArray);
+				Plot.setLineWidth(3);
+				Plot.setFontSize(21);
+				Plot.setAxisLabelSize(28, "bold");
+				
+				Plot.setLimits(0,  xMax, 0, yMax);
+				Plot.setLineWidth(2);
+				Plot.add("error bars", FitnessErrorArray);
+				Plot.show();
+	
+	
+
+
+		//Scatter Plot
+		Array.getStatistics(GenArray, min, max, mean, stdDev);
+		xMax = max;
+		Array.getStatistics(FitnessMeanArray, min, max, mean, stdDev);
+
+		yMax = yMax + max + max/5;
+
+        Plot.create("Scatter Plot", "Generation", "Fitness");
+        Plot.setLineWidth(3);
+				Plot.setFontSize(21);
+				Plot.setAxisLabelSize(28, "bold");
+				
+				Plot.setLimits(0,  xMax, 0, yMax);
+				Plot.setLineWidth(4);
+
+        Plot.add("dots", GenArray, FitnessArray);
+		Plot.setLineWidth(2);
+		
+		Plot.show();
+
+
+
+//Array.show(FitnessMeanArray);
+
+
+Table.create("Results");
+Table.setColumn("Generation", GenArray);
+Table.setColumn("ID", IDarray);
+Table.setColumn("fitness", FitnessArray);
+Table.setColumn("fitness_real", RealArray);
+Table.showRowNumbers(false);
+
+Final = survivalDIR + "Fitness Summary_0" + csv;
+
+Table.rename("Results", "Fitness Summary");
+
+n=0;
+while(File.exists(Final)){
+n=n+1;
+Final = survivalDIR + "Fitness Summary_"+ n + csv;
+}
+
+saveAs("Results",Final);
+
+
+
+
+
+
+

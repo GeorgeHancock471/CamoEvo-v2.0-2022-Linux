@@ -1,0 +1,487 @@
+/*____________________________________________________________________
+
+	Title: ImageGA Interface
+	Authors:  George Hancock 
+	Date: 05/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This code allows the user to change the algorithm settings and population.
+
+*/
+
+
+
+setOption("ShowRowNumbers", false);
+
+
+
+//============================================================================
+// Make file names easier to handle.
+//============================================================================
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt"'
+png = ".png"
+
+//----------------------------------------------------------------------------
+
+
+
+
+//============================================================================
+// FUNCTIONS
+//============================================================================
+setOption("ShowRowNumbers", false);
+setOption("ShowRowIndexes", false);
+
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+
+//===========================================================================
+// Assign Algorithm Variables
+//===========================================================================
+defaultSettingsT = newArray(
+
+// Population Setup
+"0", 				// Sex
+"custom", 			// Use Template 
+"24", 				// Population Size
+"10",				// Max Number of Generations
+"random", 			// Population Genotype
+
+// Division Setup
+"fraction",			// Unit
+"0.50", 			// Deletion Pool	
+"0.50", 			// Mating Pool
+"0.0000", 			// Mutate Pool
+
+// Gametic Mutation
+"0.001",			// Gamete Point Mutation
+"0.001",			// Gamete Lvl1 Mutation
+"0.001",			// Gamete Lvl2 Mutation
+"0.001",			// Gamete Linked Mutation
+
+// Offspring Mutation
+"0.001",			// Offspring Point Mutation
+"0.001",			// Offspring Lvl1 Mutation
+"0.001",			// Offspring Lvl2 Mutation
+"0.001",			// Offspring Linked Mutation
+
+// Clonal Mutation
+"0.001",			// Clone Point Mutation
+"0.001",			// Clone Lvl1 Mutation
+"0.001",			// Clone Lvl2 Mutation
+"0.001",			// Clone Linked Mutation
+
+// Protective Mechanisms
+"false",			// Clone Best
+"false",			// Rescue Best
+
+// Adaptive Mechanisms
+"0.15",				// Displacement Mutation
+"true",				// Scale mutation with rank
+"true",				// Scale mutation with gene variance
+"true",				// Scale mutation with generation
+
+// Crossover
+"random",			//Crossover Type
+"0.80000",			//Crossover Probability
+"incomplete",		//Crossover Completeness
+
+// Mating Systems
+"ranked_choice",	//Breeding Pool 
+"random",			//Mating System
+"none");			//Poly System
+
+
+
+settingsFilePath = getDirectory("plugins") + "ImageGA/RequisitFunctions/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+} 
+
+
+ 
+
+
+//----------------------------------------------------------------------------
+
+
+
+//===========================================================================
+// Use Sex
+//============================================================================
+
+
+Dialog.create("Biological Sex");
+Dialog.addMessage(    "________________(1) Biological Sex___________________");
+	Dialog.addMessage("Choose whether or not to enable or disable biological sex");
+	Dialog.addMessage("If enabled the population will be divided into males and females");
+	Dialog.addMessage("Males can only mate with females and vice versa");
+	Dialog.addCheckbox("Enable Sex", defaultSettings[0]);
+Dialog.show();
+
+inableSex = Dialog.getCheckbox();
+
+
+
+//===========================================================================
+// Starting Population
+//============================================================================
+
+
+PopChoices = newArray("existing", "custom");
+
+Dialog.create("Starting Population Template");
+	Dialog.addMessage("________________(2.1) Starting Population Values___________________");
+		Dialog.addMessage("Would you like to use the existing values within the template or create new values?");
+		Dialog.addMessage("(If you choose Use Existing, it will use the existing population size and gene values)");
+		Dialog.addChoice("", PopChoices, defaultSettings[1]);
+	Dialog.show();
+
+populationChoice = Dialog.getChoice();
+
+
+
+popTypes = newArray("random", "uniform", "standard", "gaussian");
+
+
+Dialog.create("Population Settings");
+
+		Dialog.addMessage("___________________(2.2) Population Size_____________________");
+		Dialog.addMessage("The Number of Individuals in each Population. (number has to be divisible by 6)");
+		Dialog.addNumber("                                                                              Population Size N = ", defaultSettings[2]);
+		
+		Dialog.addMessage("___________________(2.3) Number of Generations_____________________");
+		Dialog.addNumber("                                                                              The Number of Generations of Selection", defaultSettings[3]);
+		
+		Dialog.addMessage("___________________(2.4) Population Types____________________");
+		Dialog.addMessage("Determines the range of different Genotypes within the Starting Population \n            random: each gene is a random number between 0-1\n            uniform: perfectly uniform distribution for each gene across the population\n            standard: each individual starts with the values of the 1st individual in the template\n            gaussian: standard with random gaussian mutation applied");
+		Dialog.addChoice("                                                                                     Population Type ", popTypes, defaultSettings[4]);
+	
+
+	Dialog.show();
+
+
+populationSize = Dialog.getNumber();
+generationCap = Dialog.getNumber();
+populationGenotype = Dialog.getChoice();
+
+
+
+
+//===========================================================================
+// Divisions
+//============================================================================
+
+acceptBreed="no";
+
+while(acceptBreed=="no"){
+
+unitChoices = newArray("integer", "fraction");
+
+Dialog.create("Pool Settings Part 0.5");
+
+	
+		Dialog.addMessage("_________________(3) Population Divisions____________________");
+		Dialog.addMessage("Choose which unit you wish to use for the deletion, breeding and cloned pools");
+		Dialog.addMessage("Integers, e.g. 6,  are easier to use when tailoring to specific populations");
+		Dialog.addMessage("Fraction/Decimal, e.g. 1/3 or 0.33333333, are useful for settings being flexible across multiple population sizes");
+
+		Dialog.addChoice("                                                        Unit Choice =", unitChoices, defaultSettings[5]);
+		Dialog.addString("                                                        Number Deleted =", defaultSettings[6]);
+		Dialog.addString("                                                        Number Breeding =", defaultSettings[7]);
+		Dialog.addString("                                                        Number Cloned =", defaultSettings[8]);
+
+		Dialog.show();
+		
+segmentationUnit = Dialog.getChoice();
+segmentationDeletion  = Dialog.getString();
+segmentationBreeding  = Dialog.getString();
+segmentationMutate  = Dialog.getString();
+
+if(segmentationUnit == "fraction"){
+
+	tArray = split(segmentationDeletion, "/");
+	if(tArray.length>1){
+	segmentationDeletion  = d2s(parseFloat(tArray[0]) / parseFloat(tArray[1]),8);
+	}
+
+	tArray = split(segmentationBreeding, "/");
+	if(tArray.length>1){
+	segmentationBreeding  = d2s(parseFloat(tArray[0]) / parseFloat(tArray[1]),8);
+	}
+
+}
+
+
+
+//============================================================================
+// Mutations
+//============================================================================
+
+trueFalse=newArray("true","false");
+
+Dialog.create("Mutations");
+
+		
+		
+		Dialog.addMessage("Note: Gene levels refer to the naming system (1_2_3) that each gene has");
+		
+		Dialog.addMessage("__________________ (6.1) Gametes Mutations______________________");
+		Dialog.addMessage("Determines the probability of mutations that take place prior to crossover");
+		
+		Dialog.addNumber("Point Mutation, probability of a gene mutating                                 ", defaultSettings[9], 5, 6, "");
+		Dialog.addNumber("Lvl1 Mutation, probability of genes sharing lvl1 mutating", defaultSettings[10], 5, 6, "");
+		Dialog.addNumber("Lvl2 Mutation, probability of genes sharing both lvl1 & lvl2 mutating", defaultSettings[11], 5, 6, "");
+		Dialog.addNumber("Linked Mutation, probability of genes sharing lvl1 & lvl3 undergoing the same mutation", defaultSettings[12], 5, 6, "");
+		
+		Dialog.addMessage("__________________ (6.2) Offspring Mutations______________________");
+		Dialog.addMessage("Determines the probability of mutations that take place post crossover");
+		
+		Dialog.addNumber("Point Mutation, probability of a gene mutating                                    ", defaultSettings[13], 5, 6, "");
+		Dialog.addNumber("Lvl1 Mutation, probability of genes sharing lvl1 mutating", defaultSettings[14], 5, 6, "");
+		Dialog.addNumber("Lvl2 Mutation, probability of genes sharing both lvl1 & lvl2 mutating", defaultSettings[15], 5, 6, "");
+		Dialog.addNumber("Linked Mutation, probability of genes sharing lvl1 & lvl3 undergoing the same mutation", defaultSettings[16], 5, 6, "");
+
+		Dialog.addMessage("__________________ (6.3) NonBreeder Mutations_____________________");
+		Dialog.addMessage("Determines the probability of mutations for non breeders, mutation is needed to prevent fixation");
+		
+		Dialog.addNumber("Mutation, probability of a gene mutating                                 ", defaultSettings[17], 5, 6, "");
+		Dialog.addNumber("Lvl1 Mutation, probability of genes sharing lvl1 mutating", defaultSettings[18], 5, 6, "");
+		Dialog.addNumber("Lvl2 Mutation, probability of genes sharing both lvl1 & lvl2 mutating", defaultSettings[19], 5, 6, "");
+		Dialog.addNumber("Linked Mutation, probability of genes sharing lvl1 & lvl3 undergoing the same mutation", defaultSettings[20], 5, 6, "");
+		
+
+	Dialog.show();
+
+
+pointMutationRateGamete = d2s(Dialog.getNumber(),10);
+lvl1MutationRateGamete = d2s(Dialog.getNumber(),10);
+lvl2MutationRateGamete = d2s(Dialog.getNumber(),10);
+linkedMutationProbGamete = d2s(Dialog.getNumber(),10);
+
+
+pointMutationRateOffspring = d2s(Dialog.getNumber(),10);
+lvl1MutationRateOffspring = d2s(Dialog.getNumber(),10);
+lvl2MutationRateOffspring = d2s(Dialog.getNumber(),10);
+linkedMutationProbOffspring = d2s(Dialog.getNumber(),10);
+
+pointMutationRateClone = d2s(Dialog.getNumber(),10);
+lvl1MutationRateClone = d2s(Dialog.getNumber(),10);
+lvl2MutationRateClone = d2s(Dialog.getNumber(),10);
+linkedMutationProbClone = d2s(Dialog.getNumber(),10);
+
+
+
+//============================================================================
+// Protective Mechanisms
+//============================================================================
+
+
+Dialog.create("Protective Settings");
+
+		Dialog.addMessage("___________________ (7.0) Protective Settings_______________________");
+		Dialog.addMessage("Note doesn't currently work if sex is enabled");
+		Dialog.addNumber("Clone the best 2 individuals?", parseFloat(defaultSettings[21]));
+		Dialog.addNumber("Revive the best 2 individuals if killed?", parseFloat(defaultSettings[22]));
+		
+	Dialog.show();
+
+cloneBest = Dialog.getNumber();
+rescueBest = Dialog.getNumber();
+
+
+
+
+//============================================================================
+// Adaptive Mechanisms
+//============================================================================
+
+Dialog.create("Adaptive Settings");
+
+		Dialog.addMessage("___________________ (8.0) Adaptive Settings_______________________");
+		Dialog.addNumber("Gene Displacement, Probability of displacing similar gene values", defaultSettings[23], 5, 6, "");
+		Dialog.addChoice("Rank Proability, Adjust mutation with individual rank", trueFalse, defaultSettings[24]);
+		Dialog.addChoice("Variance Probability, Adjust mutation with gene variation ", trueFalse, defaultSettings[25]);
+		Dialog.addChoice("Fitness Probability, Adjust mutation with fitness change", trueFalse, defaultSettings[26]);
+		
+	Dialog.show();
+	
+distanceRateOffspring =  Dialog.getNumber();
+rankedProbability = Dialog.getChoice();
+varianceProbability = Dialog.getChoice();
+fitnessProbability = Dialog.getChoice();
+
+
+//============================================================================
+// Crossover
+//============================================================================
+
+crossTypes = newArray("random", "one_Point", "two_point", "multi_point");
+crossCompleteness = newArray("complete", "incomplete");
+
+
+
+Dialog.create("Genetic Crossover");
+
+
+		Dialog.addMessage("_____________________(9.1) Cross Over Type______________________");
+		Dialog.addMessage("Determines the pattern of recombination of genes between the parents.");
+		Dialog.addMessage("        Random: all genes 50/50 \n        One Point: one rand length sections\n        Two Point: two rand length sections \n        Multi Point: multiple sections of random length\n        Linked Point: sections assigned by gene names");
+
+
+		Dialog.addChoice("                                                                  Cross Over Type",crossTypes, defaultSettings[27]);
+
+
+		Dialog.addMessage("_____________________(9.2) Cross Over Probability______________________");
+		Dialog.addMessage("Determines the probability that genetic crossover occurs");
+		Dialog.addMessage("Setting this probability to 0 renders the population asexual");
+		Dialog.addNumber("                                                                  Cross Over Probability",defaultSettings[28], 5, 6, "");
+		
+		Dialog.addMessage("_____________________(9.3) Cross Over Completeness______________________");
+		Dialog.addMessage("Determines whether genes are copied over wholey (complete) or averaged with random weighting between parents (incomplete). ");
+
+		Dialog.addChoice("                                                                  Cross Over Completeness",crossCompleteness , defaultSettings[29]);
+		
+
+		
+
+Dialog.show();
+
+                                                 		
+
+crossOverType =  Dialog.getChoice();
+crossOverProbability =  Dialog.getNumber();
+crossOverBalance =  Dialog.getChoice();
+
+
+
+
+//============================================================================
+// Mating
+//============================================================================
+MatingSystemTypes = newArray ("random", "ranked", "inverse", "ranked-biased", "inverse-biased", "disassortative", "assortative", "semi-sortative", "dissort-biased", "assort-biased");
+breedTypes = newArray("ranked_choice", "binary_tournament", "biased_roulette");
+polyTypes  = newArray("none","fittestChose","fittestPicked","male","female");
+
+Dialog.create("Mating System");
+
+		Dialog.addMessage("_____________________(10.1) Mating Pool Assignment__________________");
+		Dialog.addMessage("Determines which individuals are allowed to breeed.");
+		Dialog.addChoice("                                               Selection System ",breedTypes, defaultSettings[30]);
+		
+		Dialog.addMessage("_____________________(10.2) Mating System Type_____________________");
+		Dialog.addMessage("Determines the pattern of mating between the breeding individuals within the population.");
+		Dialog.addChoice("                                               Mating System Type",MatingSystemTypes, defaultSettings[31]);
+		
+		Dialog.addMessage("___________________(10.3) Poly Breeding (experimental)______________");
+		Dialog.addMessage("Determines whether cerrtain individuals can mate more then others.");
+		Dialog.addChoice("                                               Selection System ",polyTypes, defaultSettings[32]);
+		
+
+Dialog.show();
+
+
+poolAssignmentSystem = Dialog.getChoice();
+matingAssignmentSystem  =  Dialog.getChoice();
+polySystem = Dialog.getChoice();
+
+
+
+// SAVE PREVIOUSLY USED SETTINGS
+
+
+dataFile = File.open(settingsFilePath);
+
+
+// Population Setup
+	print(dataFile, inableSex);
+	print(dataFile, populationChoice);
+	print(dataFile, populationSize);
+	print(dataFile, generationCap);
+	print(dataFile, populationGenotype);
+
+// Division Setup	
+	print(dataFile, segmentationUnit);	
+	print(dataFile, segmentationDeletion);
+	print(dataFile, segmentationBreeding);
+	print(dataFile, segmentationMutate);	
+	
+//Gametic Mutation
+	print(dataFile, pointMutationRateGamete);
+	print(dataFile, lvl1MutationRateGamete);
+	print(dataFile, lvl2MutationRateGamete);
+	print(dataFile, linkedMutationProbGamete);
+	
+//Offspring Mutation
+	print(dataFile, pointMutationRateOffspring);
+	print(dataFile, lvl1MutationRateOffspring);
+	print(dataFile, lvl2MutationRateOffspring);
+	print(dataFile, linkedMutationProbOffspring);
+	
+//Clone Mutation	
+	print(dataFile, pointMutationRateClone);
+	print(dataFile, lvl1MutationRateClone);
+	print(dataFile, lvl2MutationRateClone);
+	print(dataFile, linkedMutationProbClone);
+	
+	
+//Protective Mechanisms
+	print(dataFile, cloneBest);
+	print(dataFile, rescueBest);
+		
+	
+//Adaptive Mechanisms
+	print(dataFile, distanceRateOffspring);
+	print(dataFile, rankedProbability);
+	print(dataFile, varianceProbability);
+	print(dataFile, fitnessProbability);
+		
+//Crossover	
+	print(dataFile, crossOverType);
+	print(dataFile, crossOverProbability);	
+	print(dataFile, crossOverBalance);
+
+
+//Mating System	
+	print(dataFile, poolAssignmentSystem);
+	print(dataFile, matingAssignmentSystem);
+	print(dataFile, polySystem);
+	
+
+
+File.close(dataFile);
+
+
+

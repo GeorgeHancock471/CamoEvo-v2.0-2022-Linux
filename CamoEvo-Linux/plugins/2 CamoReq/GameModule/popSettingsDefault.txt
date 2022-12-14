@@ -1,0 +1,8 @@
+Target = 	Default_Oval
+Generation = 	30
+PopSize = 	24
+NumSlide = 	1
+TimeOutTime = 	15000
+StartSpace = 	0	100	-80	80	-80	80
+ColourSpace = 	0	100	-80	80	-80	80
+FitnessValue = 	Camouflage

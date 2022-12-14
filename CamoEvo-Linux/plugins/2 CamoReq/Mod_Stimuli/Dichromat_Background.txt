@@ -1,0 +1,12 @@
+setBatchMode(true);
+run("Select All");
+run("Duplicate...", "title=dichromat");
+run("Max...","value=225");
+run("Lab Stack");
+setSlice(2);
+run("Set...","value=0");
+run("RGB Color");
+run("Copy");
+close();
+setPasteMode("Copy");
+run("Paste");

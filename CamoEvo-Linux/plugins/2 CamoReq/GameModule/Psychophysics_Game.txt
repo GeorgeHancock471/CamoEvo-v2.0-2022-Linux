@@ -1,0 +1,2711 @@
+/*____________________________________________________________________
+
+	Title: Psychophysics Game
+	Authors:  George Hancock 
+	Date: 28/10/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Modular version of the CamoEvo game, allows users to run psychophysics experiments providing that they provide target 
+and background images.
+
+
+
+*/
+
+
+setBatchMode(true);
+
+
+
+/*
+..........................................................................................................................................
+
+															Setup
+
+..........................................................................................................................................
+
+*/
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) General
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+//================================================================
+//Functions
+//================================================================
+
+// TestPoint
+//---------------------------------------------------
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+// ROI by Name
+//---------------------------------------------------
+function 	roiGetList(String1){
+
+roiList1 = newArray();
+roiLocs1 = newArray();
+roiFullList1 = newArray();
+nROIs1 = roiManager("count");
+
+for(j=0; j<nROIs1; j++){
+	roiManager("Select", j);
+	tStr = getInfo("selection.name");
+	roiFullList1 = Array.concat(roiFullList1, tStr);
+	if(startsWith(tStr, String1) == true){
+		roiList1 = Array.concat(roiList1, tStr);
+		roiLocs1= Array.concat(roiLocs1, j);
+		}
+	}
+
+return roiLocs1;
+
+}
+
+
+// Setup Clicks
+//--------------------------------------------------
+rightButton=4;
+leftButton=16;
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+// Idle
+//---------------------------------------------------
+// Allows the program to check wether to go idle during a loop
+
+iSettings = newArray(10000,0, 0, 0);
+
+ function idle(array) {
+ 
+ wGate = 1;
+ 
+ while(wGate==1){
+ 
+ wGate=0;
+ 
+ t=array[0];
+ iGate=array[1];
+ xM=array[2];
+ yM=array[3];
+
+scaleX = getWidth() / screenWidth;
+scaleY = getHeight() / screenHeight;
+
+wait(100);
+getCursorLoc(xM2, yM2, zM, flag);
+
+getLocationAndSize(x, y, width, height);
+
+width = width*scaleX;
+height = height*scaleY;
+
+threshold = 10;
+if(flag==02) threshold = 30;
+
+if(iGate>t/5 && xM2>=width-threshold) iGate=t;
+if(iGate>t/5 && xM2<= threshold) iGate=t;
+if(iGate>t/5 && yM2>=height- threshold) iGate=t;
+if(iGate>t/5 && yM2<= threshold)iGate=t;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0  && iGate>=t) Overlay.remove;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0 ) iGate=0;
+
+if(xM2==xM && yM2==yM) iGate=iGate+100;
+
+if(iGate>=t){
+
+	getCursorLoc(xM1, yM1, zM, flag);
+
+	Overlay.add;
+
+	setColor(255,100,100);
+	setFont("SansSerif", round(40*scaleX*scaleY));
+
+	Overlay.drawString("Idle", 40*scaleX*scaleY, 40*scaleX*scaleY);
+
+	Overlay.show;
+
+	wait(2500);
+	
+	wGate=1;
+
+	}
+
+
+if(iGate>=120000){
+
+waitForUser("Idle for too long, operation paused");
+
+}
+
+}
+
+return newArray(t, iGate, xM2, yM2);
+
+  }
+
+
+//================================================================
+//Population Location
+//================================================================
+
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory of the Game.");
+	Dialog.show();
+
+
+gameDIR = getDirectory("Select folder you wish to use.");
+tempString = "select=["+gameDIR+"]";
+
+
+
+//================================================================
+//Appearance
+//================================================================
+
+
+setBackgroundColor(50, 50, 50);
+setTool("arrow");
+ToolOld = 0;
+
+
+
+startTimeTest = getTime();
+TestTime= getTime()- startTimeTest;
+
+//print(TestTime/1000);
+
+setBatchMode(true);
+
+if (isOpen("ROI Manager")) {
+selectWindow("ROI Manager");
+run("Close");
+}
+
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+LoadingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Loading/01.jpg";
+} else {
+LoadingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Loading/";
+}
+
+if( startsWith(getInfo("os.name"), "Windows") ==1){
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/01.jpg";
+} else {
+EvolvingDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Evolving/";
+}
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 1) Get Scale Settings
+//----------------------------------------------------------------------------------------------------------------
+
+//Obtain Scales
+//------------------
+
+screenScales = getDirectory("plugins") + "2 CamoReq/GameModule/screenScales.txt";
+
+screenSettings = File.openAsString(screenScales);
+screenSettings = split(screenSettings, "\n");
+
+interfaceX= parseFloat(screenSettings[0] );
+interfaceY= parseFloat( screenSettings[1] );
+interfaceW= parseFloat( screenSettings[2] );
+interfaceH= parseFloat( screenSettings[3] );
+
+gameARatio= parseFloat( screenSettings[4] );
+
+
+interfaceHeight= 1130;
+interfaceWidth= 1130*gameARatio;
+
+
+iButtonShift = (interfaceWidth - 1478);
+
+
+
+
+
+/*
+..........................................................................................................................................
+
+														Create Game
+
+..........................................................................................................................................
+
+*/
+
+
+
+//=========================
+//Get Game Settings
+//=========================
+//Opens the Game Settings and Adjusts them to there set values.
+
+GameDirectory = getDirectory("plugins") + "1 CamoEvo/Interface/Game/";
+
+DefaultDirectory = getDirectory("plugins") + "2 CamoReq/GameModule/gameSettingsDefault.txt";
+
+if(!File.exists(GameDirectory+"01.jpg")){
+exit("Game Screen Img, missing, reinstall suggested");
+}
+
+gameSet = gameDIR+"Settings_Game.txt";
+
+if(!File.exists(gameSet)){
+
+File.copy(DefaultDirectory, gameSet);
+
+}
+
+
+gameSettings = File.openAsString(gameSet);
+gameSettings = split(gameSettings , "\n");
+
+//Size
+//.........
+tArr = split(gameSettings[0],"\t");
+TargetSize = tArr[1];
+
+
+//numPerSlide
+//.........
+tArr = split(gameSettings[1],"\t");
+numPerSlide = parseFloat(tArr[1]);
+
+
+//Angles
+//.........
+tArr = split(gameSettings[2],"\t");
+minAngle = parseFloat(tArr[1]);
+maxAngle = parseFloat(tArr[2]);
+
+
+//TimeOut
+//.........
+tArr = split(gameSettings[3],"\t");
+TimeOutTime = parseFloat(tArr[1]);
+
+
+//Spawn
+//.........
+tArr = split(gameSettings[4],"\t");
+spawnSystem= tArr [1];
+
+
+//Capture
+//.........
+tArr = split(gameSettings[5],"\t");
+captureMethod= tArr [1];
+
+
+//Transition
+//............
+tArr = split(gameSettings[6],"\t");
+transitionMethod= tArr [1];
+
+
+
+//TrainingNumber
+//.............
+tArr = split(gameSettings[7],"\t");
+trainingNumber= parseFloat(tArr[1]);
+
+
+//Repeats
+//.........
+tArr = split(gameSettings[8],"\t");
+repeatPlays = tArr [1];
+
+
+//clickLeeway
+//.........
+tArr = split(gameSettings[9],"\t");
+clickLeeway = parseFloat(tArr [1]);
+
+
+//cropWidth
+//.........
+tArr = split(gameSettings[10],"\t");
+cropWidth = parseFloat(tArr [1]);
+
+
+//cropHeight
+//.........
+tArr = split(gameSettings[11],"\t");
+cropHeight = parseFloat(tArr [1]);
+
+
+//cropMode
+//.........
+tArr = split(gameSettings[12],"\t");
+cropMode = tArr[1];
+
+
+//failTrigger
+//.........
+failCap=1;
+tArr = split(gameSettings[13],"\t");
+failTrigger = tArr[1];
+failTrigger = split(failTrigger,".");
+if(failTrigger.length>1) failCap=parseFloat(failTrigger[1]);
+failTrigger=failTrigger[0]; 
+
+
+//targetMod
+//.........
+tArr = split(gameSettings[14],"\t");
+targetMod = tArr[1];
+
+
+
+
+//imageMod
+//.........
+tArr = split(gameSettings[15],"\t");
+imageMod = tArr[1];
+
+
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 1) Setup Game Slides
+//----------------------------------------------------------------------------------------------------------------
+
+
+//================================================
+//Generate Random Pattern and Background Orders
+//================================================
+
+SpawnDirectory = gameDIR+"SpawnMaps/";
+
+BackgroundsDirectory = gameDIR+"Backgrounds/";
+BackgroundList  =  getFileList(BackgroundsDirectory);
+
+TargetDirectory = gameDIR+"Targets/";
+TargetList  =  getFileList(TargetDirectory);
+
+TrainDirectory = gameDIR+"Training/";
+TrainingList  =  getFileList(TrainDirectory);
+
+// Target  Orders
+//---------------------------------
+
+randomTargets = newArray();
+
+for(j=0;j<repeatPlays;j++){
+
+randOrder=newArray(TargetList.length);
+
+	for(i=0; i<randOrder.length;i++){
+	randOrder[i] = random();
+	}
+
+randOrder = Array.rankPositions(randOrder);
+
+	for(i=0; i<randOrder.length;i++){
+	str=randOrder[i];
+	randomTargets  = Array.concat(randomTargets , TargetList[str]);
+	}
+
+}
+
+
+
+m=0;
+
+for(i=0;i<trainingNumber*numPerSlide;i++){
+	if(m>=TrainingList.length) m=0;
+	trainName = TrainingList[m];
+	randomTargets = Array.concat(trainName, randomTargets);
+	m=m+1;
+}
+
+
+
+// Background  Orders
+//---------------------------------
+if(randomTargets.length > BackgroundList.length){
+extendLoop = randomTargets.length / BackgroundList.length;
+} else {
+extendLoop =1; 
+}
+
+randOrder=newArray();
+
+for(j=0; j<extendLoop; j++){
+randArray=newArray(BackgroundList.length);
+
+for(i=0; i<BackgroundList.length;i++){
+randArray[i] = random();
+}
+
+randArray = Array.rankPositions(randArray);
+
+
+randOrder = Array.concat(randOrder,randArray );
+
+}
+
+
+randomBackgrounds =newArray();
+
+
+for(i=0; i<randomTargets.length / numPerSlide; i++){
+
+num=i;
+
+str=randOrder[num];
+
+for(j=0; j< numPerSlide; j++){
+randomBackgrounds = Array.concat(randomBackgrounds, BackgroundList[str]);
+}
+
+}
+
+
+
+
+
+//================================================
+//Background Pasting
+//================================================
+
+cropXArray = newArray(randomBackgrounds.length);
+cropYArray = newArray(randomBackgrounds.length);
+
+open(BackgroundsDirectory + randomBackgrounds[0]);
+
+currentSlice = getSliceNumber();
+labelSlice = toString(currentSlice)+"_"+randomBackgrounds[0];
+Property.setSliceLabel(labelSlice);
+
+run("Select All");
+Roi.getBounds(loadX, loadY, loadW, loadH);
+
+if(loadW<cropWidth) cropWidth=loadW;
+if(loadH<cropHeight) cropHeight=loadH;
+
+
+gameHeight = cropHeight;
+gameWidth = cropHeight * gameARatio;
+
+gButtonShift = (gameWidth - cropWidth);
+
+rename("slide0");
+
+cropIndex = 0;
+
+//Crop
+//-------------------------------------
+
+if(cropMode=="random"){
+cropX = random()*(loadW-cropWidth);
+cropY = random()*(loadH-cropHeight);
+}
+if(cropMode=="centre"){
+cropX = (loadW-cropWidth)/2;
+cropY = (loadH-cropHeight)/2;
+}
+
+	for(v=0; v<numPerSlide; v++){
+	cropXArray[cropIndex] = cropX;
+	cropYArray[cropIndex]  = cropY;
+
+	cropIndex=cropIndex+1;
+	}
+
+makeRectangle(cropX,cropY,cropWidth,cropHeight);
+
+
+
+run("Copy");
+setPasteMode("Copy");
+//-------------------------------------
+
+newImage("GameSlides", "RGB black",  cropWidth, cropHeight, ((randomBackgrounds.length) / (numPerSlide))+1);
+
+setSlice(2);
+
+run("Paste");
+
+close("slide0");
+
+setColor(50,50,50);
+
+
+
+
+//Aspect Ratio
+//-------------
+
+maxRatio = getWidth /(getHeight-100);
+aRatio = maxRatio;
+aRatio = maxRatio;
+
+
+
+
+
+//================================================
+//Apply Backgrounds to Slides
+//================================================
+
+
+
+for(i=1;i<randomBackgrounds.length / (numPerSlide) ;i++){
+
+open(BackgroundsDirectory + randomBackgrounds[i*numPerSlide]);
+
+
+selectImage(randomBackgrounds[i*numPerSlide]);
+
+//Crop
+//-------------------------------------
+
+if(cropMode=="random"){
+cropX = random()*(loadW-cropWidth);
+cropY = random()*(loadH-cropHeight);
+}
+if(cropMode=="centre"){
+cropX = (loadW-cropWidth)/2;
+cropY = (loadH-cropHeight)/2;
+}
+
+	for(v=0; v<numPerSlide; v++){
+	cropXArray[cropIndex] = cropX;
+	cropYArray[cropIndex]  = cropY;
+
+	cropIndex=cropIndex+1;
+	}
+
+
+makeRectangle(cropX,cropY,cropWidth,cropHeight);
+
+
+
+run("Copy");
+setPasteMode("Copy");
+//-------------------------------------
+
+close(randomBackgrounds[i*numPerSlide]);
+
+selectImage("GameSlides");
+setSlice(2+(i));
+run("Select All");
+run("Paste");
+
+}
+
+
+aspectModXC = ( getWidth - ((getHeight*aRatio)-150))/2;
+aspectModYC = ( getHeight - (getHeight-150) )/2;
+
+
+
+
+for(i=1;i<nSlices;i++){
+setSlice(i+1);
+currentSlice = getSliceNumber();
+//labelSlice = toString(currentSlice)+"_"+randomBackgrounds[(i-1)*numPerSlide];
+labelSlice = randomBackgrounds[(i-1)*numPerSlide];
+labelSlice = replace(labelSlice,".jpg","");
+labelSlice = replace(labelSlice,".png","");
+Property.setSliceLabel(labelSlice);
+print(labelSlice);
+}
+
+
+
+
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 2) Add Targets to Slides
+//----------------------------------------------------------------------------------------------------------------
+
+
+//================================================
+//Get Measures
+//================================================
+selectImage("GameSlides");
+run("Select All");
+Roi.getBounds(x, y, width, height);
+run("Select None");
+
+bgWidth= getWidth;
+bgHeight= getHeight;
+
+selectImage("GameSlides");
+
+
+
+chPX = replace(TargetSize,"px","");
+if(chPX.length<TargetSize.length) TargetSize=parseFloat(chPX);
+
+
+
+
+//================================================
+//Add Wait Slide
+//================================================
+// Adds the slide with the cursor oval
+
+setSlice(1);
+setColor("White");
+setLineWidth(5);
+
+setJustification("center");
+
+cropMin=cropHeight;
+if(cropWidth<cropHeight) cropMin = cropWidth;
+
+setFont("Caldibri ", cropMin/30, "bold");
+setColor( "White");
+if(transitionMethod == "centre") stringI= "Place your your cursor inside the centre to continue";
+if(transitionMethod == "wait") stringI= "Wait to continue";
+if(transitionMethod == "click") stringI= "Click anywhere to continue";
+drawString(stringI, bgWidth/2, (bgHeight/3.2));
+
+
+
+setFont("Caldibri ", cropMin/40, "bold");
+stringI="";
+if(captureMethod == "click" || captureMethod == "response") stringI= "(DON'T MOVE your cursor UNTIL you spot the target)";
+if(captureMethod == "left&right") stringI = "(LeftClick if on the left, RightClick if on the right)";
+if(captureMethod == "rank") stringI = "(click the targets in the order you spot them)";
+drawString(stringI, bgWidth/2, (bgHeight/2.5));
+
+
+
+
+ovalW=cropMin/40;
+ovalH=cropMin/40;
+ovalX= (getWidth/2)-(ovalW/2) ;
+ovalY= (getHeight/2)-(ovalH/2);
+ovalCX = (getWidth/2);
+ovalCY = (getHeight/2);
+
+rectW = ovalW*3;
+rectH = rectW/20;
+
+
+if(transitionMethod != "wait" && transitionMethod != "click"){ 
+
+makeRectangle(getWidth/2 - rectW/2,getHeight/2 - rectH/2, rectW,rectH);
+fill();
+makeRectangle(getWidth/2 - rectH/2,getHeight/2 - rectW/2, rectH,rectW);
+fill();
+
+setColor("black");
+fillOval(ovalX, ovalY, ovalW, ovalH);
+setColor("white");
+setLineWidth(5);
+drawOval(ovalX, ovalY, ovalW, ovalH);
+
+} else {
+
+rectW = ovalW*20;
+rectH = rectW/20;
+
+setColor("white");
+drawRect(getWidth/2 - rectW/2,getHeight/2 - rectH/2, rectW,rectH);
+
+rectX=getWidth/2 - rectW/2;
+rectY=getHeight/2 - rectH/2;
+
+
+}
+
+
+//================================================
+//Apply Targets to Slides
+//================================================
+
+
+// Record Values
+//---------------------------------
+
+targetXcoords = newArray();
+targetYcoords = newArray();
+targetFlip = newArray();
+targetAngle = newArray();
+
+
+luminanceDifference = newArray();
+patternDifference = newArray();
+colourDifference = newArray();
+GabRatArray = newArray();
+
+
+//Array.show(randomTargets);
+
+for(i=0; i<(randomTargets.length); i++){   // Loop
+
+TargetPath = gameDIR + "Targets/" + randomTargets[i];
+TrainPath = gameDIR + "Training/";
+
+if(startsWith(randomTargets[i], "Train_")) TargetPath = TrainPath + randomTargets[i];
+
+
+// Open and Rescale Target
+//---------------------------------
+open(TargetPath);
+rename("Target");
+
+		if(targetMod != "none" && startsWith(targetMod, "PostGame")){
+		run(targetMod);
+		}
+
+
+
+run("Select All");
+Roi.getBounds(x, y, width, height);
+
+
+
+
+// Flip the Target
+//---------------------------------
+
+TargetRotation = minAngle + (random()*( maxAngle -  minAngle));
+flip=parseInt(random());
+if(startsWith(spawnSystem,"grid"))flip=0;
+if(flip==0){
+flip="none";
+}
+if(flip==1){
+flip="horizontal";
+run("Flip Horizontally");
+}
+
+targetFlip=Array.concat(targetFlip,flip);
+
+
+// Record X and Y Coordinates
+//---------------------------------
+
+coordArrayCheck1 = i/numPerSlide;
+coordArrayCheck2 = floor(i/numPerSlide);
+
+//print(coordArrayCheck1,coordArrayCheck2);
+
+if(parseInt(i/numPerSlide) == i/numPerSlide){
+
+
+saveCheck = 0;
+
+nameNumber =-1;
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("delete");
+
+}
+
+
+
+}
+
+nameNumber = nameNumber + 1;
+
+roiManager("Show None");
+
+//Scale Target
+//---------------------------------
+
+selectImage("Target");
+
+		run("Select None");
+
+		//run("Rotate... ", "angle=[&rotation] grid=1 interpolation=None");
+		run("Size...", "width=&TargetSize height=&TargetSize depth=1 constrain interpolation=None");
+
+		
+
+		run("Select All");
+		run("Duplicate...", "title=mask");
+		run("8-bit");
+		setThreshold(1, 255);
+		run("Create Selection");
+		Roi.getBounds(a1, b1, targetW, targetH);
+		roiManager("add");
+		roiManager("select",roiManager("count")-1);
+		roiManager("rename","outline");
+		close("mask");
+		
+		aspectRatioW = TargetSize/targetW;
+		aspectRatioH = TargetSize/targetH;
+		
+		
+selectImage("Target");
+
+
+
+		
+	
+
+selectImage("GameSlides");		
+setSlice(2+(floor(i/numPerSlide)));
+run("Select None");
+boundW = getWidth();
+boundH = getHeight();
+
+
+
+if(isOpen("SpawnMap") ) close("SpawnMap");
+if(isOpen("ExcludeMap") && (parseInt(i/numPerSlide) == i/numPerSlide)) close("ExcludeMap");
+
+
+//Spawn Methods ! Grid
+if(!startsWith(spawnSystem,"grid")){
+
+
+if(!isOpen("ExcludeMap")){
+		run("Duplicate...", "title=ExcludeMap");
+		selectImage("ExcludeMap");
+
+		run("32-bit");
+
+		boundMin = boundH;
+		boundMax = boundW;
+
+
+		boundXE=boundMin*0.1+TargetSize*0.75;
+		boundYE=boundMin*0.2+TargetSize*0.75;
+	
+		makeRectangle(boundW/2  - (boundW-boundXE)/2 ,  boundH/2  - (boundH-boundYE)/2, boundW-boundXE, boundH-boundYE);
+		run("Set...","value=1");
+		run("Make Inverse");
+		run("Set...","value=0");
+
+		makeOval(boundW/2  - (boundXE)/2 ,  boundH/2  - (boundXE)/2, boundXE, boundXE);
+		run("Set...","value=0");
+		
+		
+		if(captureMethod == "left&right"){
+		makeRectangle((boundW-boundXE)/2,0,boundXE,boundH);
+		run("Set...","value=0");
+		}
+		
+}
+
+
+if(!isOpen("SpawnMap")){
+
+		run("Select None");
+
+
+		selectImage("GameSlides");		
+		setSlice(2+(floor(i/numPerSlide)));
+		run("Select None");
+		
+		run("Duplicate...", "title=SpawnMap");
+
+
+							
+		if(startsWith(spawnSystem,"random")){run("32-bit"); run("Set...","value=1");}
+
+		if(startsWith(spawnSystem,"measure.L.")){
+			selectImage("Target");
+			roiManager("select", roiManager("count")-1);
+			getStatistics(area,mean,min);
+			selectImage("SpawnMap");
+			run("32-bit");
+			run("Select None");
+			run("Subtract...","value=mean");
+			run("Square");
+			run("Square Root");
+			
+			
+			run("Gaussian Blur...", "sigma=10 slice");
+
+			if(endsWith(spawnSystem,".near")){
+			run("Multiply...","value=-1");
+			run("Add...","value=1");
+			}
+			
+			//setBatchMode("show");
+			//waitForUser("");
+
+			run("Enhance Contrast...", "saturated=0.3 normalize");
+			run("Square","Stack");
+			
+		} // measure L
+		
+		
+		
+		if(startsWith(spawnSystem,"measure.A.")){
+			selectImage("Target");
+			run("Duplicate...", "title=tempLAB");
+			run("Lab Stack");
+			roiManager("select", roiManager("count")-1);
+			setSlice(2);
+			getStatistics(area,mean,min);
+			close();
+			
+			
+			selectImage("SpawnMap");
+			run("Lab Stack");
+			setSlice(2);
+			run("Select None");
+			run("Subtract...","value=mean");
+			run("Square","Stack");
+			run("Square Root","Stack");
+			
+			
+			run("Gaussian Blur...", "sigma=10 slice");
+
+			if(endsWith(spawnSystem,".near")){
+			run("Multiply...","value=-1");
+			}
+			
+			//setBatchMode("show");
+			//waitForUser("");
+
+			run("Enhance Contrast...", "saturated=0.3 normalize");
+			run("Square","Stack");
+			
+		} // measure A
+		
+		
+		if(startsWith(spawnSystem,"measure.B.")){
+			selectImage("Target");
+			run("Duplicate...", "title=tempLAB");
+			run("Lab Stack");
+			roiManager("select", roiManager("count")-1);
+			setSlice(3);
+			getStatistics(area,mean,min);
+			close();
+			
+			
+			selectImage("SpawnMap");
+			run("Lab Stack");
+			setSlice(3);
+			run("Select None");
+			run("Subtract...","value=mean");
+			run("Square","Stack");
+			run("Square Root","Stack");
+			
+			
+			run("Gaussian Blur...", "sigma=10 slice");
+
+			if(endsWith(spawnSystem,".near")){
+			run("Multiply...","value=-1");
+			}
+			
+			//setBatchMode("show");
+			//waitForUser("");
+
+			run("Enhance Contrast...", "saturated=0.3 normalize");
+			run("Square","Stack");
+			
+		} // measure B
+		
+		
+		
+		
+		
+		if(startsWith(spawnSystem,"measure.LAB.")){
+			selectImage("Target");
+			run("Duplicate...", "title=tempLAB");
+			run("Lab Stack");
+			roiManager("select",roiManager("count")-1);
+
+			
+			setSlice(1);getStatistics(area,meanL);
+			setSlice(2);getStatistics(area,meanA);
+			setSlice(3);getStatistics(area,meanB);
+
+			close();
+			
+			selectImage("SpawnMap");
+			run("Lab Stack");
+			setSlice(1);
+				run("Select None");
+				run("Subtract...","value=meanL");
+				run("Square","slice");
+				run("Square Root","slice");
+				
+				run("Gaussian Blur...", "sigma=20 slice");
+
+				if(endsWith(spawnSystem,".near")){
+				run("Multiply...","value=-1 slice");
+				}
+			setSlice(2);
+				run("Select None");
+				run("Subtract...","value=meanA");
+				run("Square","slice");
+				run("Square Root","slice");
+				
+				run("Gaussian Blur...", "sigma=20 slice");
+
+				if(endsWith(spawnSystem,".near")){
+				run("Multiply...","value=-1 slice");
+				}	
+				
+			setSlice(3);
+				run("Select None");
+				run("Subtract...","value=meanB");
+				run("Square","slice");
+				run("Square Root","slice");
+				
+				run("Gaussian Blur...", "sigma=20 slice");
+
+				if(endsWith(spawnSystem,".near")){
+				run("Multiply...","value=-1 slice");
+				}
+				
+			run("Copy"); setPasteMode("Add");
+			run("Delete Slice");
+			run("Paste");
+			run("Copy"); setPasteMode("Add");
+			run("Delete Slice");
+			run("Paste");
+				
+			
+			selectImage("ExcludeMap");
+			run("Copy"); setPasteMode("Multiply");
+			selectImage("SpawnMap");
+			
+			run("Enhance Contrast...", "saturated=0.3 normalize");
+			run("Square","Stack");	
+			
+			
+		} // measure LAB
+		
+		
+			
+		run("Enhance Contrast...", "saturated=0.3 normalize");
+		run("Square","Stack");
+
+		run("Paste");
+	
+		if(startsWith(spawnSystem,"measure.")){
+		setThreshold(0.7,1);
+		run("Create Selection");
+		run("Set...","value=1");
+		run("Make Inverse");
+		run("Set...","value=0");
+		run("Select None");
+		}
+	
+	
+		if(startsWith(spawnSystem,"orientation")){
+		run("32-bit"); 
+		selectImage("SpawnMap");
+		setSlice(1);
+		run("Set...","value=1");
+		
+		
+		}
+		
+		
+		selectImage("ExcludeMap");
+		run("Copy");
+		setPasteMode("Multiply");
+		selectImage("SpawnMap");
+		run("Paste");
+		run("Enhance Contrast...", "saturated=0.3 normalize");
+		rename("SpawnMap");
+
+		
+		if(File.exists(SpawnDirectory)){
+		selectImage("GameSlides");		
+		setSlice(2+(floor(i/numPerSlide)));
+		sliceName=getInfo("slice.label");
+		open(SpawnDirectory+sliceName+".png");
+		rename("SpawnInstructions");
+		
+		cropX=cropXArray[i];
+		cropY=cropXArray[i];
+		
+		makeRectangle(cropX,cropY,cropWidth,cropHeight);
+		run("Crop");
+		
+		run("RGB Stack");
+		run("Invert","slice");
+		run("Copy");
+		setPasteMode("Subtract");
+		selectImage("SpawnMap");
+		wait(4);
+		run("Paste");
+		run("Min...","value=0");
+		if(!startsWith(spawnSystem,"orientation")) close("SpawnInstructions");
+		}
+			
+}
+
+
+selectImage("SpawnMap");
+
+
+
+setThreshold(0.99,1);
+run("Create Selection");
+Roi.getContainedPoints(xpointsSpawn, ypointsSpawn)
+rI = random()*xpointsSpawn.length;
+
+
+selectImage("GameSlides");		
+setSlice(2+(floor(i/numPerSlide)));
+
+
+	
+		//ORIENTATION HUNTING
+		//============================
+		// matches luminance and matches orientation
+		// E.g. orientation.positive
+		// [Method, number of locations chosen, positive/negative angle]
+		
+		
+
+	if(startsWith(spawnSystem,"orientation")){
+
+	setArray=split(spawnSystem,".");
+	posCheck = setArray[1];
+
+		//If Positive seeks out similar
+		//If Negative seeks out disimilar
+		
+	if(posCheck=="positive") bestV=10000000;
+	if(posCheck=="negative") bestV=0;
+	
+	
+	
+	Xcoord=xpointsSpawn[rI]-TargetSize/2;
+	Ycoord=ypointsSpawn[rI]-TargetSize/2;
+	
+	//If their are instructions
+	//------------------------------
+	if(isOpen("SpawnInstructions")){
+
+	selectImage("SpawnInstructions");
+	run("Select None");
+	setSlice(1);
+	getStatistics(area,mean1,min,max,dev1);
+	setSlice(2);
+	getStatistics(area,mean2,min,max,dev2);
+	
+	print(mean1,mean2,dev1,dev2);
+
+	if(dev1 != dev2){
+
+	makeOval(xpointsSpawn[rI]-2,ypointsSpawn[rI]-2,4,4);
+	getStatistics(area,mean);
+	mode=getValue("Mode");
+
+	TargetRotation=mode;
+
+	TargetRotation+=parseInt(random())*180;
+	
+	if(posCheck=="negative") TargetRotation+=90;
+	
+	close("SpawnInstructions");
+	angleCheck=1;
+	}else{
+	angleCheck=0;
+	}
+	
+	} else {
+	angleCheck=0;
+	}
+	
+	//If their are NO instructions
+	//------------------------------
+	if(angleCheck==0) {
+	
+	makeOval(xpointsSpawn[rI]-10,ypointsSpawn[rI]-10,20,20);
+	getStatistics(area,mean1);
+
+	
+			//ROTATION
+			
+			
+			bestV=10000000;
+
+			
+			angleRange=maxAngle-minAngle;
+			
+			nAng = 12;
+			
+			yScale=TargetSize/20;
+			
+			
+			
+			//Mean Method
+			
+				for(search=0;search<nAng ;search++){
+
+				angle = angleRange*search/nAng;
+
+				makeOval(xpointsSpawn[rI]-10,ypointsSpawn[rI]-10,20,20);
+				run("Scale... ", "x=1 y=yScale centered");
+				run("Rotate...", "  angle=&angle");
+
+				getStatistics(area,mean2,min,max,dev);
+
+				difV=Math.sqrt(Math.sqr(mean1-mean2));
+				
+				if(difV<bestV){
+					bestAngle=angle;
+					bestV = difV;
+					}
+
+				}
+				
+			makeOval(xpointsSpawn[rI]-10,ypointsSpawn[rI]-10,20,20);
+				run("Scale... ", "x=1 y=yScale centered");
+				run("Rotate...", "  angle=&bestAngle");
+				
+			setBatchMode("show");
+			TestPoint("");
+			
+			/*
+			//Dev Method
+			
+
+				for(search=0;search<nAng ;search++){
+
+				angle = angleRange*search/nAng;
+
+				makeOval(xpointsSpawn[rI]-10,ypointsSpawn[rI]-10,20,20);
+				run("Scale... ", "x=1 y=yScale centered");
+				run("Rotate...", "  angle=&angle");
+
+				getStatistics(area,mean2,min,max,dev);
+
+				difV=dev;
+				
+				if(difV<bestV){
+					bestAngle=angle;
+					bestV = difV;
+					}
+
+				}			
+				
+			*/	
+				
+				
+	if(posCheck=="negative") bestAngle+=90;			
+	TargetRotation = bestAngle;
+	TargetRotation+=parseInt(random())*180;
+	
+	}
+
+	} else {
+	
+	
+	Xcoord=xpointsSpawn[rI]-TargetSize/2;
+	Ycoord=ypointsSpawn[rI]-TargetSize/2;
+	
+	
+	}
+
+
+selectImage("ExcludeMap");
+makeOval(Xcoord,Ycoord,TargetSize,TargetSize);
+run("Rotate...", "  angle=&TargetRotation");
+run("Scale... ", "x=aspectRatioW y=aspectRatioH centered");
+
+run("Scale... ", "x=3 y=3 centered");
+run("Set...","value=0");
+
+} // Spawn Map
+
+
+
+
+
+if(startsWith(spawnSystem,"grid")){
+gridArray=split(spawnSystem,".");
+gridXN = parseFloat(gridArray[1]);
+gridYN = parseFloat(gridArray[2]);
+if((parseInt(i/numPerSlide) == i/numPerSlide)){ nDone = 0;
+
+coordArrayGX = newArray(gridXN*gridYN);
+coordArrayGY = newArray(gridXN*gridYN);
+for(xv=0;xv<gridXN;xv++){
+for(yv=0;yv<gridYN;yv++){
+coordArrayGX[xv*gridYN+yv] = xv;
+coordArrayGY[xv*gridYN+yv] = yv;
+}
+}
+
+}
+
+GridW = TargetSize*gridXN*2;
+GridH = TargetSize*gridYN*2;
+
+GridX = coordArrayGX[nDone];
+GridY = coordArrayGY[nDone];
+
+Xcoord = boundW/2 - GridW/2  + GridX*TargetSize*2 +TargetSize/2;
+Ycoord = boundH/2 - GridH/2  + GridY*TargetSize*2 +TargetSize/2;
+
+
+
+nDone=nDone+1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Rotate Target
+//---------------------------------
+
+selectImage("Target");
+
+		run("Select All");
+
+		run("Rotate... ", "angle=[&TargetRotation] grid=1 interpolation=None");
+		
+		run("Duplicate...", "title=mask");
+		run("8-bit");
+		setThreshold(1, 255);
+		run("Create Selection");
+		getStatistics(area,TargetMean);
+		Roi.getBounds(a, b, targetW, targetH);
+		
+		run("Create Selection");
+		roiManager("Add");
+		roiManager("select", roiManager("count")-1);
+		rename("copy");
+		
+		run("Select All");
+		roiManager("Add")
+		roiManager("select", roiManager("count")-1);
+		rename("copySquare");
+		
+		roiManager("deselect");
+		
+		close("copySquare");
+		
+		selectImage("Target");
+		roiManager("select", roiManager("count")-1);
+
+
+	run("Select None");
+
+priorX = Xcoord;
+priorY = Ycoord;
+
+group=group+1;
+
+if( (2+(floor(i/numPerSlide))) <= ( ( parseFloat(randomTargets.length) ) / numPerSlide) +1 ){
+
+
+// Copy Target to the Image
+//---------------------------------
+
+
+
+selectImage("Target");
+		
+		roiManager("Select", roiManager("Count")-1);
+		run("Copy");
+		roiManager("deselect");
+		
+		
+
+selectImage("GameSlides");
+
+
+setSlice(2+(floor(i/numPerSlide)));
+
+		roiManager("Select", roiManager("Count")-1);
+		Roi.getBounds(x, y, width, height);
+		oldX=x;
+		oldY=y;
+		oldWidth=width;
+		oldHeight = height;
+		
+		
+		Roi.move(Xcoord, Ycoord);
+		roiManager("update");
+		
+
+		setPasteMode("Transparent-zero");
+		run("Paste");
+		
+
+		
+		
+		roiManager("Select", roiManager("Count")-2);
+		
+		Roi.getBounds(x, y, width, height);
+		targetROIx = Xcoord +(x-oldX);
+		targetROIy = Ycoord +(y-oldY);
+		//print(oldWidth-width);
+		//print(oldHeight-height);
+
+		Roi.move(targetROIx, targetROIy);
+		roiManager("Add");
+		
+		
+		
+		roiManager("select", roiManager("Count")-3);
+		roiManager("delete");
+		
+
+targetXcoords=Array.concat(targetXcoords,Xcoord);
+targetYcoords=Array.concat(targetYcoords,Ycoord);
+targetAngle=Array.concat(targetAngle,TargetRotation);
+
+// Add ROIS
+//---------------------------------
+
+roiManager("Select", roiManager("Count")-1);
+roiManager("rename", "prey_"+nameNumber);
+roiManager("deselect");
+
+roiManager("Select", roiManager("Count")-2);
+
+run("Fit Circle");
+run("Scale... ", "x=2 y=2 centered");
+roiManager("Add");
+
+roiManager("Select", roiManager("Count")-3);
+roiManager("delete");
+
+
+roiManager("Select", newArray(roiManager("Count")-1, roiManager("Count")-2 ) );
+roiManager("XOR");
+roiManager("Add");
+
+
+
+run("Select All");
+roiManager("Add");
+
+roiManager("Select", newArray(roiManager("Count")-1, roiManager("Count")-2 ) );
+roiManager("AND");
+roiManager("Add");
+roiManager("Select", roiManager("Count")-1);
+roiManager("rename", "local_"+nameNumber);
+
+
+roiManager("select", roiManager("count")-5);
+
+if(imageMod != "none"){
+run(imageMod);
+}
+
+//run("Gaussian Blur...", "sigma=0.1 slice");
+
+//TestPoint("");
+
+roiManager("Select", newArray(roiManager("Count")-2,roiManager("Count")-3, roiManager("Count")-4) );
+roiManager("delete");
+
+
+// Save Slide
+//---------------------------------
+
+close("target");
+
+}
+
+
+}
+
+
+
+
+//================================================
+//Remove ROIs
+//================================================
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("delete");
+}
+
+
+
+
+//================================================
+//Save Coordinates, Flip and Rotation
+//================================================
+
+
+IDsArray = newArray("ID");
+
+for(i=0;i<randomTargets.length;i++){
+
+string = replace(randomTargets[i], ".Tif", "");
+string = replace(string, ".tif", "");
+
+IDsArray = Array.concat(IDsArray, string);
+
+}
+
+RowNumbers= Array.getSequence(randomTargets.length);
+
+surivalString1 = Array.concat("Img_Num", "Bg", "ID", "X", "Y", "flip", "angle");
+
+surivalString = String.join(surivalString1, "\t");
+
+
+
+/*
+
+dataFile = File.open(gameDIR+"Records.txt");
+
+for(i=trainingNumber*numPerSlide; i< RowNumbers.length; i++){
+
+surivalString1 = Array.concat(RowNumbers[floor(i/numPerSlide)], randomBackgrounds[i], replace(randomTargets[i], ".tif", ""), targetXcoords[i], targetYcoords[i], targetFlip[i], targetAngle[i]);
+
+surivalString = String.join(surivalString1, "\t");
+
+print(dataFile, surivalString);
+
+}
+File.close(dataFile);
+
+*/
+
+
+
+selectImage("GameSlides");
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 3) Run the Game
+//----------------------------------------------------------------------------------------------------------------
+
+
+//================================================
+//Hide Screens
+//================================================
+
+
+
+if(isOpen("Loading")){
+selectImage("Loading");
+setBatchMode("Hide");
+}
+
+
+if(isOpen("Evolving")){
+selectImage("Evolving");
+setBatchMode("Hide");
+}
+
+
+if(isOpen("SpawnMap")) close("SpawnMap");
+if(isOpen("ExcludeMap")) close("ExcludeMap");
+
+//================================================
+//Ask to Play Screen
+//================================================
+
+
+// Open Screen
+//---------------------------------
+
+if(isOpen("Game")){
+
+		selectImage("Game");
+		run("Canvas Size...", "width=&interfaceWidth height=&interfaceHeight  position=Center");
+		setBatchMode("Show");
+		run("Maximize");
+		setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+
+		// Add Group Size and Time Out Text
+		//---------------------------------
+
+		//ADD text string
+		setFont("Caldibri ", 32, "bold");
+
+
+		setColor("#16150D");
+		fillRect(174 + (iButtonShift/2), 534, 1142, 128);
+
+		setColor("white");
+
+		setJustification("center");
+		stringT= "You have "+(TimeOutTime/1000)+" Seconds to click on each target.";
+		if(captureMethod == "left&right") stringT= "You have "+(TimeOutTime/1000)+" Seconds to find each target.";
+
+		drawString(stringT, 740 + (iButtonShift/2), 580);
+
+		 setColor(255,255, 255);
+		setJustification("center");
+
+		TargetString = " target";
+		if(numPerSlide>1){
+		TargetString = " targets";
+		}
+
+		stringT= "Each slide will have " + numPerSlide + TargetString +" you need to find.";
+		drawString(stringT, 740 + (iButtonShift/2), 640);
+
+
+		//BUTTON 1, Play
+		//-----------------------------------------
+
+			b1_x1= 327  + (iButtonShift/2);
+			b1_y1= 772;
+
+			b1_x2= b1_x1 +  355;
+			b1_y2= b1_y1 + 210;
+
+
+		//BUTTON 2, Play Later
+		//-----------------------------------------
+
+			b2_x1= 797 + (iButtonShift/2);
+			b2_y1= 772;
+
+			b2_x2= 	b2_x1 +  355;
+			b2_y2= b2_y1 + 210;
+
+
+		//----------------------------------------
+
+		selectImage("Game");
+
+
+
+		whileGate=0;
+		exitCheck=0;
+
+
+		run("Select None");
+
+		while(whileGate==0){
+
+		iSettings = idle(iSettings);
+
+		setSlice(1);
+		selectImage("Game");
+
+			
+			getCursorLoc(mouseX, mouseY, mouseZ, flag); Tool=0;
+			
+			
+				{
+
+
+				clickX=mouseX; 
+				clickY=mouseY;
+
+				//Button 1
+				//-----------------
+				if( clickX > b1_x1   &&    clickX < b1_x2   &&   clickY > b1_y1 &&  clickY < b1_y2) {
+				
+					Tool=1;
+					Tool=1;   if(flag&leftButton!=0){wait(75);
+				whileGate=1;
+				exitCheck=0;
+
+				}
+				}
+				
+				//Button 2
+				//-----------------
+				if( clickX > b2_x1   &&    clickX < b2_x2   &&   clickY > b2_y1 &&  clickY < b2_y2) {
+					
+					
+				Tool=1;
+				Tool=1;   if(flag&leftButton!=0){wait(75);
+				whileGate=1;
+				exitCheck=1;
+
+				}
+				}
+
+		run("Select None");
+		if(Tool != ToolOld){
+					if(Tool == 0)
+						setTool("arrow");
+					if(Tool  == 1)
+						setTool("hand");
+				ToolOld= Tool;
+		}
+
+
+		}
+		}
+
+
+
+
+		// Back to Main Menu
+		//---------------------------------
+
+		if(exitCheck==1){
+		if(isOpen("Loading")){
+		selectImage("Loading");
+
+		setBatchMode("Show");
+		run("Maximize");
+		setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+		 run("Animation Options...", "speed="+6);
+		doCommand("Start Animation");
+		setBatchMode(false);
+		close("\\Others");
+		} else{
+		close("*");
+		}
+
+		exit
+		}
+
+
+
+} // (If Game Screen);
+
+
+//================================================
+//Setup Game
+//================================================
+
+// Time Recordings
+//---------------------------------
+FitnessArray=newArray(randomBackgrounds.length+1);
+FitnessArray[0] = "fitness";
+
+RankArray=newArray(randomBackgrounds.length+1);
+RankArray[0] = "Rank";
+for(v=1;v<RankArray.length;v++){
+RankArray[v] = numPerSlide;
+}
+
+SurvArray=newArray(randomBackgrounds.length+1);
+SurvArray[0] = "Survival_Time";
+
+capTimesArray=newArray(randomBackgrounds.length+1);
+capTimesArray[0] = "Capture_Time";
+
+respTimesArray=newArray(randomBackgrounds.length+1);
+respTimesArray[0] = "Response_Time";
+
+clickXPosition=newArray(randomBackgrounds.length+1);
+clickXPosition[0] = "Click_X";
+
+clickYPosition=newArray(randomBackgrounds.length+1);
+clickYPosition[0] = "Click_Y";
+
+clickDistance=newArray(randomBackgrounds.length+1);
+clickDistance[0] = "Click_Distance";
+
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("delete");
+
+}
+run("Select None");
+
+
+
+// Show Slides
+//---------------------------------
+selectImage("GameSlides");
+setSlice(1);
+
+run("Select None");
+run("Canvas Size...", "width=&gameWidth height=&gameHeight  position=Center");
+
+
+ovalX= (getWidth/2)-(ovalW/2) ;
+ovalY= (getHeight/2)-(ovalH/2);
+ovalCX = (getWidth/2);
+ovalCY = (getHeight/2);
+
+for(i=0;i<nSlices;i++){
+
+setSlice(i+1);
+
+if(captureMethod == "left&right" || captureMethod == "response"){
+setColor("white");
+makeRectangle(getWidth/2 - rectW/2,getHeight/2 - rectH/2, rectW,rectH);
+fill();
+makeRectangle(getWidth/2 - rectH/2,getHeight/2 - rectW/2, rectH,rectW);
+fill();
+fillOval(ovalX, ovalY, ovalW, ovalH);
+}
+
+//borderRectangle
+//-------------------
+borderWidth = gameWidth*0.95;
+borderHeight = gameHeight*0.90;
+makeRectangle(gameWidth/2-borderWidth/2,gameHeight/2-borderHeight/2, borderWidth,borderHeight);
+run("Make Inverse");
+setColor(50,50,50);
+run("Fill", "slice");
+//-------------------
+
+}
+
+run("Select None");
+
+
+setSlice(1);
+
+setBatchMode("Show");
+run("Maximize");
+setLocation(interfaceX, interfaceY, interfaceW, interfaceH);
+
+if(isOpen("Game")){
+selectImage("Game");
+setBatchMode("Hide");
+}
+
+
+
+
+
+// Hit Box Size
+//--------------------------------
+
+selectImage("GameSlides");
+
+clickLeeway = clickLeeway*TargetSize;
+
+
+
+//================================================
+//GamePlay
+//================================================
+
+for(j=0;j<randomBackgrounds.length / numPerSlide;j++){
+setTool("Arrow");
+
+setLineWidth(1);
+
+if(getImageID() != "GameSlides"){
+if(isOpen("GameSlides")){
+selectImage("GameSlides");
+} else {
+close("*");
+exit
+}
+
+}
+
+
+
+
+// Screen Centre Slide
+//--------------------------------
+
+if(getSliceNumber() != (1+(j*2))){
+setSlice(1);
+}
+
+	if(transitionMethod != "wait" && transitionMethod != "click"){ 
+
+	setColor("black");
+	fillOval(ovalX, ovalY, ovalW, ovalH);
+	setColor("white");
+	setLineWidth(5);
+	drawOval(ovalX, ovalY, ovalW, ovalH);
+
+	} else {
+
+bgBorder = getWidth/2 - cropWidth/2;
+
+setColor("black");
+fillRect(bgBorder + rectX,rectY, rectW,rectH);
+setColor("white");
+drawRect(bgBorder + rectX,rectY, rectW,rectH);
+
+}
+
+
+
+centreGate=0;
+vLeng=9;
+
+
+fillCheck = 0;
+while(centreGate==0){
+
+	if(transitionMethod != "wait" && transitionMethod != "click"){ 
+
+	setColor("black");
+	fillOval(ovalX, ovalY, ovalW, ovalH);
+	setColor("white");
+	setLineWidth(5);
+	drawOval(ovalX, ovalY, ovalW, ovalH);
+
+	}  else {
+
+bgBorder = getWidth/2 - cropWidth/2;
+
+setColor("black");
+fillRect(bgBorder + rectX,rectY, rectW,rectH);
+setColor("white");
+drawRect(bgBorder + rectX,rectY, rectW,rectH);
+
+
+
+}
+
+for(v=0;v<vLeng;v++){
+setSlice(1);
+
+iSettings = idle(iSettings);
+
+getCursorLoc(x1, y1, z, modifiers);
+getCursorLoc(x2, y2, z, modifiers);
+
+speedCheck = Math.sqrt(Math.sqr(x1-x2)+Math.sqr(y1-y2))/100;
+//print(speedCheck);
+
+
+if(transitionMethod == "centre") fillCheck = 0;
+
+if(x2>ovalX && y2>ovalY && x2<(ovalX+ovalW) && y2<(ovalY+ovalH) && transitionMethod == "centre") fillCheck=1;
+
+if(transitionMethod == "wait"){ fillCheck=1;  centreGate=1;}
+if(transitionMethod == "click" && modifiers&leftButton!=0) fillCheck=1;
+if(transitionMethod == "click" && modifiers&rightButton!=0) fillCheck=1;
+
+	if(transitionMethod != "wait" && transitionMethod != "click" ){
+
+		if(fillCheck==1){
+		centreGate=1;
+		greyColor = 255/vLeng;
+		greyColor = v*greyColor;
+		setColor(greyColor,greyColor,greyColor);
+		fillOval(ovalX, ovalY, ovalW, ovalH);
+		}else{
+
+		v=0;
+		setColor("black");
+		fillOval(ovalX, ovalY, ovalW, ovalH);
+		setColor("white");
+		setLineWidth(5);
+		drawOval(ovalX, ovalY, ovalW, ovalH);
+		centreGate=0;
+		}
+
+	
+
+	} else {
+	
+	
+		if(fillCheck==1){
+		centreGate=1;
+		setColor("white");
+		fillRect(bgBorder+rectX, rectY, rectW/vLeng*(v+1), ovalH);
+		wait(10);
+		}
+	
+	
+	
+	
+	}
+	
+	
+	
+	
+	
+
+
+
+} // vLeng
+} // (While)
+
+
+getCursorLoc(x, y, z, modifiers);
+
+wait(500);
+
+
+if(getSliceNumber() != (2+(j))){
+setSlice(2+(j));
+}
+
+
+
+
+run("Select None");
+
+// Initiate Game Slide
+//--------------------------------
+
+		nMiss=0;
+
+		hit=0;
+		mouseDown=0;
+
+		timeOutGate1= 1;
+		timeOutGate2= 0;
+		timeOutGate3= 0;
+		timeOutGate4= 0;
+		timeOutGate5= 0;
+		timeOutGate6= 0;
+
+
+		if(numPerSlide == 2){
+		timeOutGate2= 1;
+		}
+
+		if(numPerSlide == 3){
+		timeOutGate2= 1;
+		timeOutGate3= 1;
+		}
+
+		if(numPerSlide == 4){
+		timeOutGate2= 1;
+		timeOutGate3= 1;
+		timeOutGate4= 1;
+		}
+		
+		
+		if(numPerSlide == 6){
+		timeOutGate2= 1;
+		timeOutGate3= 1;
+		timeOutGate4= 1;
+		timeOutGate5= 1;
+		timeOutGate6= 1;
+		}
+
+		groupRank = 1;
+
+		startTime = getTime();
+		i= getTime()- startTime;
+		TimeDeduct=0;
+		
+		setOption("DisablePopupMenu", true);
+		
+		getCursorLoc(mouseCX, mouseCY, z, modifiers);
+
+		timeStr1 = -1;
+
+			// i) Show Slide
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			
+				while(i<TimeOutTime){
+				
+				i= getTime()- startTime;
+			
+				if(!isOpen("GameSlides")){
+				close("*");
+				exit
+				
+				}
+
+				selectImage("GameSlides");
+		
+				if(getSliceNumber() != (2+(j))){
+				setSlice(2+(j));
+				}
+				
+				//TIME PASTE
+					timeStr2 = Math.floor(i/1000);
+					
+					if(timeStr2 != timeStr1){
+					
+					setJustification("centre");
+					setColor(255,255,255);
+					setFont("SansSerif", cropMin/40);
+
+					drawString(timeStr2 + " s", getWidth/2, getHeight-cropMin/40/2, "#323232");
+					
+					timeStr1 = timeStr2;
+					
+				}
+				
+			
+				if(respTimesArray[(j*numPerSlide)+1]==0){
+				getCursorLoc(x1, y1, z, modifiers);
+				cursorDist = Math.sqrt( Math.sqr(x1-mouseCX) + (y1-mouseCY));
+				if(cursorDist>ovalH/2){
+				for(v=0;v<numPerSlide;v++){
+				respTimesArray[(j*numPerSlide)+v+1]= i;
+				}
+				}
+				respTime = i;
+							
+				}
+				
+				
+				
+				if(failTrigger == "react" || failTrigger == "miss/react"){ 
+				if(i>respTime+1000) i = TimeOutTime;
+				}
+				
+				
+				// ii) Get Click
+				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+					getCursorLoc(mouseX, mouseY, mouseZ, flag); 
+					
+					clickSide=0;
+					if(captureMethod == "left&right"){
+					clickSide="none";
+					if(flag&leftButton!=0) clickSide = "left";
+					if(flag&rightButton!=0) clickSide = "right";
+					}
+					
+					if(flag&leftButton==0 && flag&rightButton==0) mouseDown=0;
+					if(flag&leftButton!=0 || flag&rightButton!=0){
+					if(mouseDown==0){
+					xClick = mouseX- (gButtonShift/2);
+					yClick = mouseY;
+					mouseDown=1;
+					
+					iSettings = newArray(TimeOutTime+10000,0, 0, 0);
+					
+
+					
+					
+
+					//Target 1 Click?
+					
+					if(timeOutGate1 == 1){
+					
+					targetNum = (j*numPerSlide);
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+					
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+					
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+				
+
+						hit=0;
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+						capTimesArray[targetNum+1]=i;			
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;
+						
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate1=0;
+						
+						
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+
+						
+
+						}
+					
+					}
+					
+					//Target 2 Click?
+					
+					if(timeOutGate2 == 1){
+					
+					targetNum = (j*numPerSlide)+1;
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+
+
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+
+						hit=0;
+
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+
+						capTimesArray[targetNum+1]=i;
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;					
+
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate2=0;
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+
+						}
+					
+					}
+					
+					
+					//Target 3 Click?
+					
+					if(timeOutGate3 == 1){
+					
+					targetNum = (j*numPerSlide)+2;
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+
+						hit=0;
+
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+
+						capTimesArray[targetNum+1]=i ;
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;						
+
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate3=0;
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+
+						}
+					
+					}
+					
+					
+					//Target 4 Click?
+					
+					if(timeOutGate4 == 1){
+					
+					targetNum = (j*numPerSlide)+3;
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+
+						hit=0;
+						
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+
+						capTimesArray[targetNum+1]=i;
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;					
+
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate4=0;
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+						
+
+
+						}
+					
+					}
+					
+
+					//Target 5 Click?
+					
+					if(timeOutGate5 == 1){
+					
+					targetNum = (j*numPerSlide)+4;
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+
+						hit=0;
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+
+						capTimesArray[targetNum+1]=i;
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;				
+
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate5=0;
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+			
+
+
+						}
+					
+					}
+					
+					//Target 6 Click?					
+					
+					if(timeOutGate6 == 1){
+					
+					targetNum = (j*numPerSlide)+5;
+					
+					DistX = Math.sqrt( Math.sqr(xClick-(targetXcoords[targetNum] + (TargetSize/2)) ));
+
+					DistY = Math.sqrt( Math.sqr(yClick-(targetYcoords[targetNum] + (TargetSize/2)) ));
+
+					DistH=Math.sqrt( Math.sqr(DistX) + Math.sqr(DistY) );
+
+					side="left";
+					if(targetXcoords[targetNum] + (TargetSize/2) > getWidth/2 - gButtonShift/2) side="right";
+
+						hit=0;
+						if(DistH <(TargetSize/2+clickLeeway)) hit = "correct";
+						if(clickSide == side && captureMethod == "left&right") hit = "correct";
+						if(clickSide != side) 			if(captureMethod == "left&right") i=TimeOutTime;;
+						
+						if( hit == "correct"){
+
+
+						capTimesArray[targetNum+1]=i;
+						RankArray[targetNum+1]=groupRank;
+						groupRank = groupRank+1;
+
+						clickXPosition[targetNum+1] = xClick;
+						clickYPosition[targetNum+1] = yClick;
+						clickDistance[targetNum+1] = DistH;
+						
+						timeOutGate6=0;
+						
+
+						circleX = targetXcoords[targetNum] + (gButtonShift/2);
+						circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("green");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+						
+						
+
+
+						}
+					
+					}
+						
+			
+					run("Select None");
+					
+					if(timeOutGate1 == 0 && timeOutGate2 == 0 && timeOutGate3 == 0 && timeOutGate4 == 0 && timeOutGate5 == 0 && timeOutGate6 == 0  ){
+					i=TimeOutTime;
+					}
+					
+					
+					
+					if(failTrigger == "miss" || failTrigger == "miss/react"){
+					nMiss=nMiss+1;
+					if(nMiss>=failCap){
+					i = TimeOutTime;
+					}
+					}
+					
+					}} // (Click)
+					
+				
+			
+				
+
+
+
+			wait(2);
+			
+			}
+			
+			
+		// iii) Check for failed to find targets
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~		
+			
+		//Target 1 Fail!		
+
+		if(timeOutGate1==1){
+		
+		targetNum = (j*numPerSlide);
+
+		capTimesArray[targetNum+1]=TimeOutTime;
+		respTimesArray[targetNum+1]=TimeOutTime;
+
+	
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+		
+		
+		//Target 2 Fail!	
+		
+		if(timeOutGate2==1){
+		
+		targetNum = (j*numPerSlide)+1;
+
+		capTimesArray[targetNum+1]=TimeOutTime;
+		respTimesArray[targetNum+1]=TimeOutTime;
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+
+		//Target 3 Fail!	
+
+		if(timeOutGate3==1){
+		
+		targetNum = (j*numPerSlide)+2;
+
+	capTimesArray[targetNum+1]=TimeOutTime;
+	respTimesArray[targetNum+1]=TimeOutTime;
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+		
+		//Target 4 Fail!			
+		
+		if(timeOutGate4==1){
+		
+		targetNum = (j*numPerSlide)+3;
+
+	capTimesArray[targetNum+1]=TimeOutTime;
+	respTimesArray[targetNum+1]=TimeOutTime;
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+		
+		//Target 5 Fail!			
+		
+		if(timeOutGate5==1){
+		
+		targetNum = (j*numPerSlide)+4;
+
+	capTimesArray[targetNum+1]=TimeOutTime;
+	respTimesArray[targetNum+1]=TimeOutTime;
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+		
+		
+		//Target 6 Fail!			
+		
+		if(timeOutGate6==1){
+		
+		targetNum = (j*numPerSlide)+5;
+
+	capTimesArray[targetNum+1]=TimeOutTime;
+	respTimesArray[targetNum+1]=TimeOutTime;
+
+		circleX = targetXcoords[targetNum] + (gButtonShift/2);
+		circleY = targetYcoords[targetNum];
+						setLineWidth(6);
+						setColor("red");
+						drawOval(circleX-clickLeeway/2, circleY-clickLeeway/2, (TargetSize+clickLeeway),  (TargetSize+clickLeeway));
+
+		}
+		
+		
+		
+		if(timeOutGate1==1 || timeOutGate2==1 || timeOutGate3==1 || timeOutGate4==1 || timeOutGate5==1 || timeOutGate6==1 ){
+		wait(1500);
+		} else {
+		wait(500);
+		}
+
+		}
+
+ 
+ 
+	floatFit =newArray(capTimesArray.length-1);
+	for(i=0; i <floatFit.length;i++){
+	floatFit[i]=parseFloat(capTimesArray[i+1]);
+	}
+	
+	
+	if(numPerSlide==1){ 
+	RankArray=Array.rankPositions(floatFit);
+	RankArray=Array.concat("Rank",RankArray);
+	}
+	
+	//Array.show(RankArray,SurvArray);
+ 
+	for(i=1; i <capTimesArray.length;i++){
+	if(parseFloat(respTimesArray[i]) >= parseFloat(capTimesArray[i]) - 600 && respTimesArray[i] != 0){
+	SurvArray[i] = respTimesArray[i];
+	}else{
+	SurvArray[i] = capTimesArray[i];
+	}
+
+	}
+
+
+
+
+//==============================-
+//Save Results
+//==============================
+
+
+psychOutputDIR = gameDIR + "psychOutput.txt";
+
+if(File.exists(psychOutputDIR)==1){
+File.delete(psychOutputDIR);
+}
+
+
+randomTargets = Array.concat("ID", randomTargets);
+randomBackgrounds = Array.concat("Background", randomBackgrounds);
+targetXcoords = Array.concat("Target_X", targetXcoords );
+targetYcoords = Array.concat("Target_Y", targetYcoords );
+targetFlip =  Array.concat("Flip", targetFlip);
+targetAngle =  Array.concat("Angle", targetAngle);
+cropXArray =  Array.concat("Crop_X", cropXArray);
+cropYArray =  Array.concat("Crop_Y", cropYArray);
+
+for(i=0; i< FitnessArray.length; i++){
+
+	if(i==0 || i>numPerSlide*trainingNumber){
+	
+	ID = randomTargets[i];
+	ID = replace(ID, ".tif", "");
+	ID = replace(ID, ".TIF", "");
+	ID = replace(ID, ".png", "");
+	ID = replace(ID, ".PNG", "");
+	ID = replace(ID, ".jpg", "");
+	ID = replace(ID, ".JPG", "");
+
+	surivalString1 = Array.concat(ID, RankArray[i], SurvArray[i], respTimesArray[i], capTimesArray[i], clickXPosition[i], clickYPosition[i], clickDistance[i],  randomBackgrounds[i], targetXcoords[i], targetYcoords[i], targetFlip[i], targetAngle[i], cropXArray[i], cropYArray[i]);
+
+	surivalString = String.join(surivalString1, "\t");
+
+	File.append(surivalString, psychOutputDIR);
+
+	}
+
+}
+
+
+close("GameSlides");
+
+

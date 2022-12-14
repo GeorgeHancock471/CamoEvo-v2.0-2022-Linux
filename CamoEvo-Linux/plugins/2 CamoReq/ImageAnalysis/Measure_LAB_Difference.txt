@@ -1,0 +1,171 @@
+/*____________________________________________________________________
+
+	Title: Measure XYZ Values
+	Authors:  George Hancock and Jolyon Troscianko
+	Date: 19/04/22
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Measures the XYZ Mean, Dev and GabRat
+
+*/
+
+
+popDIR = getDirectory("population");
+FolderName=File.getName(popDIR);
+saveDIR = popDIR + "Data_Measures_" + FolderName +".txt";
+
+
+while(roiManager("count")>0){
+roiManager("select", 0);
+roiManager("delete");
+}
+
+setBatchMode(true);
+
+selectImage("Background");
+
+//setBatchMode("show");
+run("Lab Stack");
+rename("LAB");
+
+
+//MeasureTitles
+//========================================
+
+//Make Sure to add all the titles and in the same order as the measurements.
+
+TiArray=newArray();
+
+TiArray=Array.concat(TiArray,"Target_Surround","Target_Local","Target_Global", "Surround_Target","Local_Target","Global_Target");
+
+
+
+if(!File.exists(saveDIR)){
+File.append(String.join(TiArray,"\t"),saveDIR);
+}
+
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+  
+  
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+ 
+
+
+
+
+
+//Measures Array
+//========================================
+
+MsArray=newArray(); // Blank Measure Array
+
+
+
+selectImage("TargetMask");
+run("Create Selection");
+roiManager("Add");
+	roiManager("select",0);
+	run("Interpolate", "interval=1");
+	roiManager("update");
+	roiManager("select",0);
+	roiManager("Rename","Target");
+close();
+
+selectImage("LocalMask");
+run("Create Selection");
+roiManager("Add");
+	roiManager("select",1);
+	roiManager("Rename","Local");
+close();
+
+roiManager("select",0);
+run("Make Inverse");
+roiManager("add");
+	roiManager("select",2);
+	roiManager("Rename","Global");
+	
+roiManager("select",0);
+run("Make Band...", "band=10");
+roiManager("add");
+	roiManager("select",3);
+	roiManager("Rename","Surround");
+		
+
+
+setBatchMode("show");
+run("ROI Manager...");
+
+for(i=0;i<roiManager("count");i++){
+roiManager("select",i);
+run("Scale... ", "x=0.5 y=0.5");
+roiManager("update");
+}
+
+
+
+selectImage("LAB");
+w=getWidth()*(1/2);
+h=getHeight()*(1/2);
+run("Select None");
+run("Size...", "width=&w height=&h depth=3 interpolation=None");
+
+
+
+
+for(i=0;i<roiManager("count");i++){
+selectImage("LAB");
+roiManager("select",i);
+run("Generate LAB Map");
+}
+
+
+run("Compare LAB Maps", "threshold=0.9500 metric=Mean frequency=Yes");
+
+
+
+TargetLocal = getResult("Local",0);
+TargetGlobal = getResult("Global",0);
+TargetSurround = getResult("Surround",0);
+
+LocalTarget = getResult("Target",1);
+GlobalTarget = getResult("Target",2);
+SurroundTarget = getResult("Target",3);
+
+
+MsArray=Array.concat(TargetSurround,TargetLocal,TargetGlobal,SurroundTarget,LocalTarget,GlobalTarget ); // Adds the measure to the measure array.
+
+
+
+close("*");
+setBatchMode(true);
+
+//------------------------------------------------------------------------------------------------------------------
+
+//Save Measurements
+//========================================
+
+File.append(String.join(MsArray,"\t"),saveDIR);

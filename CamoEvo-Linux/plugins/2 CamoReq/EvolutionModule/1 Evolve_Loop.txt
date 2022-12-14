@@ -1,0 +1,777 @@
+/*____________________________________________________________________
+
+	Title: Evolve Patterns
+	Authors:  George Hancock 
+	Date: 27/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Generates patterns and then waits for fitness files to be added.
+*/
+
+
+setBatchMode(true);
+
+
+
+/*
+..........................................................................................................................................
+
+ Setup
+
+..........................................................................................................................................
+
+*/
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) General
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+//================================================================
+//Functions
+//================================================================
+
+// TestPoint
+//---------------------------------------------------
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Setup Clicks
+//--------------------------------------------------
+rightButton=4;
+leftButton=16;
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+// Idle
+//---------------------------------------------------
+// Allows the program to check wether to go idle during a loop
+
+iSettings = newArray(10000,0, 0, 0);
+
+ function idle(array) {
+ 
+ wGate = 1;
+ 
+ while(wGate==1){
+ 
+ wGate=0;
+ 
+ t=array[0];
+ iGate=array[1];
+ xM=array[2];
+ yM=array[3];
+
+scaleX = getWidth() / screenWidth;
+scaleY = getHeight() / screenHeight;
+
+wait(100);
+getCursorLoc(xM2, yM2, zM, flag);
+
+getLocationAndSize(x, y, width, height);
+
+width = width*scaleX;
+height = height*scaleY;
+
+threshold = 10;
+if(flag==02) threshold = 30;
+
+if(iGate>t/5 && xM2>=width-threshold) iGate=t;
+if(iGate>t/5 && xM2<= threshold) iGate=t;
+if(iGate>t/5 && yM2>=height- threshold) iGate=t;
+if(iGate>t/5 && yM2<= threshold)iGate=t;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0  && iGate>=t) Overlay.remove;
+
+if(xM2!=xM || yM2!=yM || flag&leftButton != 0 || flag&rightButton != 0 ) iGate=0;
+
+if(xM2==xM && yM2==yM) iGate=iGate+100;
+
+if(iGate>=t){
+
+	getCursorLoc(xM1, yM1, zM, flag);
+
+	Overlay.add;
+
+	setColor(255,100,100);
+	setFont("SansSerif", round(40*scaleX*scaleY));
+
+	Overlay.drawString("Idle", 40*scaleX*scaleY, 40*scaleX*scaleY);
+
+	Overlay.show;
+
+	wait(2500);
+	
+	wGate=1;
+
+	}
+
+
+if(iGate>=120000){
+
+waitForUser("Idle for too long, operation paused");
+
+}
+
+}
+
+return newArray(t, iGate, xM2, yM2);
+
+  }
+
+
+//================================================================
+//Population Location
+//================================================================
+
+
+Dialog.create("Choose Directory");
+		Dialog.addMessage("________________Choose Folder___________________");
+		Dialog.addMessage("Select directory of the evolution game population.");
+	Dialog.show();
+
+
+gameDIR = getDirectory("Select folder you wish to use.");
+gameDIR=gameDIR;
+tempString = "select=["+ gameDIR+"]";
+
+
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+dataFile = File.open(PopLocal);
+print(dataFile, gameDIR );
+File.close(dataFile);
+
+
+
+//================================================================
+//Fitness Calculator
+//================================================================
+
+measureMethodsDIR = getDirectory("plugins") + "2 CamoReq/EvolutionModule";
+measureList = getFileList(measureMethodsDIR);
+
+calculatorTypes = newArray();
+
+for(i=0;i<measureList.length;i++){
+tStr = measureList[i];
+
+if(startsWith(tStr, "Calculator_")){
+
+nStr = replace(tStr, ".txt", "");
+nStr = replace(nStr, "_", " ");
+
+calculatorTypes = Array.concat(calculatorTypes,nStr);
+
+}
+}
+
+
+
+Dialog.createNonBlocking("CalculatorMethod");
+Dialog.addMessage("__Choose the measurement method__");
+		Dialog.addChoice("Measure", calculatorTypes);
+Dialog.show();
+
+calculatorMethod = Dialog.getChoice();
+
+
+
+setBatchMode(true);
+
+
+//----------------------------------------------------------------------------------------------------------------
+// 0) Setup New Generation
+//----------------------------------------------------------------------------------------------------------------
+
+
+
+//=========================
+//Get Population Settings
+//=========================
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet[1];
+
+numGenerations = split(PopulationSettings[1],"\t");
+numGenerations  = numGenerations [1];
+
+PopSize = split(PopulationSettings[2],"\t");
+PopSize = PopSize [1];
+
+
+TimeOutTime = split(PopulationSettings[4],"\t");
+TimeOutTime = parseFloat(TimeOutTime [1]);
+
+numPerSlide = split(PopulationSettings[3],"\t");
+numPerSlide = parseFloat(numPerSlide [1]);
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+
+
+DefaultDirectory = getDirectory("plugins") + "2 CamoReq/GameModule/popSettingsDefault.txt";
+
+if(!File.exists(PopulationSet)){
+
+File.copy(DefaultDirectory, PopulationSet);
+
+}
+
+
+
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet[1];
+
+FitnessM = split(PopulationSettings[7],"\t");
+FitnessMeasure = FitnessM[1];
+
+
+if(PopulationSettings.length<9){
+
+fitnessMethod = "Survival"; // (left&right , survival, response, capture, rank)
+
+transitionMethod = "Centre"; // (centre, click, wait)
+
+trainingMethod = "None"; // (None, First, Every, Resurrect)
+
+trainingNumber = 0;
+
+} else {
+
+tempA = split(PopulationSettings[8],"\t");
+fitnessMethod = tempA[1];
+
+tempA = split(PopulationSettings[9],"\t");
+transitionMethod = tempA[1];
+
+tempA = split(PopulationSettings[10],"\t");
+trainingMethod = tempA[1];
+
+tempA = split(PopulationSettings[11],"\t");
+trainingNumber = parseFloat(tempA[1]);
+
+
+}
+
+
+
+
+//=========================
+//Get Target Settings
+//=========================
+
+TargetChoice = TargetSetting;
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+capture="response";
+if(numPerSlide>1) capture="rank";
+
+SettingPath = gameDIR + "Settings_Game.txt";
+
+settingGate=1;
+if(!File.exists(SettingPath)) settingGate=0;
+
+if(settingGate==1){
+test = File.openAsString(SettingPath);
+test = split(test,"\n");
+if(test.length<5)  settingGate=0;
+}
+
+if(settingGate==0){
+
+dataFile = File.open(SettingPath);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+print(dataFile, "TargetSize =	"+TargetChoiceScale+"px		( The size of the given target in either pixels [px] or cm [cm] )");
+print(dataFile, "NumPerSlide =	"+numPerSlide+"		( The number of targets shown per slide )");
+print(dataFile, "Angles =	"+TargetChoiceMinRotation+"	"+TargetChoiceMaxRotation+"	( The range of angles the target can have )");
+print(dataFile, "TimeOutTime = 	"+TimeOutTime+"		( The maximum time per slide )");
+print(dataFile, "SpawnMethod =	random		( The target spawning method [random, L*a*b* nearest,  L*a*b* furthest] )");
+print(dataFile, "CaptureMethod =	"+capture+"	( The method used to determine capture [click,response,left&right,rank] )");
+print(dataFile, "TransitionMethod =	centre	( The method used to change between slides [centre,click,wait] )");
+print(dataFile, "TrainingNumber =	"+trainingNumber+"	( The number of dummy targets used at the beginning )");
+print(dataFile, "Repeats =	1		( The number of repeats per individual )");
+print(dataFile, "ClickLeeWay =	0.5		( The click leeway based on the size of the target [e.g. 0.5 = + 50%] )");
+print(dataFile, "CropWidth =	1478		( The crop width CAN'T BE BIGGER THEN SOURCE IMAGE )");
+print(dataFile, "CropHeight =	1130		( The crop height CAN'T BE BIGGER THEN SOURCE IMAGE  )");
+print(dataFile, "CropMode = 	centre		( The crop location [centre or random]  )");
+print(dataFile, "FailTrigger =	none		( Fail conditions other then time out [miss, react, miss/react] )");
+print(dataFile, "TargetMod =	none	( runs imageJ script on target )");
+print(dataFile, "ImageMod =	none		( runs imageJ script on whole image )");
+
+
+	
+File.close(dataFile);
+
+}
+
+
+
+//=========================
+//Check for Generation 0
+//=========================
+
+//If there is no Generation 0 Create one
+//----------------------------------------------
+
+if(!File.exists(PopLocation+"gen_0_genes.txt")){
+
+//run("CamoEvo ImageGA Relay");
+
+
+populatorDirectory1= "select_folder=[" + PopLocation+ "]";
+
+
+populatorDirectory2= " select_template=[" + getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+TargetPatternChoice+".txt]";
+
+
+
+
+populatorDirectory = populatorDirectory1+populatorDirectory2;
+
+run("Assign Algorithm Settings");
+
+print(populatorDirectory);
+
+run("ImageGA Populator", populatorDirectory);
+
+run("Colour Range Modifier");
+
+}
+
+
+
+checkZ=1;
+
+runCount=-1;
+
+while(checkZ==1){
+
+
+
+CheckDirectory = PopLocation;
+
+checkA = 1;
+checkB1 = getFileList(CheckDirectory);
+checkB1 = checkB1.length;
+
+checkB2 = getFileList(CheckDirectory);
+checkB2 = checkB2.length;
+
+
+
+
+//===============================
+//Get Current Generation
+//===============================
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+
+
+
+
+
+while(GenNumber<numGenerations){
+
+
+
+//===============================
+//Get Current Generation
+//===============================
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+
+if(File.exists(GenNum )){
+
+
+setBatchMode(true);
+
+print("gen_"+GenNumber+"_ranks.txt");
+
+
+
+
+
+
+
+
+
+
+
+//===============================
+//Check if Generation Exists
+//===============================
+TrainPath = CheckDirectory + "Training/";
+if(trainingMethod != "none" )if(!File.exists(TrainPath)) File.makeDirectory(TrainPath);
+
+
+
+GenerationString=File.openAsString(GenNum);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+
+
+//==================================
+//Create Population
+//==================================
+
+
+
+
+//Create Image Directory
+//---------------------------------
+
+fold = "GenPat_" + GenNumber;
+foldOld = "GenPat_" + GenNumber-1;
+PatternPath = CheckDirectory + fold;
+PriorPath = CheckDirectory + foldOld;
+
+
+if(GenNumber>0 && trainingMethod == "First") trainingNumber = 0;
+if(trainingMethod == "none") trainingNumber = 0;
+
+//Work out existing patterns
+//---------------------------------
+//IF there is already patterns for that Generation,don't remake them.
+// If the file already exists and its size == the desired pop size then don't make pattersn.
+
+
+CheckLength = getFileList(PatternPath);
+
+if(CheckLength.length<PopSize || !File.exists(PatternPath)) {
+File.makeDirectory(PatternPath );
+
+
+//Temporary
+if(GenNumber>0){ 	 // if it is generation 1 or higher it will check which individuals have survived without mutating, and save them without remaking them. 
+					 // this preserves the exact same phenotype.
+				
+				
+notMade=newArray();
+
+for(i=1; i<GenerationRows.length; i++){
+Temp = split(GenerationRows[i], "\t");
+Temp = Temp[0];
+patternGet = PriorPath + "/" + Temp + tif;
+
+
+if(File.exists(patternGet) == 1){
+	while(!isOpen(Temp + tif)){
+	open(patternGet);
+}
+
+selectImage(Temp + tif);
+
+title = getTitle();
+newName = replace (title, ".tif", "");
+rename(newName);
+
+
+} else {
+	str=GenerationRows[i];
+	notMade=Array.concat(notMade,str);
+}
+
+
+
+}
+
+
+
+dataFile = File.open(PatternTemplate);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+	print(dataFile, GenerationRows[0]);
+	
+	for(i=0; i<notMade.length; i++){
+	print(dataFile, notMade[i]);
+	}
+	
+	
+		if(trainingMethod == "Every"){
+	
+			trainArray = split(GenerationRows[GenerationRows.length-1], "\t");
+			
+			for(i=0; i<trainingNumber*numPerSlide; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+			
+			trainArray[0] = "Train_"+i;
+			
+			for(j=3;j<trainArray.length;j++){
+			trainArray[j] = random();
+			}
+			
+			trainString = String.join(trainArray,"\t");
+			
+			print(dataFile, 	trainString);
+			
+			}
+		
+		
+		} // Train
+	
+	
+	File.close(dataFile);
+
+}
+
+
+//Copy all if Gen = 0
+//---------------------------------
+
+if(GenNumber==0){ // if it is generation 0 it will need to generate all the patterns no matter what.
+
+	dataFile = File.open(PatternTemplate);
+	
+	for(i=0; i<GenerationRows.length; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+	
+	print(dataFile, GenerationRows[i]);
+	
+	}
+	
+	
+		if(trainingMethod != "none"){
+	
+			trainArray = split(GenerationRows[GenerationRows.length-1], "\t");
+			
+			for(i=0; i<trainingNumber*numPerSlide; i++){	// writes the pattern genome to a temporary text file, which the target generator then uses.
+			
+			trainArray[0] = "Train_"+i;
+			
+			for(j=3;j<trainArray.length;j++){
+			trainArray[j] = random();
+			}
+			
+			trainString = String.join(trainArray,"\t");
+			
+			print(dataFile, 	trainString);
+			
+			}
+		
+		
+		} // Train
+	
+	
+	
+	File.close(dataFile);
+}
+
+
+
+
+//Create Patterns
+//--------------------------------
+// Users can add direction to different pattern generation scripts here.
+
+
+
+generateString = "Generate "+ TargetPatternChoice;
+
+run(generateString);
+
+//Save Patterns
+//---------------------------------
+
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+for ( i=0; i<Win; i++ ) { 
+
+	pat = "/" + WinNam[i] + tif;
+	PatternPath = CheckDirectory + fold + pat;
+
+	selectWindow(WinNam[i]);
+
+	if(endsWith(WinNam[i], ".tif")){
+
+	close(WinNam[i]);
+	} else {
+
+		if(startsWith(WinNam[i], "Gen")==1 || startsWith(WinNam[i], "gloss")==1){
+
+		saveAs("Tiff", PatternPath); 
+
+		close(WinNam[i]+".tif");
+
+		} // GenTarget
+		
+		
+		if(startsWith(WinNam[i], "Train")==1){
+
+		saveAs("Tiff", TrainPath + WinNam[i] + tif); 
+
+		close(WinNam[i]+".tif");
+
+		} // GenTarget
+
+
+	}
+} // (i)
+
+
+
+}
+
+
+
+//Save Ressurected
+//---------------------------------
+if(trainingMethod == "Resurrect" && GenNumber>0){
+oldTargets = getFileList(CheckDirectory + "GenPat_"+GenNumber-1+"/");
+newTargets = getFileList(CheckDirectory + "GenPat_"+GenNumber+"/");
+
+dummyTargets = newArray();
+
+inD = 0;
+while(dummyTargets.length<trainingNumber*numPerSlide){
+
+tStr = oldTargets[inD];
+checkExist = index(newTargets,tStr);
+checkExist2 =  index(newTargets,replace(tStr,"ID","IDR"));
+
+if(checkExist==-1 && checkExist2 == -1) dummyTargets = Array.concat(dummyTargets, tStr);
+
+inD = inD+1;
+
+}
+
+for(i=0;i<dummyTargets.length;i++){
+File.copy(CheckDirectory + "GenPat_"+GenNumber-1+"/"+dummyTargets[i], CheckDirectory+"training/"+"Train_"+i+".tif");
+
+} //(i)
+
+
+} // Resurrect
+
+
+
+popString = "choose-population=["+gameDIR+"]";
+
+run(calculatorMethod); // Measure
+
+
+
+} // exists
+
+
+DirectoryString= "select=[" + CheckDirectory+ "]";
+run("ImageGA Algorithm", DirectoryString);
+
+close("*");
+
+
+} // This will Loop until ImageGA stops producing new generations
+
+

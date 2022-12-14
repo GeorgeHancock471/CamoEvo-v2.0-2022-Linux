@@ -1,0 +1,224 @@
+<!-- vim::set expandtab tabstop=4 softtabstop=2 shiftwidth=2: -->
+<html>
+<style TYPE="text/css">
+h2
+{
+  margin-bottom: 0px;
+}
+table, tr, td
+{
+  border-spacing: 0px;
+}
+table
+{
+  width:100%;
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+  background-color:#f8f8f8;
+}
+td
+{
+  padding:5px;
+  padding-right:10px;
+  padding-left:10px;
+  border-left: 1px solid black;
+  border-bottom: 1px solid black;
+}
+td.a
+{
+  text-align:center;
+}
+body
+{
+  background-color:white;
+  margin-left:10px;
+}
+</style>
+<body>
+<h2>Sources and display modes</h2>
+<p>
+The viewer can display files containing multiple sources.
+</p>
+<p>
+The viewer has two display modes, <i>single-source</i> and <i>fused</i>.
+In <i>single-source</i> mode, only the <i>current</i> source is shown
+(there is exactly one current source at any given time.)
+In <i>fused</i> mode, all <i>active</i> sources are shown overlaid.
+</p>
+
+<table border="1">
+<tr>
+  <td class="a"><b>F</b></td>
+  <td>Switch between <i>single-source</i> and <i>fused</i> mode.</td>
+</tr><tr>
+  <td class="a"><b>G</b></td>
+  <td>Toggle source <i>grouping</i>.</td>
+</tr><tr>
+  <td class="a"><b>I</b></td>
+  <td>Switch between tri-linear and nearest-neighbor interpolation.</td>
+</tr><tr>
+  <td class="a"><b>T&nbsp;</b></td>
+  <td>Toggle whether moving image is displayed warped or raw. </td>
+</tr><tr>
+  <td class="a"><b>S</b></td>
+  <td>Show Brightness &amp; Color dialog.</td>
+</tr><tr>
+  <td class="a"><b>F6</b></td>
+  <td>Show moving image panel Visibility &amp; and Grouping dialog.</td>
+</tr><tr>
+  <td class="a"><b>F7</b></td>
+  <td>Show target image panel Visibility &amp; and Grouping dialog.</td>
+</tr><tr>
+  <td class="a"><b>U&nbsp;</b></td>
+  <td>Show warp visualization grid dialog.</td>
+</tr><tr>
+  <td class="a"><b>Ctrl&nbsp;O</b></td>
+  <td>Open landmarks from a file</td>
+</tr><tr>
+  <td class="a"><b>Ctrl&nbsp;S</b></td>
+  <td>Save landmarks to a file</td>
+</tr><tr>
+  <td class="a"><b>Ctrl&nbsp;E</b></td>
+  <td>Export moving image as an ImagePlus</td>
+</tr><tr>
+  <td class="a"><b>Ctrl-Shift&nbsp;E</b></td>
+  <td>Export moving image as a virtual ImagePlus</td>
+</tr><tr>
+  <td class="a"><b>Ctrl-Alt&nbsp;E</b></td>
+  <td>Save warped moving image to file</td>
+</tr>
+</table>
+<br/>
+
+<h2>Navigation</h2>
+<p>
+Using the mouse:
+</p>
+<table border="1">
+<tr>
+  <td class="a"><b>Left-drag</b></td>
+  <td>Rotate (pan and tilt) around the point where the mouse was clicked.</td>
+</tr><tr>
+  <td class="a"><b>Right-drag</b> or<br/><b>Middle-drag</b></td>
+  <td>Move in the xy-plane.</td>
+</tr><tr>
+  <td class="a"><b>Scroll</b></td>
+  <td>Move along the z-axis.</td>
+</tr><tr>
+  <td class="a"><b>Meta&nbsp;Scroll</b> or<br/><b>Ctrl&nbsp;Shift&nbsp;Scroll</b></td>
+  <td>Zoom in and out.</td>
+</tr>
+</table>
+<p>
+Using the keyboard:
+</p>
+<table border="1">
+<tr>
+  <td class="a"><b>Q&nbsp;<i>key</i></b></td>
+  <td>Align the non-active viewer with the active viewer.</td>
+</tr><tr>
+  <td class="a"><b>W&nbsp;<i>key</i></b></td>
+  <td>Align the active viewer with the non-active viewer.</td>
+</tr><tr>
+  <td class="a"><b>R&nbsp;<i>key</i></b></td>
+  <td>Resets view to origin.</td>
+</tr><tr>
+  <td class="a"><b>D&nbsp;<i>key</i></b></td>
+  <td>Centers the active viewer on the currently selected landmark.</td>
+</tr><tr>
+  <td class="a"><b>Ctrl&nbsp;D</b></td>
+  <td>Centers the active viewer on the next selected landmark.</td>
+</tr><tr>
+  <td class="a"><b>Ctrl-Shift&nbsp;D</b></td>
+  <td>Centers the active viewer on the previous selected landmark.</td>
+</tr><tr>
+  <td class="a"><b>E&nbsp;<i>key</i></b></td>
+  <td>Centers the active viewer on landmark closest to the mouse.</td>
+</tr><tr>
+  <td class="a"><b>X</b> / <b>Y</b> / <b>Z</b></td>
+  <td>Select rotation axis.</td>
+</tr><tr>
+  <td class="a"><b>&larr;</b> / <b>&rarr;</b></td>
+  <td>Rotate clockwise / counter-clockwise around the choosen rotation axis.</td>
+</tr><tr>
+  <td class="a"><b>&uarr;</b> / <b>&darr;</b></td>
+  <td>Zoom in / out.</td>
+</tr><tr>
+  <td class="a"><b>,</b> / <b>.</b></td>
+  <td>Move forward / backward along the z-axis.</td>
+</tr><tr>
+  <td class="a"><b>Shift&nbsp;Y</b> or <b>Shift&nbsp;A</b></td>
+  <td> 3d: Rotate to the xz-plane of the current source. (Look along the y-axis of the current source.)</td>
+</tr><tr>
+  <td class="a"><b>Shift&nbsp;X</b></td>
+  <td> 3d: Rotate to the zy-plane of the current source. (Look along the x-axis of the current source.)<br>
+       2d: Rotate clockwise to the next 90 degree rotation of the image</td>
+</tr><tr>
+  <td class="a"><b>Shift&nbsp;Z</b></td>
+  <td> 3d: Rotate to the xy-plane of the current source. (Look along the z-axis of the current source.)<br>
+       2d: Rotate counterclockwise to the next 90 degree rotation of the image </td>
+</tr>
+</table>
+<p>
+Hold <b>Shift</b> to rotate and browse 10x faster.<br/>
+Hold <b>Ctrl</b> to rotate and browse 10x slower.
+</p>
+
+<h2>Landmark placement and navigation</h2>
+<p>
+Landmarks are placed in <i>landmark mode</i> which is entered by
+pressing and holding the <i>space bar</i>.  A message is briefly displayed
+in viewer windows to indicate that you are in landmark mode.
+</p>
+<table border="1">
+<tr>
+  <td class="a"><b>Space bar</b><br/>(press and hold)</td>
+  <td>Enter <i>landmark mode.</i></td>
+</tr>
+<tr>
+<td class="a">(<b>Space bar</b>) + ( mouse click )</td>
+  <td>Place landmark point.</td>
+</tr>
+<tr>
+<td class="a">(<b>Space bar</b>) + ( mouse click and drag )</td>
+  <td>Drag an existing landmark point.</td>
+</tr>
+<tr>
+  <td class="a">(<b>Space bar</b>) + <b>Shift</b> + ( mouse drag )</td>
+  <td>"Move" a point. <br>Click to place a landmark in the moving image
+    space, drag to move a landmark in the fixed image, release to set the fixed image landmark.</td>
+</tr>
+<tr>
+  <td class="a">(<b>Space bar</b>) + <b>Ctrl</b> + ( mouse click )</td>
+  <td>"Fix" a point. <br>Click to place a landmark in both the fixed and
+    moving images, at the clicked position.</td>
+</tr>
+<tr>
+<td class="a">(<b>Space bar</b>) + click point in table.</td>
+  <td>Clears a point's position.  Next landmark-click resets position.</td>
+</tr>
+<tr>
+<td class="a">Double click point in table.</td>
+  <td>Center landmark point in viewer.</td>
+</tr>
+<tr>
+  <td class="a"><b>Ctrl&nbsp;Z</b></td>
+  <td>Undo last change to a landmark point.</td>
+</tr>
+<tr>
+  <td class="a"><b>Ctrl&nbsp;Y</b></td>
+  <td>Redo last undone change to a landmark point.</td>
+</tr>
+<tr>
+  <td class="a"><b>V</b></td>
+  <td>Toggle landmark visibility.</td>
+</tr>
+<tr>
+  <td class="a"><b>N</b></td>
+  <td>Toggle landmark name visibility.</td>
+</tr>
+</table>
+<br/>
+
+</body>
+</html>

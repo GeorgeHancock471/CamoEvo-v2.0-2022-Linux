@@ -1,0 +1,144 @@
+/*____________________________________________________________________
+
+	Title: Create Game
+	Authors:  George Hancock 
+	Date: 06/06/2022	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Allows the user to create a game without using the school UI
+
+*/
+
+// Game Location
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//Dialog
+Dialog.createNonBlocking("1. Game Location");
+Dialog.addMessage("Choose a folder to store your game");
+Dialog.show();
+
+GameDIR = getDirectory("Assign_Game_Folder");
+
+// Background Images
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//Dialog
+Dialog.createNonBlocking("2. Background Images");
+Dialog.addMessage("Choose a folder containing background images, and only images");
+Dialog.show();
+
+BgDIR = getDirectory("Select_Backgrounds");
+
+
+// Population Settings
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Target_Settings = File.openAsString(getDirectory("plugins") +"1 CamoEvo/Targets/Target_Settings.txt");
+Target_Rows=split(Target_Settings, "\n");
+targetChoices = newArray(Target_Rows.length-1);
+
+for(i=0;i<targetChoices.length;i++){
+
+tArray = split(Target_Rows[i+1], "\t");
+if(tArray.length>1){
+tString = tArray [0];
+targetChoices[i] = tString;
+}
+}
+
+
+
+
+
+
+//Dialog
+Dialog.createNonBlocking("3. Assign Population Settings part 1");
+
+Dialog.addChoice("Target Choice", targetChoices);
+Dialog.addNumber("N Generations", 10);
+Dialog.addNumber("Population Size", 24);
+Dialog.addNumber("Individuals per slide", 1);
+Dialog.addNumber("Max time per slide", 15000);
+Dialog.addMessage("Starting Colour Space, LAB or Deposition");
+Dialog.addNumber("1. Min", 0);
+Dialog.addNumber("1. Max", 0);
+Dialog.addNumber("2. Min", 0);
+Dialog.addNumber("2. Max", 0);
+Dialog.addNumber("3. Min", 0);
+Dialog.addNumber("3. Max", 0);
+Dialog.addMessage("Full Colour Space, LAB or Deposition");
+Dialog.addNumber("1. Min", 0);
+Dialog.addNumber("1. Max", 0);
+Dialog.addNumber("2. Min", 0);
+Dialog.addNumber("2. Max", 0);
+Dialog.addNumber("3. Min", 0);
+Dialog.addNumber("3. Max", 0);
+Dialog.show();
+
+TargetType = Dialog.getChoice();
+GenerationLength = Dialog.getNumber();
+PopSize = Dialog.getNumber();
+NumSlide = Dialog.getNumber();
+TimeOutTime = Dialog.getNumber();
+Mn1 = Dialog.getNumber();
+Mx1 = Dialog.getNumber();
+Mn2 = Dialog.getNumber();
+Mx2 = Dialog.getNumber();
+Mn3 = Dialog.getNumber();
+Mx3 = Dialog.getNumber();
+StartSpace = newArray(Mn1,Mx1,Mn2,Mx2,Mn3,Mx3);
+StartSpace = String.join(StartSpace,"\t");
+
+Mn1 = Dialog.getNumber();
+Mx1 = Dialog.getNumber();
+Mn2 = Dialog.getNumber();
+Mx2 = Dialog.getNumber();
+Mn3 = Dialog.getNumber();
+Mx3 = Dialog.getNumber();
+ColourSpace = newArray(Mn1,Mx1,Mn2,Mx2,Mn3,Mx3);
+ColourSpace = String.join(ColourSpace,"\t");
+
+
+choiceInvert = newArray("No","Yes");
+fitnessMeasure = newArray("survival","capture","response","rank","left&right");
+transitionMethod = newArray("cetnre","click","wait");
+DemoMethod = newArray("None","Random.First","Random.Every","Custom.First","Custom.Every","Resurrect.Every")
+
+//Dialog
+Dialog.createNonBlocking("3. Assign Population Settings part 2");
+Dialog.addChoice("Invert Fitness, whether to *-1 the fitness value", choiceInvert);
+Dialog.addChoice("Fitness Measure", fitnessMeasure);
+Dialog.addChoice("Transition Method, how the slides change", transitionMethod);
+Dialog.addChoice("Demo Method, whether demo images are shown", DemoMethod);
+Dialog.addNumber("N Demo Images", 0);
+Dialog.addNumber("N repeats, how many times each target is shown", 1);
+Dialog.show();
+
+FitnessValue = Dialog.getChoice();
+MeasureMethod = Dialog.getChoice();
+TransitionMethod = Dialog.getChoice();
+DemoMethod = Dialog.getChoice();
+DemoCount = Dialog.getNumber();
+RepNum = Dialog.getNumber();
+
+dataFile = File.open(GameDIR+"Settings_Population.txt");
+
+print(dataFile, "Target = "+"\t"+TargetType+"\t"+"\t"+"The TargetSetting Choice");
+print(dataFile, "Generation = "+"\t"+GenerationLength+"\t"+"\t"+"The number of generations, will overide algorithm settings if there are none existing.");
+print(dataFile, "PopSize = "+"\t"+PopSize+"\t"+"\t"+"The number of individuals in a population.");
+print(dataFile, "NumSlide = "+"\t"+NumSlide+"\t"+"\t"+"The number of individuals per slide.");
+print(dataFile, "TimeOutTime = "+"\t"+TimeOutTime+"\t"+"\t"+"The amount of time allowed on each slide.");
+print(dataFile, "StartSpace = "+"\t"+StartSpace+"\t"+"\t"+"The starting Lab ranges of colour.");
+print(dataFile, "ColourSpace = "+"\t"+ColourSpace+"\t"+"\t"+"The full range of Lab colours.");
+print(dataFile, "InvertFit? = "+"\t"+FitnessValue+"\t"+"\t"+"Whether fitness is inverted (Yes / No).");
+print(dataFile, "FitnessValue = "+"\t"+MeasureMethod+"\t"+"\t"+"The fitness measure,  (survival,capture,response and rank).");
+print(dataFile, "Transition = "+"\t"+TransitionMethod+"\t"+"\t"+"The transition method used by the game (centre, click, wait).");
+print(dataFile, "DemoImage = "+"\t"+DemoMethod+"\t"+"\t"+"Whether demo targets are shown before hand (None, First, Every, Resurrect).");
+print(dataFile, "DemoCount = "+"\t"+DemoCount+"\t"+"\t"+"Number of demo targets");
+print(dataFile, "RepeatNum = "+"\t"+RepNum+"\t"+"\t"+"Number of repeats per target");
+File.close(dataFile);
+
+

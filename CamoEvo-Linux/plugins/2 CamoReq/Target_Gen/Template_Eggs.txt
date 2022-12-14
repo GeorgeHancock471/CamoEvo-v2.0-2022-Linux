@@ -1,0 +1,3 @@
+ID	Parent1	Parent2	Sex	por_int_lvl	por_sig_lvl	pat_noi_int	pat_noi_sig	pat_noi_thr	pat_mc1_xcd	pat_mc1_ycd	pat_mc1_thr	pat_mc1_sig	pat_mc1_med	pat_mc1_noi	pat_grd_blr	pat_grd_hgt	pat_grd_lng	pat_grd_int	pat_mc2_xcd	pat_mc2_ycd	pat_mc2_sig	pat_mc2_thr	pat_mc2_rnw	pat_mac_noi	pat_mac_smg	col_bkg_dep	col_bkg_pir	col_pt1_dep	col_pt1_pir	col_pt1_rep	col_pt2_dep	col_pt2_pir	col_pt2_rep	col_exp_lvl
+Gen0_Mut0_ID0	none	none	m	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+Gen0_Mut0_ID1	none	none	f	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5

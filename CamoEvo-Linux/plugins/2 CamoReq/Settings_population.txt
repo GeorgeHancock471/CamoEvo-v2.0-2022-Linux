@@ -1,0 +1,7 @@
+Target=	Exp_Lizard
+blank
+blank
+blank
+blank
+blank
+ColourSpace =		0	100	-50	30	5	70

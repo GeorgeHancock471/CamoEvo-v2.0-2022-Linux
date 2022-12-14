@@ -1,0 +1,3 @@
+-	-	-	Range	ptn_dim_xcp	ptn_dim_ycp	ptn_dim_wdt	ptn_dim_asr	ptn_dim_agl	ptn_grd_cvr	ptn_grd_sig	ptn_grd_hgt	ptn_grd_agl	eem_int_lvl	eem_int_rto	eem_sig_lvl	eem_sig_rto	eem_exp_lvl	eem_exp_rto	ptn_bil_ctr	ptn_bil_sft	ptn_bil_frq	col_mac_lmv	col_mac_rgv	col_mac_byv	col_top_lmv	col_top_rgv	col_top_byv	col_bot_lmv	col_bot_rgv	col_bot_byv	col_grd_sig	col_grd_hgt	spk_one_lvl	spk_one_rto	spk_one_sig	spk_one_ycp	spk_two_lvl	spk_two_rto	spk_two_sig	spk_two_ycp
+-	-	-	Min	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+-	-	-	Max	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1

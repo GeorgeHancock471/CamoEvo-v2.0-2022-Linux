@@ -1,0 +1,25 @@
+50
+0.001000000
+0.050000000
+poisson
+poisson
+2
+10
+4
+6
+10
+10
+random
+24.0
+random
+Create Custom
+random
+1/2
+1/2
+0.001000000
+0.001000000
+mutantMate
+0.9
+4
+both
+0

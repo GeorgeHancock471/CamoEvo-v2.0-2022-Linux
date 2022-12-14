@@ -1,0 +1,17 @@
+// Newt Target Modifier
+setBatchMode(true);
+run("Randomise Tail&Head", "head_ymax=100 tail_ymin=215 tail_diameter=30");
+
+selectImage("warped");
+run("Select All");
+setPasteMode("Copy");
+run("Copy");
+
+if(isOpen("warp")) close("warp");
+if(isOpen("warped")) close("warped");
+if(isOpen("head"))close("head");
+
+
+run("Select All");
+run("Paste");
+

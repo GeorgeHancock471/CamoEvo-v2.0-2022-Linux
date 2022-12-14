@@ -1,0 +1,14 @@
+Target = 	Default_Moth	The TargetSetting Choice.
+Generation = 	10		The number of generations, will overide algorithm settings if there are none existing.
+PopSize = 	24		The number of individuals in a population.
+NumSlide = 	1		The number of individuals per slide.
+TimeOutTime = 	15000		The amount of time allowed on each slide.
+StartSpace = 	0	100	-30	30	-5	50		The starting Lab ranges of colour.
+ColourSpace = 	0	100	-30	30	-5	50		The full range of Lab colours.
+InvertFit? = 	No		Whether fitness is inverted (Yes / No).
+FitnessValue = 	survival		The fitness measure,  (survival,capture,response and rank).
+Transition = 	centre		The transition method used by the game (centre, click, wait).
+DemoImage = 	None		Whether demo targets are shown before hand (None, First, Every, Resurrect).
+DemoCount =	0		Number of demo targets
+RepeatNum =	1		Number of repeats per target
+

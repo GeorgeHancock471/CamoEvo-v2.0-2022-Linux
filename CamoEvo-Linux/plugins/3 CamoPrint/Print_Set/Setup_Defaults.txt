@@ -1,0 +1,8 @@
+1
+1
+Shared
+4
+Random
+4	60	80	1
+10	10	4	random
+colour

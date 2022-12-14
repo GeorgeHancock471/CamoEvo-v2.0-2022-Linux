@@ -1,0 +1,154 @@
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+setBatchMode(true);
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+GenStr = File.openAsString(GenNum);
+GenArr = split(GenStr, "\n");
+GenRand = newArray(GenArr.length);
+
+BgDirectory = CheckDirectory+"Backgrounds/";
+BGList  =  getFileList(BgDirectory);
+
+open(BgDirectory+BGList[0]);
+rename("BG");
+run("Lab Stack");
+w=getWidth();
+h=getHeight();
+getStatistics(areaBG);
+
+setSlice(1);
+makeRectangle(w/2-200,h/2-200,400,400);
+getHistogram(bg_LV, bg_LC, 20, 0, 100);
+
+setSlice(2);
+makeRectangle(w/2-200,h/2-200,400,400);
+getHistogram(bg_AV, bg_AC, 40, -100, 100);
+
+setSlice(3);
+makeRectangle(w/2-200,h/2-200,400,400);
+getHistogram(bg_BV, bg_BC, 40, -100, 100);
+
+for(i=0;i<bg_LC.length;i++){
+bg_LC[i]=(bg_LC[i]/areaBG);
+}
+
+for(i=0;i<bg_AC.length;i++){
+bg_AC[i]=(bg_AC[i]/areaBG);
+bg_BC[i]=(bg_BC[i]/areaBG);
+}
+
+
+patDIR =CheckDirectory+"GenPat_"+GenNumber+"/";
+
+
+
+GenRand[0] = "ID"+"\t"+"Fitness";
+for(j=1;j<GenRand.length;j++){
+t = split(GenArr[j], "\t");
+
+open(patDIR+t[0]+".tif");
+run("Lab Stack");
+setThreshold(1,100);
+run("Create Selection");
+getStatistics(areaTG);
+
+setSlice(1);
+getHistogram(tg_LV, tg_LC, 20, 0, 105);
+
+setSlice(2);
+getHistogram(tg_AV, tg_AC, 40, -105, 105);
+
+setSlice(3);
+getHistogram(tg_BV, tg_BC, 40, -105, 105);
+
+
+
+for(i=0;i<tg_LC.length;i++){
+tg_LC[i]=tg_LC[i]/areaTG;
+}
+
+for(i=0;i<tg_AC.length;i++){
+tg_AC[i]=tg_AC[i]/areaTG;
+tg_BC[i]=tg_BC[i]/areaTG;
+}
+
+
+
+sumLD=0;
+for(i=0;i<tg_LC.length;i++){
+D=tg_LC[i]-bg_LC[i];
+if(D<0) D=0;
+sumLD+=D;
+}
+
+sumAD=0;
+sumBD=0;
+for(i=0;i<tg_AC.length;i++){
+D=tg_AC[i]-bg_AC[i];
+D=Math.sqrt(Math.sqr(D));
+sumAD+=D;
+
+D=tg_BC[i]-bg_BC[i];
+D=Math.sqrt(Math.sqr(D));
+sumBD+=D;
+}
+
+
+GenRand[j] = t[0]+"\t"+-sumLD-sumAD-sumBD;
+close();
+}
+
+
+
+
+
+	dataFile = File.open(SurvGenNum);
+	for(i=0;i<GenRand.length;i++){
+		print(dataFile, GenRand[i]);
+	}		
+	File.close(dataFile);

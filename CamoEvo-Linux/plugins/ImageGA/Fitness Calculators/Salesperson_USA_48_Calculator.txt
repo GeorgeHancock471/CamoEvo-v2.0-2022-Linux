@@ -1,0 +1,500 @@
+setBatchMode(true);
+
+
+
+//__________________________________________________________________
+
+//=========================================================
+/*
+FITNESS PRE-CHECKER (Recommended for all calculators )
+_____________________________________________________
+
+Counts the number of survival tables in the last directory used by ImageJ
+
+ NOTE: the algorithim will always premake a results table.
+
+
+*/
+//=========================================================
+
+
+
+CheckDirectory = getDirectory("Select folder you wish to use.");
+
+GeneratArray = newArray("none");
+
+GeneratList  =  getFileList(CheckDirectory);
+
+//Array.show(GeneratList);
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}
+
+
+}
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+//print (ArrayLeng);
+
+//Array.show(GeneratArray);
+
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+  
+   function sIndex(a, value) {
+      for (i=0; i<a.length; i++)
+          if (startsWith(a[i],value)) return i;
+      return -1;
+  }
+  
+  
+
+// Obtain SubArray
+//---------------------------------------------------
+// Allows you to obtain a SubArray of a given Name and Length, where a is the array and b is the original number of rows.
+
+ function subArray(a, value, b) {
+	IndexLab = index(a, value);
+	Start = IndexLab + 1;
+	End = IndexLab  + b;
+	//print("startIndex: "+Start);
+	//print("endIndex: "+End);
+	return Array.slice(a, Start, End);
+}
+
+
+//--------------------------------------------------------------------------------------------
+
+GenNumber = ArrayLeng -1;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes.txt";
+GenName = "gen_" + GenNumber + "_genes.txt";
+SurvGenNum= CheckDirectory + "gen_" + GenNumber + "_ranks.txt";
+
+//------------------------------------
+//Load Current Generation
+//------------------------------------
+
+if(File.exists(GenNum) == 1){
+GenerationString=File.openAsString(GenNum);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+
+	Column_Titles = GenerationRows[0];
+	CT=split(Column_Titles, "\t");
+	SiteNames=Array.deleteValue(CT, "ID");
+	SiteNames=Array.deleteValue(SiteNames, "Parent1");
+	SiteNames=Array.deleteValue(SiteNames, "Parent2");
+	SiteNames=Array.deleteValue(SiteNames, "Sex");
+	F = lengthOf(CT);
+	RouteLeng = F;
+	
+VarLeng = GenerationRows.length-1;
+ColumnLength = VarLeng;
+
+IndividualsArray=Array.deleteIndex(GenerationRows,0);
+
+//------------------------------------------------
+// Make Pattern Directory
+//-------------------------------------------------
+fold = "SalespersonRoutes";
+PatternPath = CheckDirectory + fold;
+File.makeDirectory(PatternPath );
+
+
+noiseAmount = parseFloat(File.openAsString( getDirectory("plugins") + "ImageGA/Fitness Calculators/Salesperson/noise.txt" ) );
+
+	//Open Map
+//===========================
+setBatchMode("true");
+
+photoFilePath = getDirectory("plugins") + "ImageGA/Fitness Calculators/Salesperson/USA.jpg";
+open(photoFilePath);
+rename("Map.jpg");
+
+
+	//Set Sites
+//============================
+
+Olympia = newArray("C_N_Olympia", 174, 170);
+Olympia = String.join(Olympia, "\t");
+
+Boise = newArray("C_N_Boise", 310, 334);
+Boise  = String.join(Boise , "\t");
+
+Helena = newArray("C_N_Helena",444, 246);
+Helena= String.join(Helena, "\t");
+
+Salt_Lake_City = newArray("C_N_SaltLakeCity", 412, 470);
+Salt_Lake_City = String.join(Salt_Lake_City, "\t");
+
+Denver = newArray("C_N_Denver", 610, 534);
+Denver = String.join(Denver, "\t");
+
+Cheyenne = newArray("C_N_Cheyenne", 616, 474);
+Cheyenne = String.join(Cheyenne, "\t");
+
+Pierre = newArray ("C_N_Pierre", 732, 350);
+Pierre = String.join(Pierre, "\t");
+
+Bismarck = newArray("C_N_Bismarck", 730, 266);
+Bismarck = String.join(Bismarck, "\t");
+
+St_Paul = newArray("C_N_StPaul", 932, 320);
+St_Paul= String.join(St_Paul, "\t");
+
+Madison = newArray("C_N_Madison", 1032, 380);
+Madison = String.join(Madison, "\t");
+
+Lansing = newArray("C_N_Lansing", 1176, 368);
+Lansing = String.join(Lansing , "\t");
+
+Columbus = newArray("C_N_Columbus", 1236, 462);
+Columbus = String.join(Columbus, "\t");
+
+Washington = newArray("C_N_Washington",1290, 516);
+Washington = String.join(Washington, "\t");
+
+Harrisburg = newArray("C_N_Harrisburg", 1392, 412);
+Harrisburg = String.join(Harrisburg, "\t");
+
+Albany = newArray("C_N_Albany", 1446, 280);
+Albany  = String.join(Albany , "\t");
+
+Montpelier = newArray("C_N_Montpelier", 1463, 225);
+Montpelier = String.join(Montpelier, "\t");
+
+Augusta = newArray("C_N_Augusta", 1538, 186);
+Augusta  = String.join(Augusta , "\t");
+
+Concord = newArray("C_N_Concord", 1509, 237);
+Concord  = String.join(Concord , "\t");
+
+Boston = newArray("C_N_Boston", 1533, 266);
+Boston  = String.join(Boston , "\t");
+
+Providence = newArray("C_N_Providence",1529, 297);
+Providence  = String.join(Providence , "\t");
+
+Hartford = newArray("C_N_Hartford", 1491, 306);
+Hartford  = String.join(Hartford, "\t");
+
+Trenton = newArray("C_N_Trenton", 1465, 381);
+Trenton  = String.join(Trenton, "\t");
+
+Dover = newArray("C_N_Dover", 1457, 436);
+Dover = String.join(Dover, "\t");
+
+Annapolis = newArray("C_N_Annapolis", 1422, 453);
+Annapolis  = String.join(Annapolis, "\t");
+
+Richmond = newArray("C_N_Richmond", 1415, 510);
+Richmond  = String.join(Richmond, "\t");
+
+Raleigh = newArray("C_N_Raleigh", 1395, 581);
+Raleigh  = String.join(Raleigh, "\t");
+
+Columbia = newArray("C_N_Columbia",1337, 674);
+Columbia  = String.join(Columbia, "\t");
+
+Tallahassee = newArray("C_N_Tallahassee", 1255, 825);
+Tallahassee  = String.join(Tallahassee, "\t");
+
+Montgomery = newArray("C_N_Montgomery", 1181, 770);
+Montgomery = String.join(Montgomery, "\t");
+
+Atlanta = newArray("C_N_Atlanta", 1239, 710);
+Atlanta = String.join(Atlanta, "\t");
+
+Nashville = newArray("C_N_Nashville", 1151, 626);
+Nashville = String.join(Nashville, "\t");
+
+Frankfort = newArray("C_N_Frankfort", 1197, 546);
+Frankfort = String.join(Frankfort, "\t");
+
+Indianapolis = newArray("C_N_Indianapolis", 1153, 493);
+Indianapolis = String.join(Indianapolis, "\t");
+
+Springfield = newArray("C_N_Springfield",1049, 507);
+Springfield= String.join(Springfield, "\t");
+
+Des_Moines = newArray("C_N_DesMoines", 949, 462);
+Des_Moines = String.join(Des_Moines, "\t");
+
+Lincoln = newArray("C_N_Lincoln", 843, 488);
+Lincoln = String.join(Lincoln, "\t");
+
+Topeka = newArray("C_N_Topeka", 879, 554);
+Topeka = String.join(Topeka, "\t");
+
+Jefferson_City = newArray("C_N_JeffersonCity", 972, 566);
+Jefferson_City = String.join(Jefferson_City, "\t");
+
+Little_Rock = newArray("C_N_LittleRock", 989, 711);
+Little_Rock = String.join(Little_Rock, "\t");
+
+Jackson = newArray("C_N_Jackson", 1064, 794);
+Jackson = String.join(Jackson, "\t");
+
+Baton_Rouge = newArray("C_N_BatonRouge",1034, 865);
+Baton_Rouge = String.join(Baton_Rouge, "\t");
+
+Austin = newArray("C_N_Austin", 820, 888);
+Austin = String.join(Austin, "\t");
+
+Oklahoma_City = newArray("C_N_OklahomaCity", 827, 698);
+Oklahoma_City = String.join(Oklahoma_City, "\t");
+
+Santa_Fe = newArray("C_N_SantaFe", 567, 679);
+Santa_Fe = String.join(Santa_Fe, "\t");
+
+Phoenix = newArray("C_N_Phoenix", 372, 739);
+Phoenix = String.join(Phoenix, "\t");
+
+Carson_City = newArray("C_N_CarsonCity", 181, 477);
+Carson_City = String.join(Carson_City, "\t");
+
+Sacramento = newArray("C_N_Sacramento", 128, 485);
+Sacramento = String.join(Sacramento, "\t");
+
+Salem = newArray("C_N_Salem",143, 235);
+Salem = String.join(Salem, "\t");
+
+
+
+// Create Array of All Sites
+///===============================
+SitesArray = Array.concat(Olympia,Boise,Helena,Salt_Lake_City,Denver,Cheyenne,Pierre,Bismarck,St_Paul,Madison,Lansing,Columbus,Washington,Harrisburg,Albany,Montpelier,Augusta,Concord,Boston,Providence,Hartford,Trenton,Dover,Annapolis,Richmond,Raleigh,Columbia,Tallahassee,Montgomery,Atlanta,Nashville,Frankfort,Indianapolis,Dover,Springfield,Des_Moines,Lincoln,Topeka,Jefferson_City,Little_Rock,Jackson,Baton_Rouge,Austin,Oklahoma_City,Santa_Fe,Phoenix,Carson_City,Sacramento,Salem);
+
+BestOrder = SiteNames;
+
+
+
+
+//		Get Site Order
+//================================
+FitnessArray=newArray(ColumnLength);
+
+
+for ( k=0; k<IndividualsArray.length; k++ ) { 
+tArray1 = split(IndividualsArray[k],"\t");
+
+SiteOrderArray = Array.slice(tArray1,4,tArray1.length);
+SiteOrderArray2 = Array.rankPositions(SiteOrderArray);
+SiteOrderArray2 = Array.concat(SiteOrderArray2, SiteOrderArray2[0]);
+SiteOrderArray3 = newArray(SiteOrderArray2.length);
+
+for (i=0; i<SiteOrderArray2.length; i++){
+Temp=SiteOrderArray2[i];
+Temp=SiteNames[Temp];
+SiteOrderArray3[i] = Temp;
+}
+
+
+
+
+
+
+//	Get Fitness
+//===============================
+
+RouteLength = 0;
+
+	//	RouteLength
+	//------------------------------------------------------
+
+	for (f=0; f<SiteOrderArray2.length-1; f++){
+
+	Site1a = SiteOrderArray2[f];
+	
+	Site2a = SiteOrderArray2[f+1];
+	
+
+	Site1b = SiteNames[Site1a];
+	Site2b = SiteNames[Site2a];
+	
+	Site1 = sIndex(SitesArray, Site1b);
+	Site1 = split(SitesArray[Site1],"\t");
+
+	Site2 =  sIndex(SitesArray, Site2b);
+	Site2 = split(SitesArray[Site2],"\t");
+	
+	route = Array.concat(Site1,Site2);
+	
+	
+	a1 =  Math.sqr(parseFloat(Site1[1]) - parseFloat(Site2[1]) );
+
+	b1 =  Math.sqr(parseFloat(Site1[2]) - parseFloat(Site2[2]) );
+
+	Length = Math.sqrt (  a1 + b1 );  
+
+
+
+	RouteLength = RouteLength + Length;
+	
+
+	
+			}
+
+
+	
+	RouteSpeed = -1 * RouteLength;	
+
+	FitnessArray[k] = RouteSpeed;
+	
+
+	}
+
+
+//Save	
+
+if(File.exists(SurvGenNum)) File.delete(SurvGenNum);
+
+surivalString1 = Array.concat("ID", "fitness");
+surivalString2 = String.join(surivalString1, "\t");
+File.append(surivalString2, SurvGenNum);
+
+for(i=0; i<IndividualsArray.length; i++){
+
+tArray = split(IndividualsArray[i], "\t");
+
+surivalString1 = Array.concat(tArray[0], FitnessArray[i]);
+
+surivalString2 = String.join(surivalString1, "\t");
+
+File.append(surivalString2, SurvGenNum);
+
+}
+
+
+
+
+
+//PRINT The BEST Salesperson
+//-----------------------------------------------------
+
+setColor("red");
+setLineWidth(4);
+
+//Get the best Route
+
+FitnessRanking = Array.rankPositions(FitnessArray);
+
+Fittest = lengthOf(FitnessRanking)-1;
+
+FittestID = FitnessRanking[Fittest];
+
+k = FittestID;
+
+tArray1 = split(IndividualsArray[k],"\t");
+
+SiteOrderArray = Array.slice(tArray1,4,tArray1.length);
+SiteOrderArray2 = Array.rankPositions(SiteOrderArray);
+SiteOrderArray2 = Array.concat(SiteOrderArray2, SiteOrderArray2[0]);
+SiteOrderArray3 = newArray(SiteOrderArray2.length);
+
+for (i=0; i<SiteOrderArray2.length; i++){
+Temp=SiteOrderArray2[i];
+Temp=SiteNames[Temp];
+SiteOrderArray3[i] = Temp;
+}
+
+
+
+
+
+
+
+//	Get Fitness
+//===============================
+
+	//	RouteLength
+	//------------------------------------------------------
+
+	for (f=0; f<SiteOrderArray2.length-1; f++){
+	
+	label="route_"+f;
+
+	Site1a = SiteOrderArray2[f];
+	
+	Site2a = SiteOrderArray2[f+1];
+	
+
+	Site1b = SiteNames[Site1a];
+	Site2b = SiteNames[Site2a];
+	
+	Site1 = sIndex(SitesArray, Site1b);
+	Site1 = split(SitesArray[Site1],"\t");
+
+	Site2 =  sIndex(SitesArray, Site2b);
+	Site2 = split(SitesArray[Site2],"\t");
+	
+	route = Array.concat(Site1,Site2);
+	
+
+	makeLine(Site1[1],Site1[2],Site2[1],Site2[2]);
+
+	roiManager("Add");
+	roiManager("select", roiManager("count")-1  );
+	roiManager("rename", label);
+	
+	
+	fillOval(Site1[1]-10,Site1[2]-10, 20,20);
+	fillOval(Site2[1]-10,Site2[2]-10, 20,20);
+	
+
+
+
+	}
+
+
+	roiManager("Select", Array.getSequence(roiManager("count")));
+	roiManager("XOR");
+	roiManager("Add");
+	roiManager("select", roiManager("count")-1  );
+	roiManager("rename", "Full Path");
+
+
+
+selectWindow("Map.jpg");
+roiManager("select", roiManager("count")-1  );
+run("Fill", "slice");
+pat = "\\" + "Fittest Route_Gen" + GenNumber + tif;
+PatternPath = CheckDirectory + fold + pat;
+saveAs("Tiff", PatternPath);
+
+
+
+
+close("*");
+
+roiManager("Deselect");
+
+roiManager("Delete");
+
+
+
+
+
+}
+
+
+

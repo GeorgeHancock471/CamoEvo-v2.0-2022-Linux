@@ -1,0 +1,68 @@
+canvasW = 400;
+
+patternL = 10;
+patternA = -60;
+patternB = 90;
+
+selectImage("pattern");
+
+alphaV = newArray(canvasW*canvasW);
+
+v=0;
+for(x=0;x<canvasW;x++){
+for(y=0;y<canvasW;y++){
+alphaV[v] = getPixel(x,y);
+v=v+1;
+}}
+
+Array.show(alphaV);
+
+selectImage("col");
+setColor("red");
+fill();
+
+run("Lab Stack");
+
+
+//L*
+//----------------------------
+setSlice(1);
+
+v=0;
+for(x=0;x<canvasW;x++){
+for(y=0;y<canvasW;y++){
+oldV = getPixel(x,y);
+newV = oldV*(1-alphaV[v]) + patternL*(alphaV[v]);
+setPixel(x,y,newV);
+v=v+1;
+}}
+
+//a*
+//----------------------------
+setSlice(2);
+
+v=0;
+for(x=0;x<canvasW;x++){
+for(y=0;y<canvasW;y++){
+oldV = getPixel(x,y);
+newV = oldV*(1-alphaV[v]) + patternA*(alphaV[v]);
+setPixel(x,y,newV);
+v=v+1;
+}}
+
+
+//b*
+//----------------------------
+setSlice(3);
+
+v=0;
+for(x=0;x<canvasW;x++){
+for(y=0;y<canvasW;y++){
+oldV = getPixel(x,y);
+newV = oldV*(1-alphaV[v]) + patternB*(alphaV[v]);
+setPixel(x,y,newV);
+v=v+1;
+}}
+
+
+run("RGB Color");

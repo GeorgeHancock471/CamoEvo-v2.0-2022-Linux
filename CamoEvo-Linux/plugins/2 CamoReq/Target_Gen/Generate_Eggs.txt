@@ -1,0 +1,1419 @@
+
+
+/*____________________________________________________________________
+
+	Title: Generate Eggs
+	Authors: George Hancock 
+	Date: 27/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Generates the Egg pattern target phenotype. The pattern generation system was coded by Jolyon Troscianko. The target shape and gene string code was made by George Hancock.
+
+*/
+
+
+
+setBatchMode(true);
+
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Fetch ROI
+//---------------------------------------------------
+function 	roiGetList(String1){
+
+
+roiList1 = newArray();
+roiLocs1 = newArray();
+roiFullList1 = newArray();
+nROIs1 = roiManager("count");
+
+for(j=0; j<nROIs1; j++){
+	roiManager("Select", j);
+	tStr = getInfo("selection.name");
+	roiFullList1 = Array.concat(roiFullList1, tStr);
+	if(startsWith(tStr, String1) == true){
+		roiList1 = Array.concat(roiList1, tStr);
+		roiLocs1= Array.concat(roiLocs1, j);
+		}
+	}
+
+return roiLocs1;
+
+}
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+  
+  
+
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+
+
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+GenesString=File.openAsString(PatternTemplate);	// open txt data file
+GenesRows=split(GenesString, "\n");
+
+
+
+Var0 = newArray();
+Var1 =  newArray();
+Var2 =  newArray();
+Var3 =  newArray();
+Var4 =  newArray();
+Var5 =  newArray();
+
+Var6 =  newArray();
+Var7 =  newArray();
+Var8 = newArray();
+Var9 =  newArray();
+Var10 =  newArray();
+Var11 =  newArray();
+
+Var12 =  newArray();
+Var13 = newArray();
+Var14 =  newArray();
+Var15 =  newArray();
+Var16 =  newArray();
+Var17 =  newArray();
+
+Var18 =  newArray();
+Var19 =  newArray();
+Var20 =  newArray();
+Var21 =  newArray();
+Var22 =  newArray();
+Var23 =  newArray();
+Var24 =  newArray();
+Var25 =  newArray();
+Var26 =  newArray();
+Var27 =  newArray();
+Var28 =  newArray();
+Var29 =  newArray();
+
+Var30 =  newArray();
+Var31 =  newArray();
+
+Temp = split(GenesRows[0],"\t");
+
+//Modify Phenotype Ranges
+//=============================================================
+phenoRangeDIR = PopLocation+"Transform_PhenotypeRanges.txt";
+
+if(File.exists(phenoRangeDIR)){
+
+
+phenoRangeSTR = File.openAsString(phenoRangeDIR );
+phenoRangeARR = split(phenoRangeSTR,"\n");
+phenoRangeMIN =  split(phenoRangeARR[1],"\t");
+phenoRangeMAX =  split(phenoRangeARR[2],"\t");
+
+	for(i=1;i<GenesRows.length;i++){
+	
+	tArr = split(GenesRows[i],"\t");
+
+	for(j=4;j<Temp.length;j++){
+	
+	tV = parseFloat(tArr[j]);
+	
+	tMx =  parseFloat(phenoRangeMAX[j]);
+	tMn =  parseFloat(phenoRangeMIN[j]);
+	
+	tArr[j] = tV *(tMx-tMn) + tMn;
+
+	}
+	
+	GenesRows[i] = String.join(tArr,"\t");
+	
+	}
+	
+}
+//=============================================================
+
+
+
+v0=index(Temp, "ID");
+v1=index(Temp, "por_int_lvl");
+v2=index(Temp, "por_sig_lvl");
+
+v3=index(Temp, "pat_noi_int");
+v4=index(Temp, "pat_noi_sig");
+v5=index(Temp, "pat_noi_thr");
+
+v6=index(Temp, "pat_mc1_xcd");
+v7=index(Temp, "pat_mc1_ycd");
+v8=index(Temp, "pat_mc1_thr");
+v9=index(Temp, "pat_mc1_sig");
+v10=index(Temp, "pat_mc1_med");
+v11=index(Temp, "pat_mc1_noi");
+
+v12=index(Temp, "pat_grd_blr");
+v13=index(Temp,"pat_grd_hgt");
+v14=index(Temp, "pat_grd_lng");
+v15=index(Temp, "pat_grd_int");
+
+
+v16=index(Temp, "pat_mc2_xcd");
+v17=index(Temp, "pat_mc2_ycd");
+v18=index(Temp, "pat_mc2_sig");
+v19 = index(Temp,"pat_mc2_thr");
+v20=index(Temp, "pat_mc2_rnw");
+
+v21=index(Temp, "col_bkg_dep");
+v22=index(Temp, "col_bkg_pir");
+
+v23=index(Temp, "col_pt1_dep");
+v24=index(Temp, "col_pt1_pir");
+
+v25=index(Temp, "col_pt2_dep");
+v26=index(Temp, "col_pt2_pir");
+
+v27 = index(Temp, "col_pt1_rep");
+v28 = index(Temp, "col_pt2_rep");
+
+v29=index(Temp, "pat_mac_noi");
+v30 = index(Temp, "pat_mac_smg");
+v31 = index(Temp, "col_exp_lvl");
+
+
+for(i=1; i<GenesRows.length; i++){
+Temp = split(GenesRows[i],"\t");
+
+Var0 = Array.concat(Var0,Temp[v0]);
+Var1 = Array.concat(Var1,Temp[v1]);
+Var2 = Array.concat(Var2,Temp[v2]);
+Var3 = Array.concat(Var3,Temp[v3]);
+Var4 = Array.concat(Var4,Temp[v4]);
+Var5 = Array.concat(Var5,Temp[v5]);
+Var6 = Array.concat(Var6,Temp[v6]);
+Var7 = Array.concat(Var7,Temp[v7]);
+Var8 = Array.concat(Var8,Temp[v8]);
+Var9 = Array.concat(Var9,Temp[v9]);
+Var10 = Array.concat(Var10,Temp[v10]);
+Var11 = Array.concat(Var11,Temp[v11]);
+Var12 = Array.concat(Var12,Temp[v12]);
+Var13 = Array.concat(Var13,Temp[v13]);
+Var14 = Array.concat(Var14,Temp[v14]);
+Var15 = Array.concat(Var15,Temp[v15]);
+Var16 = Array.concat(Var16,Temp[v16]);
+Var17 = Array.concat(Var17,Temp[v17]);
+Var18 = Array.concat(Var18,Temp[v18]);
+Var19 = Array.concat(Var19,Temp[v19]);
+Var20 = Array.concat(Var20,Temp[v20]);
+Var21 = Array.concat(Var21,Temp[v21]);
+Var22 = Array.concat(Var22,Temp[v22]);
+Var23 = Array.concat(Var23,Temp[v23]);
+Var24 = Array.concat(Var24,Temp[v24]);
+Var25 = Array.concat(Var25,Temp[v25]);
+Var26 = Array.concat(Var26,Temp[v26]);
+Var27 = Array.concat(Var27,Temp[v27]);
+Var28 = Array.concat(Var28,Temp[v28]);
+Var29 = Array.concat(Var29,Temp[v29]);
+Var30 = Array.concat(Var30,Temp[v30]);
+Var31 = Array.concat(Var31,Temp[v31]);
+}
+
+
+
+
+
+PopulationSet = PopLocation+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetSetting = TargetSet[1];
+
+
+TargetChoice = TargetSetting;
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+
+TargetSettingsRows = split(TargetSettings, "\n");
+
+
+ColourSpace = split(PopulationSettings[6], "\t");
+
+DMinR = parseFloat(ColourSpace[1]);
+DMaxR =  parseFloat(ColourSpace[2]);
+
+PMinR =  parseFloat(ColourSpace[3]);
+PMaxR =  parseFloat(ColourSpace[4]);
+
+if(DMinR < 0 || DMinR > 1 || DMaxR < 0 || DMaxR > 1){
+DminR=0;
+DmaxR=1;
+}
+if(PMinR < 0 || PMinR > 1 || PMaxR < 0 || PMaxR > 1){
+PMinR=0;
+PmaxR=1;
+}
+
+
+
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoicePattern = TargetChoiceSettings[3];
+TargetChoiceCentre = parseFloat(TargetChoiceSettings[4]);
+
+TargetChoiceShader = parseFloat(TargetChoiceSettings[7]);
+TargetChoiceDetail = parseFloat(TargetChoiceSettings[8]);
+
+
+if(!isOpen("Shader") && TargetChoiceShader>0){
+if(File.exists(getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Shader.png")){
+open (getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Shader.png");
+
+
+rename("Shader");
+
+	run("Multiply...", "value=&TargetChoiceShader stack");
+	AddV=127*(1-TargetChoiceShader);
+	run("Add...", "value=&AddV stack");
+
+	run("RGB Stack");
+	run("32-bit");
+	divVal = 127;
+	run("Divide...", "value=&divVal  stack");
+	
+
+}
+}
+
+
+
+if(!isOpen("Gloss")){
+if(File.exists(getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Gloss.png")){
+open (getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Gloss.png");
+rename("Gloss");
+}
+}
+
+
+
+if(!isOpen("Outline")){
+if(File.exists(getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Outline.png")){
+open (getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Outline.png");
+rename("Outline");
+}
+
+}
+
+
+
+
+if(!isOpen("Detail")&& TargetChoiceDetail>0){
+if(File.exists(getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Detail.png")){
+open (getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Detail.png");
+rename("Detail");
+run("RGB Stack");
+}
+}
+
+
+if(!isOpen("Detail_Alpha")&& TargetChoiceDetail>0){
+if(File.exists(getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Detail_Alpha.png")){
+open (getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Detail_ALpha.png");
+rename("Detail_Alpha");
+
+run("Multiply...", "value=&TargetChoiceDetail");
+
+run("32-bit");
+run("Divide...","value=255");
+run("Copy");
+setPasteMode("Muliply");
+selectImage("Detail");
+setSlice(1);
+run("Paste");
+setSlice(2);
+run("Paste");
+setSlice(3);
+run("Paste");
+
+selectImage("Detail_Alpha");
+run("Multiply...","value=255");
+run("Invert");
+run("Divide...","value=255");
+}
+}
+
+
+for(A = 0; A<GenesRows.length-1; A++){
+
+
+
+
+while(roiManager("count") > 0){
+	roiManager("select", 0);
+	roiManager("Delete");
+}
+
+
+canvasW = 400;
+topY = 50; // y coordinate of the top of the image
+
+//------------------------Pore Speckling Variables-------------------------
+noiL =  parseFloat(Var1[A]);  // level of speckling noise (SDs around 1)
+noiS =  parseFloat(Var2[A]); // speckling noise sigma
+
+//------------------------Background Speckling-------------------------
+bg_spk =  parseFloat(Var3[A]); // level of speckling added
+bg_sig =  parseFloat(Var4[A]);  // level of gaussian blur
+bg_max =  parseFloat(Var5[A]); // Direction of noise
+
+//------------------------Maculation Variables-------------------------
+mac1_X = parseFloat(Var6[A]); // x coord
+mac1_Y = parseFloat(Var7[A]); // y coord
+mac1_T = parseFloat(Var8[A]);// threshold
+
+mac1_S = parseFloat(Var9[A]); // sigma value
+mac1_Md =  parseFloat(Var10[A]);// median expansion
+mac1_eN =  parseFloat(Var11[A]);// median expansion
+
+mac1_csS =  parseFloat(Var12[A]);// counter-shading sigma value
+mac1_csH=   parseFloat(Var13[A]);// pattern gradient height
+mac1_csL =   parseFloat(Var14[A]);  // pattern gradient length
+mac1_csD =   parseFloat(Var15[A]);// harshness
+
+mac2_X = parseFloat(Var16[A]); // x coord
+mac2_Y = parseFloat(Var17[A]); // y coord
+mac2_S =  parseFloat(Var18[A]);
+mac2_T =  parseFloat(Var19[A]);
+rW =  parseFloat(Var20[A]);  // randomWalk
+
+
+bg_Dp=  parseFloat(Var21[A]);//  determines the deposition of pigments (how much dark and saturated)
+bg_Pi =  parseFloat(Var22[A]); // determines the ratio of bv and pp (how yellow-brown, blue-green)
+
+m1_Dp =  parseFloat(Var23[A]);// determines the deposition of pigments (how much dark and saturated)
+m1_Pi =  parseFloat(Var24[A]); // determines the ratio of bv and pp (how yellow-brown, blue-green)
+
+m2_Dp  =  parseFloat(Var25[A]);//  determines the deposition of pigments (how much dark and saturated)
+m2_Pi =  parseFloat(Var26[A]); // determines the ratio of bv and pp (how yellow-brown, blue-green)
+
+m3_Dp =  parseFloat(Var27[A]);//  determines which pigment and which type is used
+m4_Dp =  parseFloat(Var28[A]); // regulates how much pigment is deposited by pttn2
+
+
+egg_spk = parseFloat(Var29[A]); // determines the internal speckling of the maculation
+egg_smg = parseFloat(Var30[A]); // determines the gaussian blur around the maculation
+
+egg_exp = parseFloat(Var31[A]); // determines the exposure of the egg
+
+//----------------------------Transforming variables to required ranges----------------------------------
+
+//Pattern Transformations
+//--------------------------------
+///Mac1
+//--------
+mac1_X = mac1_X*(2000-(canvasW*2));
+mac1_Y = mac1_Y*(2000-canvasW);
+
+mac1_Smin = 0.8;
+mac1_Smax = 10;
+mac1_S = ( Math.pow(mac1_S, 1.4)* (mac1_Smax-mac1_Smin) ) + mac1_Smin;
+
+
+
+mac1_Md = 1+(mac1_Md*(15));
+mac1_eN_blur =   mac1_eN*6;
+mac1_eN_sigma = -3+mac1_eN*12;
+
+
+mac1_csSmax = canvasW/2;
+mac1_csSmin = 100;
+mac1_csS = mac1_csS*(mac1_csSmax-mac1_csSmin) + mac1_csSmin;
+
+mac1_csHmax = (canvasW); 
+mac1_csHmin = 0;
+mac1_csH = mac1_csH*(mac1_csHmax - mac1_csHmin) + mac1_csHmin;
+
+mac1_csLmax = (canvasW)-mac1_csH; 
+mac1_csLmin = ((canvasW)-mac1_csH)/4; 
+mac1_csL = mac1_csL*(mac1_csLmax - mac1_csLmin) + mac1_csLmin;
+
+mac1_csD  = -1+(mac1_csD )*2;
+
+
+///Mac2
+//--------
+mac2_X = mac2_X*(2000-(canvasW*2));
+mac2_Y = mac2_Y*(2000-canvasW);
+
+
+
+mac2_Smin = 0.8;
+mac2_Smax = 10;
+mac2_S = ( Math.pow(mac2_S, 1.4)* (mac2_Smax-mac2_Smin) ) + mac2_Smin;
+
+
+//Speckling Transformations
+//------------------------------
+noiL = noiL - noiS/2;
+
+noiSmax = 0.8;// noise sigma
+noiSmin = 0.1;
+noiS = noiS*(noiSmax-noiSmin) + noiSmin;
+
+noiLmax = 0.05; // noise intensity (SDs from mean, where mean=1)
+noiLmin = 0.02;
+noiL = noiL*(noiLmax-noiLmin) + noiLmin;
+
+//Colouration
+//---------------------------------
+
+
+
+
+bg_Dp = bg_Dp;
+
+mVal = 1-bg_Dp;
+
+if(m1_Dp<0) m1_Dp = 0;
+if(m2_Dp<0) m2_Dp = 0;
+
+m3_Dp = m3_Dp;
+m4_Dp = m4_Dp;
+
+
+bg_Dp = DMinR + bg_Dp*(DMaxR-DMinR);
+//m1_Dp = DMinR + m1_Dp*(DMaxR-DMinR);
+//m2_Dp = DMinR + m2_Dp*(DMaxR-DMinR);
+
+bg_Pi = PMinR + bg_Pi*(PMaxR-PMinR);
+m1_Pi= PMinR + m1_Pi*(PMaxR-PMinR);
+m2_Pi = PMinR + m2_Pi*(PMaxR-PMinR);
+
+
+egg_smg = -2+egg_smg*5;
+egg_spk = Math.pow(egg_spk,3)*3;
+
+GS = 1+egg_spk *5;
+
+//====================Penotype Generation================================
+//-----------------------------------------------------------------------
+
+
+
+
+while(roiManager("count")>0){
+roiManager("select", 0);
+roiManager("delete");
+}
+
+
+canvasW=400;
+topY=50;
+
+
+//---------------------------
+//Pattern Generation
+//================
+
+
+//.....................................................
+//Maculation 1
+//.....................................................
+
+// Make Gaussian Pattern
+//-------------------------------------------
+ PatternSheet = getDirectory("plugins") + "2 CamoReq//Patterns/eggPatterns.jpg";
+ NoiseSheet = getDirectory("plugins") + "2 CamoReq//Patterns/eggNoise.tif";
+ EdgeSheet = getDirectory("plugins") + "2 CamoReq//Patterns/eggEdgeNoise.tif";
+
+
+if(!isOpen("patternSheet")){
+open(PatternSheet);
+rename("patternSheet");
+}
+
+if(!isOpen("eggNoise")){
+open(NoiseSheet);
+rename("eggNoise");
+}
+
+if(!isOpen("edgeNoise")){
+open(EdgeSheet);
+rename("edgeNoise");
+}
+
+selectImage("patternSheet");
+
+makeRectangle(mac1_X, mac1_Y, canvasW*2, canvasW);
+
+run("Duplicate...", "title=[Maculation1]");
+
+
+run("Gaussian Blur...", "sigma=mac1_S");
+
+
+
+getStatistics(area, mean, min, max, std, histogram);
+
+//  Expansion & Threshold
+//-------------------------------------------
+
+
+
+run("32-bit");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+run("Gaussian Blur...", "sigma=&mac1_eN_blur");
+if(mac1_eN_sigma >0){
+
+selectImage("edgeNoise");
+run("Duplicate...", " ");
+run("Multiply...","value=mac1_eN_sigma");
+run("Copy");
+setPasteMode("Add");
+close();
+selectImage("Maculation1");
+run("Paste");
+
+//run("Add Specified Noise...", "standard=&mac1_eN_sigma");
+}
+
+run("Median...", "radius=&mac1_Md");
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+
+// Countershading.
+//-------------------------------------------
+
+run("Duplicate...", "title=[Threshold1]");
+
+newImage("cs", "32-bit black", canvasW*2, canvasW, 1);
+run("Set...", "value=0.5 ");
+
+selectImage("cs");
+makeRectangle(-100,mac1_csH-mac1_csL/2,canvasW*2+200,mac1_csL);
+
+
+run("Set...", "value=mac1_csD");
+
+run("Select All");
+
+run("Gaussian Blur...", "sigma=&mac1_csS");
+
+
+imageCalculator("Multiply", "Threshold1","cs");
+
+close("cs");
+
+
+
+// Threshold
+//--------------------------------------------------------
+
+makeOval(0,0,canvasW,canvasW);
+getStatistics(area, mean, min, max);
+nBins = 100000;
+getHistogram(values, counts, nBins, min, max);
+
+count = 0;
+tVal = 1;
+target = area*(1-mac1_T);
+for(i=0; i<nBins; i++){
+	count += counts[i];
+	if(count >= target){
+		tVal = values[i];
+		i = nBins;
+	}
+}
+
+tValOld=tVal;
+maxOld=max;
+setThreshold(tVal, max);
+
+run("Create Selection");
+
+roiManager("add");
+
+
+close("Threshold1");
+
+selectImage("Maculation1");
+roiManager("select", 0);
+
+
+
+run("Make Inverse");
+
+run("Multiply...","value=0");
+
+run("Make Inverse");
+
+
+run("Multiply...","value=m1_Dp");
+run("Unsharp Mask...", "radius=egg_spk  mask=0.4");
+run("Multiply...","value=m1_Dp");
+
+
+
+
+roiManager("add");
+
+selectImage("eggNoise");
+roiManager("Select", roiManager("count")-1);
+run("Copy");
+setPasteMode("Add");
+selectImage("Maculation1");
+run("Paste");
+
+//run("Add Specified Noise...", "standard=0.03");
+
+run("Make Inverse");
+if(egg_smg>0)run("Enlarge...", "enlarge=egg_smg");
+if(egg_smg>0)run("Mean...", "radius=egg_smg");
+
+
+
+run("Select None");
+
+run("Mean...", "radius=1");
+
+
+run("Max...", "value=1");
+run("Min...", "value=0");
+
+
+
+
+
+makeRectangle(canvasW,0,canvasW,canvasW);
+run("Multiply...","value=m3_Dp");
+run("Copy");
+setPasteMode("Max");
+makeRectangle(0,0,canvasW,canvasW);
+run("Paste");
+
+run("Crop");
+
+run("Multiply...","value=mVal");
+
+
+
+//.....................................................
+
+//Maculation 2
+//.....................................................
+
+
+// Make Gaussian Pattern
+//-------------------------------------------
+selectImage("patternSheet");
+
+makeRectangle(mac2_X, mac2_Y, canvasW*2, canvasW);
+
+
+run("Duplicate...", "title=[Maculation2]");
+
+run("Gaussian Blur...", "sigma=mac2_S");
+
+selectImage("Maculation2");
+run("Select All");
+
+
+
+run("32-bit");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+run("Gaussian Blur...", "sigma=1");
+//run("Add Specified Noise...", "standard=0.5");
+run("Median...", "radius=1");
+
+
+
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+
+// Add RandomWalk
+//--------------------------------------------------------
+
+			selectWindow("Maculation2");
+			
+			makeOval(0,0,canvasW,canvasW);
+			getStatistics(area, mean, min, max);
+			nBins = 100000;
+			getHistogram(values, counts, nBins, min, max);
+
+			rV = max-0.1-(0.3*(1-rW));
+
+			setThreshold(rV, max);
+
+			run("Create Selection");
+
+
+			getStatistics(area, mean, min, max);
+			
+		
+			roiManager("add");
+	
+			xDir=1;
+			yDir=1;
+
+
+			dirArray=newArray(-1,1);
+		
+			for(j=0; j<1; j++) {
+			roiManager("Select", roiManager("count")-1);
+			roiManager("add");
+
+			setColor("black");
+
+			minAngle=-26;
+			maxAngle=26;
+
+			Rand = (Math.pow(random(),1.5));
+			Angle = (maxAngle*Rand) + (minAngle*(1-Rand));
+
+			run("Copy");
+
+			for(i=0; i<(pow(rW,3)*300); i++){
+
+
+
+			rand=random();
+			if(rand<0.75){
+			Angle = Angle + (random()*(maxAngle-minAngle) + minAngle);
+			}
+
+			Distance =1.5;
+
+			radi = Angle*(PI/180);
+
+			Roi.getBounds(x, y, width, height)
+
+			yCd = y + (  sin(radi ) *Distance );
+			xCd = x +(  cos(radi ) *Distance );
+
+
+			Roi.move(xCd, yCd);
+
+			setPasteMode("Max");
+			run("Paste");
+
+			}
+
+			}
+
+
+
+run("Select All");
+
+
+
+run("Enhance Contrast...", "saturated=0 normalize");
+
+
+// Threshold
+//--------------------------------------------------------
+
+selectImage("Maculation2");
+
+makeOval(0,0,canvasW,canvasW);
+getStatistics(area, mean, min, max);
+nBins = 100000;
+getHistogram(values, counts, nBins, min, max);
+
+count = 0;
+tVal = 1;
+target = area*(1-mac2_T);
+for(i=0; i<nBins; i++){
+	count += counts[i];
+	if(count >= target){
+		tVal = values[i];
+		i = nBins;
+	}
+}
+
+tValOld=tVal;
+maxOld=max;
+setThreshold(tVal, max);
+
+run("Create Selection");
+
+run("Make Inverse");
+
+run("Multiply...","value=0");
+
+run("Make Inverse");
+
+run("Multiply...","value=m2_Dp");
+run("Unsharp Mask...", "radius=egg_spk  mask=0.4");
+run("Multiply...","value=m2_Dp");
+
+roiManager("add");
+
+selectImage("eggNoise");
+roiManager("Select", roiManager("count")-1);
+run("Copy");
+setPasteMode("Add");
+selectImage("Maculation2");
+run("Paste");
+
+//run("Add Specified Noise...", "standard=0.03");
+
+
+run("Make Inverse");
+if(egg_smg>0)run("Enlarge...", "enlarge=egg_smg");
+if(egg_smg>0)run("Mean...", "radius=egg_smg");
+
+
+
+
+run("Select None");
+
+run("Mean...", "radius=1");
+
+
+run("Max...", "value=1");
+run("Min...", "value=0");
+
+
+makeRectangle(canvasW,0,canvasW,canvasW);
+run("Multiply...","value=m4_Dp");
+run("Copy");
+setPasteMode("Max");
+makeRectangle(0,0,canvasW,canvasW);
+run("Paste");
+
+run("Crop");
+
+run("Multiply...","value=mVal");
+
+
+// Egg Colouration
+//========================================================================
+
+
+shellL =99;
+shellA = -1;
+shellB = 5;
+
+ppL = -0.88;
+ppA = 0.19;
+ppB = 0.30;
+
+bvL = -0.7;
+bvA = -0.15;
+bvB = -0.13;
+
+
+
+
+
+newImage("Shell", "32bit white", canvasW,canvasW, 3);
+run("Select All");
+setSlice(1);
+run("Set...", "value=shellL");
+setSlice(2);
+run("Set...", "value=shellA");
+setSlice(3);
+run("Set...", "value=shellB");
+
+
+
+
+// Background
+//------------------------------
+newImage("Background", "32bit black", canvasW,canvasW, 1);
+run("Select All");
+run("Set...", "value=0");
+
+
+
+bg_spk=(1-bg_spk)*0.2;
+bg_sig=bg_sig*10;
+bg_max = -0.8+bg_max*1.6;
+
+run("Add Specified Noise...", "standard=0.05");
+run("Subtract...", "value=bg_spk");
+run("Min...", "value=0");
+run("Enhance Contrast...", "saturated=0 normalize");
+run("Gaussian Blur...", "sigma=bg_sig");
+run("Median...", "radius=bg_sig");
+run("Enhance Contrast...", "saturated=0 normalize");
+ 
+run("Multiply...", "value=bg_max");
+
+
+
+run("Add...", "value=bg_Dp");
+
+run("Max...", "value=DMaxR");
+run("Min...", "value=0");
+
+run("Duplicate...", "title=Deposition duplicate");
+run("Duplicate...", "title=Ratio duplicate");
+
+run("Multiply...", "value=bg_Pi");
+
+
+
+
+// Maculation 1
+//------------------------------
+selectImage("Maculation1");
+run("Copy");
+setPasteMode("Add");
+selectImage("Deposition");
+run("Paste");
+selectImage("Maculation1");
+run("Multiply...", "value=m1_Pi");
+run("Copy");
+setPasteMode("Add");
+selectImage("Ratio");
+run("Paste");
+
+// Maculation 2
+//------------------------------
+selectImage("Maculation2");
+run("Copy");
+setPasteMode("Add");
+selectImage("Deposition");
+run("Paste");
+selectImage("Maculation2");
+run("Multiply...", "value=m2_Pi");
+run("Copy");
+setPasteMode("Add");
+selectImage("Ratio");
+run("Paste");
+
+selectWindow("Deposition");
+run("Select All");
+run("Min...","value=0.0001");
+run("Copy");
+//run("Max...","value=1");
+setPasteMode("Divide");
+selectImage("Ratio");
+run("Paste");
+
+
+selectImage("Ratio");
+run("Min...","value=0");
+run("Max...","value=1");
+run("Copy");
+setPasteMode("Copy");
+run("Add Slice");
+run("Paste");
+run("Add Slice");
+run("Paste");
+
+
+selectImage("Deposition");
+run("Copy");
+setPasteMode("Copy");
+run("Add Slice");
+run("Paste");
+run("Add Slice");
+run("Paste");
+
+
+//	L*
+//-------------
+selectImage("Deposition");
+setSlice(1);
+mStr = "code=v=pow(v,1)"; 
+run("Macro...", mStr);
+selectImage("Ratio");
+setSlice(1);
+
+//RatioAdjust
+mStr = "code=v=pow(v,1.5)";
+run("Macro...", mStr);
+
+
+//Values
+mStr = "code=v=((v)*"+bvL+")+((1-v)*"+ppL+")";
+run("Macro...", mStr);
+
+run("Multiply...","value=100");
+
+run("Copy");
+selectImage("Deposition");
+setSlice(1);
+setPasteMode("Multiply");
+run("Paste");
+
+
+//	A*
+//-------------
+selectImage("Deposition");
+setSlice(2);
+mStr = "code=v=pow(v,0.25)"; 
+run("Macro...", mStr);
+selectImage("Ratio");
+setSlice(2);
+
+//RatioAdjust
+mStr = "code=v=pow(v,0.85)";
+run("Macro...", mStr);
+
+
+//Values
+mStr = "code=v=((v)*"+bvA+")+((1-v)*"+ppA+")";
+run("Macro...", mStr);
+
+run("Multiply...","value=100");
+
+run("Copy");
+selectImage("Deposition");
+setSlice(2);
+setPasteMode("Multiply");
+run("Paste");
+
+
+
+//	B*
+//-------------
+selectImage("Deposition");
+setSlice(3);
+mStr = "code=v=pow(v,0.25)"; 
+run("Macro...", mStr);
+selectImage("Ratio");
+setSlice(3);
+
+//RatioAdjust
+mStr = "code=v=1-cos((v-0.3)*7/PI)";
+run("Macro...", mStr);
+run("Min...","value=0");
+run("Max...","value=1");
+
+//Values
+mStr = "code=v=((v)*"+bvB+")+((1-v)*"+ppB+")";
+run("Macro...", mStr);
+
+run("Multiply...","value=100");
+
+run("Copy");
+selectImage("Deposition");
+setSlice(3);
+setPasteMode("Multiply");
+run("Paste");
+
+
+
+
+
+
+imageCalculator("Add create stack", "Deposition","Shell");
+
+
+
+
+close("Deposition");
+close("Ratio");
+close("Maculation1");
+close("Maculation2");
+close("Background");
+close("Shell");
+
+rename("merge");
+
+setSlice(1);
+run("Min...", "value=10");
+
+
+
+
+
+
+//-----------------------------------Pore Speckling---------------------------------
+newImage("random", "32-bit random", canvasW, canvasW, 1);
+run("Gaussian Blur...", "sigma=&noiS");
+run("Select All");
+
+run("Southeast");
+
+getStatistics(area, mean, min, max, SD);
+
+if(mean > 0)
+	mStr =  "code=v=(((v/" + d2s(SD,12) + ")-" + d2s(mean,12) + ")*" + d2s(noiL,12) + ")+1";
+else {
+	mean *= -1;
+	mStr =  "code=v=(((v/" + d2s(SD,12) + ")+" + d2s(mean,12) + ")*" + d2s(noiL,12) + ")+1";
+}
+
+run("Macro...", mStr);
+
+//run("Max...", "value=1");
+
+run("Copy");
+setPasteMode("blend");
+
+//run("Southeast");
+//run("Paste");
+//run("Paste");
+
+
+
+imageCalculator("Multiply", "merge","random");
+
+
+setSlice(1);
+egg_exp=-10+egg_exp*20;
+
+run("Add...", "value=&egg_exp ");
+
+
+run("CIELAB 32Bit to RGB24 smooth");
+close("col");
+if(isOpen("noise"))close("noise");
+
+
+
+
+selectImage("Output");
+
+
+
+
+close("merge");
+
+
+
+
+run("Spherical Deform"); // wrap around sphere
+
+run("Min...", "value=5");
+
+run("Max...", "value=255");
+
+run("Select All");
+run("Invert");
+run("Copy");
+setPasteMode("Subtract");
+close("Output");
+
+TargetPath = getDirectory("plugins") + "1 CamoEvo/Targets/" + TargetChoiceShape +"/Target.png";
+open(TargetPath);
+run("Select All");
+run("Paste");
+
+rename(Var0[A]);
+
+
+
+//Details
+//----------------------------
+if(isOpen("Detail")){
+	selectImage(Var0[A]);
+	run("RGB Stack");
+	selectImage("Detail_Alpha");
+	run("Select All");
+	run("Copy");
+	setPasteMode("Multiply");
+	selectImage(Var0[A]);
+
+	setSlice(1);
+	run("Paste");
+	setSlice(2);
+	run("Paste");
+	setSlice(3);
+	run("Paste");
+	
+	
+	setPasteMode("Add");
+	
+	selectImage("Detail");
+	setSlice(1);
+	run("Copy");
+	selectImage(Var0[A]);
+	setSlice(1);
+	run("Paste");
+	
+	selectImage("Detail");
+	setSlice(2);
+	run("Copy");
+	selectImage(Var0[A]);
+	setSlice(2);
+	run("Paste");	
+	
+	selectImage("Detail");
+	setSlice(3);
+	run("Copy");
+	selectImage(Var0[A]);
+	setSlice(3);
+	run("Paste");	
+	
+	run("RGB Color");	
+}
+
+
+
+//Shading
+//----------------------------
+if(isOpen("Shader")){
+	run("RGB Stack");
+	run("32-bit");
+	
+	
+	setPasteMode("Multiply");
+	
+	
+	for(i=0;i<3;i++){
+	selectImage("Shader");
+	setSlice(i+1);
+	run("Copy");
+	selectImage(Var0[A]);
+	setSlice(i+1);
+	run("Paste");
+	}
+
+	
+	run("8-bit");
+	run("RGB Color");
+	
+	
+	
+}
+
+
+
+//Gloss
+//----------------------------
+if(isOpen("Gloss")){
+selectImage("Gloss");
+setPasteMode("Add");
+run("Copy");
+selectImage(Var0[A]);
+run("Paste");
+}
+
+
+
+
+//Outline
+//----------------------------
+if(isOpen("Outline")){
+
+run("Min...", "value=10");
+selectWindow("Outline");
+run("Select All");
+run("Copy");
+selectImage(Var0[A]);
+setPasteMode("Transparent-white");
+run("Paste");
+}
+
+
+run("Set... ", "zoom=50 x=200 y=200");
+
+//Clear up uneeded images.
+
+
+
+selectImage("random");
+close("random");
+
+
+
+
+if(isOpen("Output"))
+close("Output");
+
+
+
+
+wait(1);
+
+
+
+
+
+
+
+}// j nResults
+
+if(isOpen("patternSheet")){
+close("patternSheet");
+}
+
+
+
+if(isOpen("Outline")){
+close("Outline");
+}
+
+if(isOpen("Detail")){
+close("Detail");
+}
+
+if(isOpen("Detail_Alpha")){
+close("Detail_Alpha");
+}
+
+
+
+
+if(isOpen("Shader")){
+close("Shader");
+}
+
+if(isOpen("Gloss")){
+close("Gloss");
+}
+
+
+
+if(isOpen("eggNoise")){
+close("eggNoise");
+}
+
+
+if(isOpen("edgeNoise")){
+close("edgeNoise");
+}

@@ -1,0 +1,621 @@
+/*____________________________________________________________________
+
+	Title: Phenotype Tester
+	Authors:  George Hancock 
+	Date: 27/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Allows the user to test how different values influence the phenotype and also output a genome for the desired phenotype.
+
+*/
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+
+
+
+randomCheck=0;
+
+
+close("*");
+
+setBatchMode(true);
+
+Target_Settings = File.openAsString(getDirectory("plugins") +"1 CamoEvo/Targets/Target_Settings.txt");
+Target_Rows=split(Target_Settings, "\n");
+targetChoices = newArray(Target_Rows.length-1);
+
+for(i=0;i<targetChoices.length;i++){
+
+tArray = split(Target_Rows[i+1], "\t");
+if(tArray.length>1){
+tString = tArray [0];
+targetChoices[i] = tString;
+}
+}
+
+
+popLocation = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+
+dataFile = File.open(popLocation);
+	print(dataFile,getDirectory("plugins") + "2 CamoReq/");
+File.close(dataFile);
+
+
+setPasteMode("copy");
+
+
+
+patternLocation = getDirectory("plugins") + "2 CamoReq/Target_Gen/";
+generatorList = getFileList(patternLocation);
+
+generatorTypes = newArray();
+
+for(i=0;i<generatorList.length;i++){
+tStr = generatorList[i];
+
+if(startsWith(tStr, "Generate_")){
+
+nStr = replace(tStr, "Generate_", "");
+
+nStr = replace(nStr, ".txt", "");
+nStr = replace(nStr, ".txt", "");
+
+generatorTypes = Array.concat(generatorTypes,nStr);
+
+}
+}
+
+
+
+Dialog.create("Shape");
+	Dialog.addMessage("__Choose Target Shape and Pattern__");
+		Dialog.addChoice("Target:", targetChoices);
+		Dialog.addChoice("Pattern:",  generatorTypes);
+Dialog.show();
+
+targetShape = Dialog.getChoice();
+targetString = newArray("Target=",targetShape);
+targetString = String.join(targetString, "\t");
+
+
+
+
+
+patternChoice  = Dialog.getChoice();
+
+
+popSetting = getDirectory("plugins") + "2 CamoReq/Settings_Population.txt";
+check1 = 1;
+if(!File.exists(popSetting)) check1 = 0;
+
+if(check1 == 1) {
+oldSettings = File.openAsString(popSetting);
+
+oldSettings  = split(oldSettings ,"\n");
+if(oldSettings.length<1) check1 = 0;
+
+if(check1 == 1) oldCol = split(oldSettings[6] ,"\t");
+
+}
+
+if(check1 == 0){
+
+oldCol = newArray("ColourSpace =","0","100","-60","60","-60","60");
+}
+
+
+colurSpaceArray = oldCol;
+
+colurSpaceString = String.join(colurSpaceArray, "\t");
+
+			dialogTitle = "Assign Colour Space for Phenotype";
+
+
+			colourHappyGate = 0;
+
+
+			lMin =oldCol[1];
+			lMax = oldCol[2];
+			aMin = oldCol[3];
+			aMax = oldCol[4];
+			bMin = oldCol[5];
+			bMax = oldCol[6];
+
+if(!startsWith(patternChoice,"Egg")){
+			while(colourHappyGate==0){
+			if(isOpen("ColourSpace")){
+			close("ColourSpace");
+			}
+
+			Dialog.createNonBlocking(dialogTitle);
+					Dialog.addMessage("NOTE, you can type the values");
+					Dialog.addMessage("Luminance");
+					Dialog.addSlider("        L Min ", 0, 100, lMin);
+					Dialog.addSlider("        L Max ", 0, 100, lMax);
+
+					Dialog.addMessage("a* Green-Red");
+					Dialog.addSlider("        a Min ", -100, 100, aMin );
+					Dialog.addSlider("        a Max",-100, 100,  aMax);
+
+					Dialog.addMessage("b* Blue-Yellow");
+					Dialog.addSlider("        b Min ",-100, 100,  bMin);
+					Dialog.addSlider("        b Max ",-100, 100,  bMax);
+			Dialog.show();
+
+
+			lMin = Dialog.getNumber();
+			lMax = Dialog.getNumber();
+			aMin = Dialog.getNumber();
+			aMax = Dialog.getNumber();
+			bMin = Dialog.getNumber();
+			bMax = Dialog.getNumber();
+
+
+			// Canvas A* B*
+			//=================================
+			newImage("col", "32-bit black", 500, 500, 3);
+			setSlice(1);
+			run("Set...", "value=50");
+
+
+			setSlice(2);
+			for(i=0; i<500;i++){
+
+			tStr = i/500;
+			tStr = tStr*(aMax-aMin) + aMin;
+			setColor(tStr);
+			fillRect(i,0,1,500);
+			}
+
+
+
+			setSlice(3);
+			for(i=0; i<500;i++){
+
+			tStr = i/500;
+			tStr = tStr*(bMax-bMin) + bMin;
+
+			setColor(tStr);
+			fillRect(0,i,500,1);
+			}
+
+
+
+			run("CIELAB 32Bit to RGB24 smooth");
+			rename("A* B* Space");
+			close("col");
+
+
+			// Canvas Luminance
+			//=================================
+			newImage("col", "32-bit black", 50, 500, 3);
+			setSlice(2);
+			run("Set...", "value=0");
+			setSlice(3);
+			run("Set...", "value=0");
+
+			setSlice(1);
+			for(i=0; i<500;i++){
+
+			tStr = i/500;
+			tStr = (1-tStr);
+			tStr = tStr*(lMax-lMin) + lMin;
+			setColor(tStr);
+			fillRect(0,i,50,1);
+			}
+
+			run("CIELAB 32Bit to RGB24 smooth");
+			rename("L* Space");
+			close("col");
+
+			newImage("ColourSpace", "RGB black", 625, 550, 1);
+				setLineWidth(2);
+				setColor("white");
+				selectImage("L* Space");
+				run("Copy");
+				selectImage("ColourSpace");
+				makeRectangle(550,25, 50, 500);
+				run("Paste");
+				drawRect(550,25, 50, 500);
+
+				selectImage("A* B* Space");
+				run("Copy");
+				selectImage("ColourSpace");
+				makeRectangle(25,25, 500, 500);
+				run("Paste");
+				drawRect(25,25, 500, 500);
+
+			run("Select None");
+			close("A* B* Space");
+			close("L* Space");
+			
+			setBatchMode("Show");
+			
+			selectImage("ColourSpace");
+			
+			run("Set... ", "zoom=100  x=500 y=500");
+
+			colourHappyGate = getBoolean("Are you happy with this colour space?", "Yes", "No, try again");
+			} // (While)
+
+
+
+if(isOpen("ColourSpace")) close("ColourSpace");
+			
+			
+colurSpaceArray = newArray("ColourSpace =	", lMin, lMax, aMin, aMax, bMin, bMax);
+
+colurSpaceString = String.join(colurSpaceArray, "\t");
+			
+} // End of Animal Picker
+
+
+
+if(startsWith(patternChoice,"Eggs")){
+
+			while(colourHappyGate==0){
+			if(isOpen("ColourSpace")){
+			close("ColourSpace");
+			}
+			
+			
+
+			Dialog.createNonBlocking(dialogTitle);
+					Dialog.addMessage("NOTE, you can type the values");
+					Dialog.addMessage("% Deposition, how much pigment is added");
+					Dialog.addSlider("        D Min", 0, 100, 0);
+					Dialog.addSlider("        D Max ", 0, 100, 100);
+
+					Dialog.addMessage("% Ratio, ratio protoporphyrin (red-brown) to biliverdin (blue-green)");
+					Dialog.addSlider("        R Min ", 0, 100, 0 );
+					Dialog.addSlider("        R Max", 0, 100,  100);
+
+			Dialog.show();
+
+
+			dp_min = Dialog.getNumber()/100;
+			dp_max = Dialog.getNumber()/100;
+			pi_min = Dialog.getNumber()/100;
+			pi_max = Dialog.getNumber()/100;
+
+
+
+		shellL =99;
+		shellA = -1;
+		shellB = 5;
+
+		ppL = -0.88;
+		ppA = 0.19;
+		ppB = 0.30;
+
+		bvL = -0.7;
+		bvA = -0.15;
+		bvB = -0.13;
+
+
+		expt = 0.1;
+
+		ppL = ppL + ppL*expt;
+		ppA = ppA + ppA*expt;
+		ppB= ppB + ppB*expt;
+
+		bvL = bvL + bvL*expt;
+		bvA = bvA + bvA*expt;
+		bvB= bvB + bvB*expt;
+
+		canvasW=500;
+		interval=1;
+
+
+
+		newImage("Egg_CIE_Space", "32bit white", canvasW*interval, canvasW, 3);
+
+		//L*
+		//--------------
+		setSlice(1);
+		for(i=0; i<canvasW; i++){
+		for(j=0; j<canvasW; j++){
+
+		bg_Dp = 1- j /canvasW;
+		bg_Pi = i /canvasW;
+
+		bg_Dp = dp_min+bg_Dp*(dp_max-dp_min);
+		bg_Pi = pi_min+bg_Pi*(pi_max-pi_min);
+
+		DepositionBg = (bg_Dp*100);
+
+		RatioBg = pow(bg_Pi,1);
+
+		BvAmount = (RatioBg*DepositionBg);
+		PpAmount= ((1-RatioBg)*DepositionBg);
+			 
+		bgL = ( (BvAmount )*bvL ) +  ( Math.pow(PpAmount,1)*ppL);
+		bgL = shellL+ bgL;
+
+		valStr = bgL;
+
+		setPixel(i,j,valStr);
+		}
+		}
+
+
+		//A*
+		//--------------
+		setSlice(2);
+		for(i=0; i<canvasW; i++){
+		for(j=0; j<canvasW; j++){
+
+		bg_Dp = 1- j /canvasW;
+		bg_Pi = i /canvasW;
+
+		bg_Dp = dp_min+bg_Dp*(dp_max-dp_min);
+		bg_Pi = pi_min+bg_Pi*(pi_max-pi_min);
+
+		DepositionBg = (pow(bg_Dp,0.25)*100);
+		RatioBg = pow(bg_Pi,0.85);
+
+		BvAmount = (RatioBg*DepositionBg);
+		PpAmount= ((1-RatioBg)*DepositionBg);
+			 
+		bgA = ( (BvAmount )*bvA ) +  ( Math.pow(PpAmount,1)*ppA);
+		bgA = shellA+ bgA;
+
+		valStr = bgA;
+
+		setPixel(i,j,valStr);
+		}
+		}
+
+
+		//B*
+		//--------------
+		setSlice(3);
+		for(i=0; i<canvasW; i++){
+		for(j=0; j<canvasW; j++){
+
+		bg_Dp = 1- j /canvasW;
+		bg_Pi = i /canvasW;
+
+		bg_Dp = dp_min+bg_Dp*(dp_max-dp_min);
+		bg_Pi = pi_min+bg_Pi*(pi_max-pi_min);
+
+		DepositionBg = (pow(bg_Dp,0.25)*100);
+		RatioBg = (bg_Pi);
+
+		RatioBg = 1-cos((RatioBg-0.3)*7/PI);
+		if(RatioBg<0) RatioBg=0;
+		if(RatioBg>1) RatioBg=1;
+
+		BvAmount = (RatioBg*DepositionBg);
+		PpAmount= ((1-RatioBg)*DepositionBg);
+			 
+		bgB = ( (BvAmount )*bvB ) +  ( Math.pow(PpAmount,1)*ppB);
+		bgB = shellB+ bgB;
+
+		valStr = bgB;
+
+		setPixel(i,j,valStr);
+		}
+		}
+
+
+
+		run("CIELAB 32Bit to RGB24 smooth");
+		selectImage("Output");
+		rename("ColourSpace");
+		close("Egg_CIE_Space");
+		
+		
+		selectImage("ColourSpace");
+		setBatchMode("Show");
+			run("Set... ", "zoom=100  x=500 y=500");
+
+			colourHappyGate = getBoolean("Are you happy with this colour space?", "Yes", "No, try again");
+			} // (While)
+
+
+
+if(isOpen("ColourSpace")) close("ColourSpace");
+			
+			
+colurSpaceArray = newArray("ColourSpace =	", dp_min, dp_max, pi_min, pi_max, bMin, bMax);
+
+colurSpaceString = String.join(colurSpaceArray, "\t");
+
+
+
+} // End Egg Picker
+
+
+
+
+
+dataFile = File.open(popSetting);
+	print(dataFile, targetString);
+	print(dataFile, "blank");
+	print(dataFile, "blank");
+	print(dataFile, "blank");
+	print(dataFile, "blank");
+	print(dataFile, "blank");
+	print(dataFile, colurSpaceString);
+File.close(dataFile);
+
+
+
+
+templateGenes = getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+patternChoice+".txt";
+
+
+TemplateString=File.openAsString(templateGenes);	// open txt data file
+TemplateRows=split(TemplateString, "\n");
+Template_Array = split(TemplateRows[0], "\t");
+Gene_Array = split(TemplateRows[1], "\t");
+
+TLeng = lengthOf(Template_Array);
+TLeng = parseInt(TLeng);
+CLeng = TemplateRows.length-1;
+
+likeCheck = 1;
+StandardVal = newArray(TLeng);
+StandardVal[0] = "Test";
+for(i=1;i<StandardVal.length;i++){
+StandardVal[i]=random();
+}
+
+
+importCheck=1;
+
+importCheck  = getBoolean("Do you want to import a genome", "No, random", "Yes");
+
+if(importCheck==0){
+importDIR = File.openDialog("Select the Folder you wish to download your genome to.");
+
+ImportString=File.openAsString(importDIR);	// open txt data file
+ImportRows=split(ImportString, "\n");
+ImportRows=Array.deleteIndex(ImportRows,0);
+
+ImportName=newArray(ImportRows.length);
+for(z=0;z<ImportName.length;z++){
+temp=split(ImportRows[z],"\t");
+ImportName[z] = temp[0];
+
+
+}
+
+Dialog.create("Import_Row");
+	Dialog.addMessage("Choose Individual, starting with row 1");
+		Dialog.addChoice("Row", ImportName,ImportName[0]);
+Dialog.show();
+
+impRow = Dialog.getChoice();
+impRow = index(ImportName,impRow);
+
+
+Import_Array = split(ImportRows[impRow], "\t");
+
+
+if(Import_Array.length ==StandardVal.length){
+
+for(j=0;j<Import_Array .length;j++){
+StandardVal[j]=(Import_Array[j]);
+
+}
+}else{
+
+exit("Error, genome incompatible with target.");
+
+}
+
+}
+
+
+while(likeCheck==1){
+
+for(z = 0; z< floor(TLeng/20)+1; z++){
+
+dialogTitle = "Part "+z+1;
+
+Dialog.createNonBlocking(dialogTitle);
+
+startVal = ((z)*20);
+endVal = startVal +20;
+if(endVal>TLeng){
+endVal = TLeng;
+}
+
+	Dialog.addMessage("Give each gene a decimal value between 0 and 1");
+	for(k=startVal; k<endVal ; k++)	{
+	Label = Template_Array[k];
+	Dialog.addString(Label, StandardVal[k]);
+					}
+	Dialog.show();
+
+	
+	for(k=startVal; k<endVal ; k++)	{
+	StandardVal[k] = Dialog.getString();
+	}
+
+
+}
+
+
+standardString = String.join(StandardVal, "\t");
+
+popGenes = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+dataFile = File.open(popGenes);
+	print(dataFile,TemplateRows[0]);
+	print(dataFile,standardString);
+File.close(dataFile);
+
+setBatchMode(true);
+
+close("*");
+
+
+
+generateString = "Generate "+ patternChoice;
+
+
+run(generateString);
+
+
+
+
+
+setBatchMode("exit and display");
+run("Select None");
+
+randomCheck=0;
+
+run("Copy to System");
+
+waitForUser("Pause for copying/processing, click ok to continue");
+
+
+
+
+likeCheck  = getBoolean("Are you happy with this pattern?", "No, try again", "Yes, lets save");
+
+
+randomCheck=0;
+if(likeCheck==1){
+randomCheck = getBoolean("Do you want to randomise?", "No, keep current", "Yes randomise");
+if(randomCheck==0){
+StandardVal = newArray(TLeng);
+for(i=0;i<StandardVal.length;i++){
+StandardVal[i]=random();
+}
+}
+
+}
+
+}
+
+
+
+
+ShapeName = getString("Give a unique name for your phenotype", "Artifical");
+datafileDIR = getDirectory("Select the Folder you wish to download your genome to.");
+
+if(File.exists(popGenes)){
+
+File.copy(popGenes, datafileDIR + ShapeName + ".txt");
+
+}
+
+
+saveAs("PNG", datafileDIR + ShapeName + ".png");

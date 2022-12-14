@@ -1,0 +1,98 @@
+lMin = 0;
+lMax = 75;
+aMin = -50;
+aMax = 50; // approximate values from background image - should be background-specific, e.g. 2-5 SDs away from image mean
+bMin = -30;
+bMax = 70;
+
+close("*");
+
+setBatchMode(true);
+
+// Canvas A* B*
+//=================================
+newImage("col", "32-bit black", 500, 500, 3);
+setSlice(1);
+run("Set...", "value=50");
+
+
+setSlice(2);
+for(n=0;n<500;n++){
+
+m1=1;
+
+int1 = m1+ (sin(n/500*PI*0.65) *(1-m1));
+
+m2=1;
+
+int2 = m2+(sin(n/500*PI*0.75) * (1-m2));
+
+for(i=0; i<500;i++){
+
+tStr = i/500;
+tStr = tStr*(aMax*int2-aMin*int1 )+ aMin*int1;
+setPixel(i,n,tStr);
+}
+}
+
+
+setSlice(3);
+for(i=0; i<500;i++){
+
+tStr = i/500;
+tStr = tStr*(bMax-bMin) + bMin;
+
+setColor(tStr);
+fillRect(0,i,500,1);
+}
+
+
+
+run("CIELAB 32Bit to RGB24 smooth");
+rename("A* B* Space");
+close("col");
+
+
+// Canvas Luminance
+//=================================
+newImage("col", "32-bit black", 50, 500, 3);
+setSlice(2);
+run("Set...", "value=0");
+setSlice(3);
+run("Set...", "value=0");
+
+setSlice(1);
+for(i=0; i<500;i++){
+
+tStr = i/500;
+tStr = (1-tStr);
+tStr = tStr*(lMax-lMin) + lMin;
+setColor(tStr);
+fillRect(0,i,50,1);
+}
+
+run("CIELAB 32Bit to RGB24 smooth");
+rename("L* Space");
+close("col");
+
+newImage("ColourSpace", "RGB black", 625, 550, 1);
+	setLineWidth(2);
+	setColor("white");
+	selectImage("L* Space");
+	run("Copy");
+	selectImage("ColourSpace");
+	makeRectangle(550,25, 50, 500);
+	run("Paste");
+	drawRect(550,25, 50, 500);
+
+	selectImage("A* B* Space");
+	run("Copy");
+	selectImage("ColourSpace");
+	makeRectangle(25,25, 500, 500);
+	run("Paste");
+	drawRect(25,25, 500, 500);
+
+run("Select None");
+setBatchMode("Show");
+setBatchMode(false);
+

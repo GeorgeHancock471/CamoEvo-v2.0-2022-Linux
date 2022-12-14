@@ -1,0 +1,269 @@
+batchCheck = is("Batch Mode");
+setBatchMode(true);
+
+
+list = getList("image.titles");
+list = Array.sort(list);
+
+currentTitle = getTitle();
+
+Dialog.create("Feathered Paste");
+Dialog.addChoice("Paste to",list );
+Dialog.addNumber("Feather", 50);
+Dialog.addCheckbox("Create New Window?", 1);
+Dialog.show();
+
+pasteTitle = Dialog.getChoice;
+Feather = Dialog.getNumber;
+newWindow = Dialog.getCheckbox;
+
+
+//----------------------------------------------------
+//Make Sure there is a Selection
+//----------------------------------------------------
+
+if(selectionType == -1){
+run("Select All");
+}
+roiManager("add");
+
+
+
+//----------------------------------------------------
+//Setup new Windows
+//----------------------------------------------------
+selectImage(currentTitle);
+currentTitle = currentTitle+"-feather";
+run("Select All");
+run("Duplicate...", "title=&currentTitle duplicate");
+
+
+
+if(newWindow==1){
+selectImage(pasteTitle);
+pasteTitle = pasteTitle+"-copy";
+run("Duplicate...", "title=&pasteTitle duplicate");
+}else{
+selectImage(pasteTitle);
+setBatchMode("hide");
+}
+
+
+
+
+//----------------------------------------------------
+//Make Alpha Channel Image
+//----------------------------------------------------
+selectImage(currentTitle);
+run("Select All");
+run("Duplicate...", "title=Alpha");
+run("8-bit");
+run("Set...", "value=0 slice");
+
+roiManager("select", roiManager("count")-1);
+subtractSize = -Feather;
+run("Enlarge...", "enlarge=&subtractSize");
+run("Set...", "value=180 slice");
+
+run("Select None");
+blurSigma = Feather*0.25;
+run("Gaussian Blur...", "sigma=&blurSigma slice");
+run("Select All");
+
+
+//----------------------------------------------------
+//Get new threshold
+//----------------------------------------------------
+
+run("Duplicate...", "title=Threshold duplicate");
+setThreshold(1, 255);
+run("Convert to Mask");
+run("Create Selection");
+run("Enlarge...", "enlarge=1");
+roiManager("Add");
+close("Threshold");
+selectImage("Alpha");
+
+//----------------------------------------------------
+//Measure Alpha Channel Image
+//----------------------------------------------------
+roiManager("Select", roiManager("count")-1);
+Roi.getContainedPoints(Xarray, Yarray);
+
+valueArrayAlpha = newArray(Xarray.length);
+
+selectImage("Alpha");
+roiManager("select", roiManager("count")-1)
+for(i = 0; i<Xarray.length; i++){
+Alpha = getPixel(Xarray[i],Yarray[i])/100;
+if(Alpha>1){
+Alpha=1;
+}
+valueArrayAlpha[i] = Alpha;
+}
+
+
+//----------------------------------------------------
+// Get Image Type of Copied Image
+//----------------------------------------------------
+selectImage(currentTitle );
+
+cImageType = bitDepth();
+if(cImageType == 24){
+cImageType = "RGB Color";
+}
+
+if(nSlices ==3){
+setSlice(1);
+lable =  getInfo("slice.label");
+
+if(lable == "Red"){
+cImageType = "RGB Stack";
+}
+
+if(lable == "Hue"){
+cImageType = "HSB Stack";
+}
+
+if(lable == "L*"){
+cImageType = "Lab Stack";
+}
+
+}
+
+//----------------------------------------------------
+// Get Image Type of Paste Image
+//----------------------------------------------------
+
+selectImage(pasteTitle );
+
+vImageType = bitDepth();
+if(vImageType == 24){
+vImageType = "RGB Color";
+}
+
+if(nSlices ==3){
+setSlice(1);
+lable =  getInfo("slice.label");
+
+if(lable == "Red"){
+vImageType = "RGB Stack";
+}
+
+if(lable == "Hue"){
+vImageType = "HSB Stack";
+}
+
+if(lable == "L*"){
+vImageType = "Lab Stack";
+}
+
+}
+
+
+
+//----------------------------------------------------
+// Match to Paste Image
+//----------------------------------------------------
+
+revertRGB = 0;
+
+if(vImageType=="RGB Color"){
+vImageType="RGB Stack";
+run("RGB Stack");
+revertRGB = 1;
+}
+
+oldCopyType = cImageType;
+if(vImageType != cImageType){
+selectImage(currentTitle );
+run("RGB Color");
+run(vImageType);
+}
+
+
+//----------------------------------------------------
+// Measure Copy Image
+//----------------------------------------------------
+selectImage(currentTitle);
+valueArraySlice1 = newArray(Xarray.length);
+if(nSlices>1){
+valueArraySlice2 = newArray(Xarray.length);
+valueArraySlice3 = newArray(Xarray.length);
+}
+
+
+setSlice(1);
+roiManager("select", roiManager("count")-1);
+for(i = 0; i<Xarray.length; i++){
+valueArraySlice1[i] = getPixel(Xarray[i],Yarray[i]);
+}
+if(nSlices>1){
+setSlice(2);
+roiManager("select", roiManager("count")-1);
+for(i = 0; i<Xarray.length; i++){
+valueArraySlice2[i] = getPixel(Xarray[i],Yarray[i]);
+}
+setSlice(3);
+roiManager("select", roiManager("count")-1);
+for(i = 0; i<Xarray.length; i++){
+valueArraySlice3[i] = getPixel(Xarray[i],Yarray[i]);
+}
+}
+
+//----------------------------------------------------
+// Paste with Alpha
+//----------------------------------------------------
+selectImage(pasteTitle);
+
+setSlice(1);
+for(i = 0; i<Xarray.length; i++){
+temp = getPixel(Xarray[i],Yarray[i]);
+alpha = valueArrayAlpha[i];
+new = valueArraySlice1[i]*alpha + temp*(1-alpha);
+setPixel(Xarray[i],Yarray[i],new);
+}
+
+if(nSlices>1){
+setSlice(2);
+for(i = 0; i<Xarray.length; i++){
+temp = getPixel(Xarray[i],Yarray[i]);
+alpha = valueArrayAlpha[i];
+new = valueArraySlice2[i]*alpha + temp*(1-alpha);
+setPixel(Xarray[i],Yarray[i],new);
+}
+
+setSlice(3);
+for(i = 0; i<Xarray.length; i++){
+temp = getPixel(Xarray[i],Yarray[i]);
+alpha = valueArrayAlpha[i];
+new =valueArraySlice3[i]*alpha + temp*(1-alpha);
+setPixel(Xarray[i],Yarray[i],new);
+}
+}
+
+
+//----------------------------------------------------
+// Finish Up
+//----------------------------------------------------
+
+if(revertRGB==1){
+selectImage(pasteTitle);
+run("RGB Color");
+}
+
+close(currentTitle);
+
+close("alpha");
+
+
+roiManager("select", roiManager("count")-1);
+roiManager("delete");
+roiManager("select", roiManager("count")-1);
+roiManager("delete");
+
+
+if(batchCheck ==0){
+setBatchMode("exit and display");
+}
+

@@ -1,0 +1,365 @@
+/*____________________________________________________________________
+
+	Title: Regenerate Stimuli
+	Authors:  George Hancock 
+	Date: 13/09/21
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+Recreates the stimuli used. Allowing for it to be measured by CamoEvo.
+
+*/
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+setBatchMode(false);
+ run("ROI Manager...");
+
+setBatchMode(true);
+
+close("*");
+
+while(roiManager("count") > 0){
+roiManager("select", Array.getSequence(roiManager("count")));
+roiManager("delete");
+}
+
+
+
+
+
+
+// STEP 1, Select the Generation
+///==========================================================================================
+
+currentDefault = File.getDefaultDir;
+
+
+checkDir1 = currentDefault ;
+checkDir2 = replace(checkDir1, "Populations", "");
+
+
+if(checkDir1.length == checkDir2.length) File.setDefaultDir(getDirectory("plugins") + "1 CamoEvo/Populations/");
+
+
+
+
+popDIR = getDirectory("Choose-Population");
+
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+dataFile = File.open(PopLocal);
+print(dataFile, popDIR );
+File.close(dataFile);
+
+
+fileList  =  getFileList(popDIR);
+
+Leng = lengthOf(fileList );
+
+completedGen = newArray();
+dataSet = newArray();
+
+
+for(i=0; i<Leng; i++) { 
+		if(endsWith(fileList[i], "_ranks.txt")!=1 && startsWith(fileList[i], "gen")==1 ){
+			completedGen = Array.concat(completedGen, fileList[i]);
+		}
+		
+		if(startsWith(fileList[i], "Data_Output")==1 ){
+			dataSet = Array.concat(dataSet, fileList[i]);
+		}
+	
+	}
+	
+
+numGenArray = Array.getSequence(completedGen.length);	
+
+
+useDataSetGate = 0;
+
+
+
+
+	if(dataSet.length>0){
+	
+	dataSet = File.openAsString(popDIR + dataSet[0]);
+	dataRows = split(dataSet,"\n");
+	finalGen = split(dataRows[dataRows.length-1], "\t");
+	numGenArray = Array.getSequence(finalGen[0]+1);	
+	
+	//Array.show(dataRows);
+	
+	useDataSetGate = 1; 
+	}
+
+
+
+
+
+// STEP 2, Get the Records
+///==========================================================================================
+
+
+
+	popSettings = File.openAsString(popDIR + "Settings_Population.txt");
+	popRows = split(popSettings, "\n");
+	popSize = split(popRows[2], "\t");
+	popSize = popSize[1];
+	
+	numPerSlide = split(popRows[3],"\t");
+	numPerSlide = parseFloat(numPerSlide [1]);
+	
+	
+
+Dialog.create("Choose-Gen");
+		Dialog.addMessage("________________Choose Generation___________________");
+		Dialog.addChoice("Start_Generation", numGenArray, 0);	
+		Dialog.addChoice("End_Generation", numGenArray, 0);	
+Dialog.show();
+
+startChoice = parseInt(Dialog.getChoice());
+endChoice = parseInt(Dialog.getChoice());
+
+
+
+
+for(L=startChoice; L<=endChoice;L++){
+
+genChoice = L;
+
+runGate = 0;
+
+if(!File.exists(popDIR+"GenPat_"+L+"/") ) runGate = 1;
+
+if(File.exists(popDIR+"GenPat_"+L+"/") ){
+
+tempFiles = getFileList(popDIR+"GenPat_"+L+"/");
+
+if(tempFiles.length==0) runGate=1;
+
+}
+
+
+if(runGate==1){
+
+File.makeDirectory(popDIR+"GenPat_"+L+"/");
+
+
+if(useDataSetGate == 1){
+
+	startLine = (genChoice*popSize)+1;
+	stopLine = ((genChoice+1)*popSize)+1;
+
+	recordLines = Array.slice(dataRows,startLine,stopLine); 
+
+
+
+	TargetChoice =  split(popRows[0], "\t");
+	TargetChoice =  TargetChoice[1];
+	
+
+	TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+	TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+	TargetSettingsRows = split(TargetSettings , "\n");
+
+	for(i=0; i<TargetSettingsRows.length; i++){
+	temp = TargetSettingsRows[i];
+
+	if(startsWith(temp, TargetChoice)){
+	TargetSetting = temp;
+	}
+
+	}
+
+	TargetChoiceSettings = split(TargetSetting, "\t");
+
+	TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+	TargetPatternChoice = TargetChoiceSettings[3];
+	TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+	TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+	
+	
+
+}
+
+
+
+
+// STEP 3, Get Population Settings
+///==========================================================================================
+
+popSetDIR = popDIR + "Settings_Population.txt";
+
+popSetText =  File.openAsString(popSetDIR);
+
+popSetList = split(popSetText, "\n");
+
+TargetSet = split(popSetList[0],"\t");
+TargetSetting = TargetSet[1];
+
+TargetChoice = TargetSetting;
+
+
+// Get Scales
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(i=0; i<TargetSettingsRows.length; i++){
+temp = TargetSettingsRows[i];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+targetDir = popDIR + "GenPat_"+genChoice+"/";
+backgroundDIR = popDIR + "Backgrounds/";
+
+
+// STEP 4, Create Image(s)
+///==========================================================================================
+
+
+if(useDataSetGate == 1){
+
+	titles = split(dataRows[0],"\t");
+	startIndex = index(titles, "Parent1");
+	templateRows = Array.slice(titles, startIndex, titles.length); 
+	templateRows =  Array.concat(titles[1], 	templateRows);
+	templateRows = String.join(templateRows, "\t");
+	
+	
+	dataFile = File.open(getDirectory("plugins") + "2 CamoReq/PopLocation.txt");
+	
+		print(dataFile, popDIR);
+		
+	File.close(dataFile);
+	
+	
+	
+//Send Over Genes
+//----------------------------------------------------------------------------------	
+
+popGenes = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+dataFile = File.open(popGenes);
+
+print(dataFile,templateRows);
+
+for(i=0; i<idArray.length; i++){
+
+	row = split(recordLines[i],"\t");
+	genes = Array.slice(row, startIndex, row.length);
+	genes = Array.concat(row[1], genes);
+	genes = String.join(genes, "\t");
+	
+	
+	standardString = 	genes;
+
+
+		print(dataFile,genes);
+		
+} // i
+
+File.close(dataFile);
+
+
+}
+
+
+if(useDataSetGate == 0){
+
+genDIR = popDIR + "gen_" + genChoice + "_genes.txt";
+
+
+geneText = File.openAsString(genDIR );
+
+geneLines = split(geneText , "\n");
+
+
+popGenes = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+dataFile = File.open(popGenes);
+
+for(i=0; i<geneLines.length; i++){
+
+
+
+		print(dataFile,geneLines[i]);
+		
+} // i
+
+File.close(dataFile);
+
+
+
+
+
+}
+	
+	
+//Create Patterns
+//----------------------------------------------------------------------------------	
+	
+generateString = "Generate "+ TargetPatternChoice;
+
+run(generateString);
+
+
+
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+for ( i=0; i<Win; i++ ) { 
+
+		pat = "/" + WinNam[i] + ".tif";
+		PatternPath = popDIR +"GenPat_"+ L + pat;
+
+		selectWindow(WinNam[i]);
+
+		if(endsWith(WinNam[i], ".tif")){
+
+		close(WinNam[i]);
+		
+		} else {
+
+			if(startsWith(WinNam[i], "Gen")==1 || startsWith(WinNam[i], "gloss")==1){
+
+			saveAs("Tiff", PatternPath); 
+
+			close(WinNam[i]+".tif");
+
+			} // GenTarget
+			
+	
+		} // (else)
+
+
+		}// (i)
+ 
+
+
+
+} //(exists
+} //(L)
+

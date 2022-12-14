@@ -1,0 +1,137 @@
+
+close("*");
+
+//Generate Target Positions
+
+groupSize = 4;
+
+xScale = 1200;
+yScale = 1200;
+
+xSquares = 5;
+ySquares = 5;
+
+colourArray = newArray("red","green","blue","yellow");
+
+newImage("Background", "RGB black", xScale, yScale , 1);
+
+rectWidth = xScale/groupSize;
+rectHeight = yScale;
+
+cArray = newArray(groupSize);
+
+for(i=0;i<groupSize;i++){
+
+xPosition=rectWidth*i;
+yPosition=0;
+
+setColor(colourArray[i]);
+
+makeRectangle(xPosition,yPosition,rectWidth,rectHeight);
+
+fill();
+
+cArray[i] = xPosition + rectWidth;
+
+}
+
+xArray = newArray(xSquares);
+
+xArray[0] = xScale/xSquares/2;
+
+for(i=1;i<xSquares;i++){
+
+xPosition=(xScale/xSquares)*i;
+yPosition = 0;
+
+setColor("white");
+makeRectangle(xPosition,yPosition,10,yScale);
+fill();
+
+xArray[i] = xPosition + xScale/xSquares/2;
+
+}
+
+
+yArray = newArray(ySquares);
+
+yArray[0] = yScale/ySquares/2;
+
+for(i=1;i<ySquares;i++){
+
+xPosition=0;
+yPosition = (yScale/ySquares)*i;
+
+setColor("white");
+makeRectangle(xPosition,yPosition,xScale,10);
+fill();
+
+yArray[i] = yPosition + yScale/ySquares/2;
+
+}
+
+
+yArray = cArray;
+
+
+run("Select All");
+
+run("Subtract...", "value=100");
+
+
+ovalW=50;
+ovalH=60;
+
+
+xRecordArray  = newArray(groupSize);
+yRecordArray = newArray(groupSize);
+
+for(i=0; i< groupSize; i++){
+
+xPositionMax =  cArray[i] - ovalW/2;
+xPositionMin = cArray[i]-cArray[0] + ovalW/2;
+
+yPositionMax = yScale-ovalH/2;
+yPositionMin = 0+ovalH/2;
+
+xPosition = random()*(xPositionMax-xPositionMin) + xPositionMin;
+
+gate=1;
+while(gate==1){
+yPosition = random()*(yPositionMax-yPositionMin) + yPositionMin;
+gate=0;
+
+if(i>0){
+xDist = Math.sqrt( Math.sqr(parseFloat(xRecordArray[i-1]) - xPosition) ) / (xScale / xSquares);
+yDist  = Math.sqrt( Math.sqr(parseFloat(yRecordArray[i-1]) - yPosition) ) / (yScale / ySquares);
+
+if(yDist<1) gate=1; 
+
+   } 
+
+
+}
+
+//yArray = Array.deleteValue(yArray, yPosition);
+
+xRecordArray[i]  = xPosition;
+yRecordArray[i] = yPosition;
+
+
+setColor("black");
+makeOval(xPosition - ovalW/2, yPosition - ovalH/2, ovalW, ovalH);
+fill();
+
+Array.show(xArray,yArray);
+
+
+
+} 
+
+
+run("Canvas Size...", "width=1400 height=1400 position=Center zero");
+
+
+
+
+

@@ -1,0 +1,320 @@
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+setBatchMode(true);
+
+
+// Selection
+//---------------------------------------------------
+
+MatchFolder =  getDirectory("plugins")+"ImageGA/Fitness Calculators/Match_Demo/";
+
+SelectString = File.openAsString(MatchFolder + "Selection.txt");
+SelectArray = split(SelectString,"\n");
+
+
+tArray = split(SelectArray[0]);
+L1 = tArray[1];
+
+tArray = split(SelectArray[1]);
+A1 = tArray[1];
+
+tArray = split(SelectArray[2]);
+B1 = tArray[1];
+
+tArray = split(SelectArray[3]);
+L2 = tArray[1];
+
+tArray = split(SelectArray[4]);
+A2 = tArray[1];
+
+tArray = split(SelectArray[5]);
+B2 = tArray[1];
+
+
+close("*");
+
+//===========================================================================
+// 0) Get the Current Generation
+//===========================================================================
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Get the Directory
+//'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+generationDir = getDirectory("Select folder you wish to use.");
+
+generationList  =  getFileList(generationDir);
+generationArray = newArray();
+genFitnessArray  = newArray();
+
+for(i=0; i<generationList .length; i++) {
+
+	if(endsWith(generationList [i], "_genes.txt")==1){
+		generationArray = Array.concat(generationArray, generationList [i]);
+	}	
+
+	if(endsWith(generationList [i], "_ranks.txt")==1){
+		genFitnessArray  = Array.concat(genFitnessArray , generationList [i]);
+	}											
+		
+} // ( i )
+
+// Check if there isn't already a fitness file
+//------------------------------------------------------------
+if(generationArray.length == genFitnessArray.length){
+print("Fitness has already been calculated");
+exit
+}
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Output the Genes
+//'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+currentGeneration = generationDir + "gen_" + generationArray.length-1 + "_genes.txt";
+currentPhenotypes = generationDir + "gen_" +generationArray.length-1 + "_phenotypes/";
+currentFitness = generationDir + "gen_" + generationArray.length-1 + "_ranks.txt";
+
+File.makeDirectory(currentPhenotypes) ;
+
+
+
+genesString=File.openAsString(currentGeneration );	// open txt data file
+genesRows=split(genesString , "\n");
+
+
+
+
+//===========================================================================
+// 1) Get the Genes
+//===========================================================================
+
+Var0 = newArray();
+Var1 =  newArray();
+Var2 =  newArray();
+Var3 =  newArray();
+Var4 =  newArray();
+Var5 =  newArray();
+Var6 =  newArray();
+
+
+Temp = split(genesRows[0],"\t");
+
+
+
+v0=index(Temp, "ID");
+
+v1=index(Temp, "col_mac_lmv");
+v2=index(Temp, "col_mac_rgv");
+v3=index(Temp, "col_mac_byv");
+
+v4=index(Temp, "col_bgd_lmv");
+v5=index(Temp, "col_bgd_rgv");
+v6=index(Temp, "col_bgd_byv");
+
+for(i=1; i<genesRows.length; i++){
+Temp = split(genesRows[i],"\t");
+
+Var0 = Array.concat(Var0,Temp[v0]);
+Var1 = Array.concat(Var1,Temp[v1]);
+Var2 = Array.concat(Var2,Temp[v2]);
+Var3 = Array.concat(Var3,Temp[v3]);
+Var4 = Array.concat(Var4,Temp[v4]);
+Var5 = Array.concat(Var5,Temp[v5]);
+Var6 = Array.concat(Var6,Temp[v6]);
+
+} // ( i )
+
+
+FitnessArray = newArray(genesRows.length-1);
+HArray = newArray(genesRows.length-1);
+SArray = newArray(genesRows.length-1);
+LArray = newArray(genesRows.length-1);
+VArray = newArray(genesRows.length-1);
+NoiseArray = newArray(genesRows.length-1);
+
+//===========================================================================
+// 2) Generate Phenotypes
+//===========================================================================
+
+
+
+for(A = 0; A<genesRows.length-1; A++){
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("delete");
+}
+
+
+canvasW = 400;
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Get Gene Values for Individual
+//'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+bgL =  parseFloat(Var1[A]);
+bgA =  parseFloat(Var2[A]);
+bgB =  parseFloat(Var3[A]);
+
+mcL =  parseFloat(Var4[A]);
+mcA =  parseFloat(Var5[A]);
+mcB =  parseFloat(Var6[A]);
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Convert gene values to their desired range
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+bgL =  bgL*100;
+bgA =  -70 + bgA*140;
+bgB =  -70 + bgB*140;
+
+mcL =  mcL*100;
+mcA =  -70 + mcA*140;
+mcB =  -70 + mcB*140;
+
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Create Phenotype
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+open(MatchFolder+"Mask.png");
+run("8-bit");
+run("Create Selection");
+roiManager("Add");
+
+
+open(MatchFolder+"Pattern.png");
+run("8-bit");
+run("Create Selection");
+roiManager("Add");
+
+run("RGB Color");
+run("Lab Stack");
+
+roiManager("Select", roiManager("count")-1);
+setSlice(1);
+run("Set...", "value=bgL");
+setSlice(2);
+run("Set...", "value=bgA");
+setSlice(3);
+run("Set...", "value=bgB");
+
+run("Make Inverse");
+
+setSlice(1);
+run("Set...", "value=mcL");
+setSlice(2);
+run("Set...", "value=mcA");
+setSlice(3);
+run("Set...", "value=mcB");
+
+
+roiManager("select", roiManager("count")-2);
+run("Make Inverse");
+setSlice(1);
+run("Set...", "value=0");
+setSlice(2);
+run("Set...", "value=0");
+setSlice(3);
+run("Set...", "value=0");
+
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Measure Fitness
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+setSlice(1); // (H)
+run("Select None");
+getStatistics(area, mean, min, max, std, histogram);
+
+
+setSlice(2); // (S)
+run("Select None");
+getStatistics(area, mean, min, max, std, histogram);
+
+
+setSlice(3); // (L)
+run("Select None");
+getStatistics(area, mean, min, max, std, histogram);
+
+
+
+
+
+LumDif1 = Math.sqrt(Math.sqr(bgL - L1));
+LumDif2 = Math.sqrt(Math.sqr(mcL - L2));
+
+ADif1 = Math.sqrt(Math.sqr(bgA - A1));
+ADif2 = Math.sqrt(Math.sqr(mcA - A2));
+
+BDif1 = Math.sqrt(Math.sqr(bgB - B1));
+BDif2 = Math.sqrt(Math.sqr(mcB - B2));
+
+
+LumDif1 = Math.pow(1-(LumDif1/100),5);
+ADif1 =  Math.pow(1-(ADif1/140),5);
+BDif1 =Math.pow(1-(BDif1/140),5);
+
+LumDif2 = Math.pow(1-(LumDif2/100),5);
+ADif2 =  Math.pow(1-(ADif2/140),5);
+BDif2 =Math.pow(1-(BDif2/140),5);
+
+
+
+FitnessArray[A] = (LumDif1 + ADif1 + BDif1 + LumDif2 + ADif2 + BDif2)/6*100;
+
+FitnessArray[A] = pow(FitnessArray[A]/100,4) *1000;
+
+NoiseArray[A] = FitnessArray[A]-pow(random(),3)*FitnessArray[A]*0.75; 
+
+NoiseArray[A] = FitnessArray[A]; 
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Save Phenotype
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+run("RGB Color");
+
+savePath = currentPhenotypes + Var0[A] + ".png";
+
+saveAs("PNG", savePath);
+close();
+
+
+} // (A)
+
+
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Save Results
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+if(File.exists(currentFitness)==1){
+File.delete(currentFitness);
+}
+
+survivalString  = newArray("ID", "Fitness", "Actual_Fitness");
+survivalString  = String.join(survivalString , "\t");
+
+File.append(survivalString , currentFitness);
+
+for(i=0; i< FitnessArray.length; i++){
+
+survivalString  = Array.concat(Var0[i],NoiseArray[i], FitnessArray[i]);
+survivalString  = String.join(survivalString , "\t");
+
+File.append(survivalString , currentFitness);
+
+} // ( i )
+
+
+

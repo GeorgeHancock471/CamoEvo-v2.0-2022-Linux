@@ -1,0 +1,118 @@
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+//Array.show(GeneratList);
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+print(GenNum);
+
+GenStr = File.openAsString(GenNum);
+GenArr = split(GenStr, "\n");
+
+arrayIDs=newArray(GenArr.length);
+arrayFit=newArray(GenArr.length);
+
+for(i=0;i<GenArr.length;i++){
+t=split(GenArr[i],"\t");
+arrayIDs[i] = t[0];
+}
+
+/*
+reorderIDs = Array.deleteIndex(arrayIDs,0);
+
+Array.sort(reorderIDs);
+
+for(i=1;i<GenArr.length;i++){
+arrayIDs[i] = reorderIDs[i-1];
+}
+
+*/
+
+tableSize = 16;
+
+columnSize = parseInt(Math.sqrt(GenArr.length-1));
+
+while(parseInt((GenArr.length-1)/columnSize) != ((GenArr.length-1)/columnSize)) columnSize=columnSize+1;
+
+print(columnSize);
+
+rStr = "select_population=["+CheckDirectory+"] generation=1 number="+(GenArr.length-1)+" block="+columnSize+" column=100 row=0 generation_0=100 start="+GenNumber+" end="+GenNumber+" rotation=none ordering=Category show";
+
+run("Get Phenotype Plot", rStr);
+
+setBatchMode("show");
+run("Maximize");
+
+
+
+
+//Generate fitness dialog
+//-------------------------------------------------
+//...........................................................................................................................................................................
+TLeng = arrayIDs.length;
+arrayFit = newArray(TLeng);
+arrayFit[0] = "Fitness";
+
+for(z = 0; z< floor(TLeng/tableSize)+1; z++){
+
+dialogTitle = "Enter Fitness Part ("+z+1+"/" +floor(TLeng/tableSize)+1+")";
+
+Dialog.createNonBlocking(dialogTitle);
+startVal = 1+((z)*tableSize);
+endVal = startVal +tableSize;
+if(endVal>TLeng){
+endVal = TLeng;
+}
+
+	Dialog.addMessage("Type the Fitness Value for each ID");
+	for(k=startVal; k<endVal ; k++)	{
+	Label =arrayIDs[k];
+	Dialog.addNumber("		"+arrayIDs[k],0);
+					}
+	Dialog.show();
+
+	
+	for(k=startVal; k<endVal ; k++){
+	arrayFit[k] = Dialog.getNumber();
+	}
+
+
+}
+
+
+	dataFile = File.open(SurvGenNum);
+	for(i=0;i<arrayIDs.length;i++){
+		print(dataFile, arrayIDs[i]+"\t"+arrayFit[i]);
+	}		
+	File.close(dataFile);

@@ -1,0 +1,21 @@
+close("*");
+
+arrayA5 = newArray(1748 ,2480);
+arrayA4 = newArray(2480, 3508);
+arrayA3 = newArray(3508, 4961);
+
+//newImage("A5", "RGB white", arrayA5[0], arrayA5[1], 3);
+newImage("A4", "RGB white", arrayA4[0], arrayA4[1], 3);
+//newImage("A3", "RGB white", arrayA3[0], arrayA3[1], 3);
+
+setSlice(1);
+setColor("magenta");
+fillRect(0,0,arrayA4[0],arrayA4[1]);
+
+setSlice(1);
+setColor("magenta");
+fillRect(0,0,arrayA4[0],arrayA4[1]);
+
+setSlice(1);
+setColor("magenta");
+fillRect(0,0,arrayA4[0],arrayA4[1]);

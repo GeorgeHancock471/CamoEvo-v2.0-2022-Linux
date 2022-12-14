@@ -1,0 +1,13 @@
+RNL Map
+8
+2
+Use colour palette
+1
+1.0000E-90
+1
+20
+2
+2
+4
+1
+3

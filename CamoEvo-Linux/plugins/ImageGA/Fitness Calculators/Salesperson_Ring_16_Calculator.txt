@@ -1,0 +1,385 @@
+setBatchMode(true);
+
+
+
+//__________________________________________________________________
+
+//=========================================================
+/*
+FITNESS PRE-CHECKER (Recommended for all calculators )
+_____________________________________________________
+
+Counts the number of survival tables in the last directory used by ImageJ
+
+ NOTE: the algorithim will always premake a results table.
+
+
+*/
+//=========================================================
+
+
+
+CheckDirectory = getDirectory("Select folder you wish to use.");
+
+GeneratArray = newArray("none");
+
+GeneratList  =  getFileList(CheckDirectory);
+
+//Array.show(GeneratList);
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}
+
+
+}
+
+
+ArrayLeng = lengthOf(GeneratArray);
+
+//print (ArrayLeng);
+
+//Array.show(GeneratArray);
+
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+  
+   function sIndex(a, value) {
+      for (i=0; i<a.length; i++)
+          if (startsWith(a[i],value)) return i;
+      return -1;
+  }
+  
+  
+
+// Obtain SubArray
+//---------------------------------------------------
+// Allows you to obtain a SubArray of a given Name and Length, where a is the array and b is the original number of rows.
+
+ function subArray(a, value, b) {
+	IndexLab = index(a, value);
+	Start = IndexLab + 1;
+	End = IndexLab  + b;
+	//print("startIndex: "+Start);
+	//print("endIndex: "+End);
+	return Array.slice(a, Start, End);
+}
+
+
+//--------------------------------------------------------------------------------------------
+
+GenNumber = ArrayLeng -1;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes.txt";
+GenName = "gen_" + GenNumber + "_genes.txt";
+SurvGenNum= CheckDirectory + "gen_" + GenNumber + "_ranks.txt";
+
+//------------------------------------
+//Load Current Generation
+//------------------------------------
+
+if(File.exists(GenNum) == 1){
+GenerationString=File.openAsString(GenNum);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+
+	Column_Titles = GenerationRows[0];
+	CT=split(Column_Titles, "\t");
+	SiteNames=Array.deleteValue(CT, "ID");
+	SiteNames=Array.deleteValue(SiteNames, "Parent1");
+	SiteNames=Array.deleteValue(SiteNames, "Parent2");
+	SiteNames=Array.deleteValue(SiteNames, "Sex");
+	F = lengthOf(CT);
+	RouteLeng = F;
+	
+VarLeng = GenerationRows.length-1;
+ColumnLength = VarLeng;
+
+IndividualsArray=Array.deleteIndex(GenerationRows,0);
+
+//------------------------------------------------
+// Make Pattern Directory
+//-------------------------------------------------
+fold = "SalespersonRoutes";
+PatternPath = CheckDirectory + fold;
+File.makeDirectory(PatternPath );
+
+
+noiseAmount = parseFloat(File.openAsString( getDirectory("plugins") + "ImageGA/Fitness Calculators/Salesperson/noise.txt" ) );
+
+	//Open Map
+//===========================
+setBatchMode("true");
+
+photoFilePath = getDirectory("plugins") + "ImageGA/Fitness Calculators/Salesperson/Ring.jpg";
+open(photoFilePath);
+rename("Map.jpg");
+
+
+	//Set Sites
+//============================
+
+City_01 = newArray("City_01_Point", 326, 74);
+City_01 = String.join(City_01, "\t");
+
+City_02 = newArray("City_02_Point", 397, 137);
+City_02 = String.join(City_02, "\t");
+
+City_03 = newArray("City_03_Point",500, 150);
+City_03 = String.join(City_03, "\t");
+
+City_04 = newArray("City_04_Point", 554, 224);
+City_04 = String.join(City_04, "\t");
+
+City_05 = newArray("City_05_Point", 569, 293);
+City_05 = String.join(City_05, "\t");
+
+City_06 = newArray("City_06_Point", 538, 372);
+City_06 = String.join(City_06, "\t");
+
+City_07 = newArray ("City_07_Point", 517, 476);
+City_07 = String.join(City_07, "\t");
+
+City_08 = newArray("City_08_Point", 424, 562);
+City_08 = String.join(City_08, "\t");
+
+City_09 = newArray("City_09_Point", 324, 564);
+City_09 = String.join(City_09, "\t");
+
+City_10 = newArray("City_10_Point", 254, 510);
+City_10 = String.join(City_10, "\t");
+
+City_11 = newArray("City_11_Point", 152, 493);
+City_11 = String.join(City_11 , "\t");
+
+City_12 = newArray("City_12_Point", 97, 398);
+City_12 = String.join(City_12, "\t");
+
+City_13 = newArray("City_13_Point",80, 296);
+City_13 = String.join(City_13, "\t");
+
+City_14 = newArray("City_14_Point", 152, 213);
+City_14 = String.join(City_14, "\t");
+
+City_15 = newArray("City_15_Point", 170, 128);
+City_15 = String.join(City_15, "\t");
+
+City_16 = newArray("City_16_Point", 246, 106);
+City_16 = String.join(City_16, "\t");
+
+
+// Create Array of All Sites
+///===============================
+SitesArray = Array.concat(City_01,City_02,City_03,City_04,City_05,City_06,City_07,City_08,City_09,City_10,City_11,City_12,City_13,City_14,City_15,City_16);
+
+
+
+//		Get Site Order
+//================================
+FitnessArray=newArray(ColumnLength);
+
+
+for ( k=0; k<IndividualsArray.length; k++ ) { 
+tArray1 = split(IndividualsArray[k],"\t");
+
+
+SiteOrderArray = Array.slice(tArray1,4,tArray1.length);
+SiteOrderArray2 = Array.rankPositions(SiteOrderArray);
+SiteOrderArray2 = Array.concat(SiteOrderArray2, SiteOrderArray2[0]);
+SiteOrderArray3 = newArray(SiteOrderArray2.length);
+
+for (i=0; i<SiteOrderArray2.length; i++){
+Temp=SiteOrderArray2[i];
+Temp=SiteNames[Temp];
+SiteOrderArray3[i] = Temp;
+}
+
+
+
+
+//	Get Fitness
+//===============================
+
+RouteLength = 0;
+
+	//	RouteLength
+	//------------------------------------------------------
+
+	for (f=0; f<SiteOrderArray2.length-1; f++){
+
+	Site1a = SiteOrderArray2[f];
+	
+	Site2a = SiteOrderArray2[f+1];
+	
+
+	Site1b = SiteNames[Site1a];
+	Site2b = SiteNames[Site2a];
+	
+	Site1 = sIndex(SitesArray, Site1b);
+	Site1 = split(SitesArray[Site1],"\t");
+
+	Site2 =  sIndex(SitesArray, Site2b);
+	Site2 = split(SitesArray[Site2],"\t");
+	
+	route = Array.concat(Site1,Site2);
+	
+	
+	a1 =  Math.sqr(parseFloat(Site1[1]) - parseFloat(Site2[1]) );
+
+	b1 =  Math.sqr(parseFloat(Site1[2]) - parseFloat(Site2[2]) );
+
+	Length = Math.sqrt (  a1 + b1 );  
+
+
+
+	RouteLength = RouteLength + Length;
+	
+
+	
+			}
+
+
+	
+	RouteSpeed = -1 * RouteLength;	
+
+	FitnessArray[k] = RouteSpeed;
+	
+
+	}
+	
+
+if(File.exists(SurvGenNum)) File.delete(SurvGenNum);
+
+surivalString1 = Array.concat("ID", "fitness");
+surivalString2 = String.join(surivalString1, "\t");
+File.append(surivalString2, SurvGenNum);
+
+for(i=0; i<IndividualsArray.length; i++){
+
+tArray = split(IndividualsArray[i], "\t");
+
+surivalString1 = Array.concat(tArray[0], FitnessArray[i]);
+
+surivalString2 = String.join(surivalString1, "\t");
+
+File.append(surivalString2, SurvGenNum);
+
+}
+
+//File.close(dataFile);
+
+
+
+
+//PRINT The BEST Salesperson
+//-----------------------------------------------------
+
+setColor("red");
+setLineWidth(4);
+
+//Get the best Route
+
+FitnessRanking = Array.rankPositions(FitnessArray);
+
+Fittest = lengthOf(FitnessRanking)-1;
+
+FittestID = FitnessRanking[Fittest];
+
+
+
+k = FittestID;
+
+tArray1 = split(IndividualsArray[k],"\t");
+
+SiteOrderArray = Array.slice(tArray1,4,tArray1.length);
+SiteOrderArray2 = Array.rankPositions(SiteOrderArray);
+SiteOrderArray2 = Array.concat(SiteOrderArray2, SiteOrderArray2[0]);
+SiteOrderArray3 = newArray(SiteOrderArray2.length);
+
+for (i=0; i<SiteOrderArray2.length; i++){
+Temp=SiteOrderArray2[i];
+Temp=SiteNames[Temp];
+SiteOrderArray3[i] = Temp;
+}
+
+
+//	Get Fitness
+//===============================
+
+	//	RouteLength
+	//------------------------------------------------------
+
+	for (f=0; f<SiteOrderArray2.length-1; f++){
+	
+	label="route_"+f;
+
+	Site1a = SiteOrderArray2[f];
+	
+	Site2a = SiteOrderArray2[f+1];
+	
+
+	Site1b = SiteNames[Site1a];
+	Site2b = SiteNames[Site2a];
+	
+	Site1 = sIndex(SitesArray, Site1b);
+	Site1 = split(SitesArray[Site1],"\t");
+
+	Site2 =  sIndex(SitesArray, Site2b);
+	Site2 = split(SitesArray[Site2],"\t");
+	
+	route = Array.concat(Site1,Site2);
+	
+
+	makeLine(Site1[1],Site1[2],Site2[1],Site2[2]);
+
+	roiManager("Add");
+	roiManager("select", roiManager("count")-1  );
+	roiManager("rename", label);
+
+
+	}
+
+
+	roiManager("Select", Array.getSequence(roiManager("count")));
+	roiManager("XOR");
+	roiManager("Add");
+	roiManager("select", roiManager("count")-1  );
+	roiManager("rename", "Full Path");
+
+
+selectWindow("Map.jpg");
+roiManager("select", roiManager("count")-1  );
+run("Fill", "slice");
+pat = "\\" + "Fittest Route_Gen" + GenNumber + jpg;
+PatternPath = CheckDirectory + fold + pat;
+saveAs("JPG", PatternPath);
+
+close("*");
+
+roiManager("Deselect");
+
+roiManager("Delete");
+
+
+
+
+
+}
+
+
+

@@ -1,0 +1,748 @@
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+
+
+
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+
+for ( p=0; p<Win; p++ ) { 
+if(startsWith(WinNam[p], "Print_")){
+
+close(WinNam[p]);
+
+
+}
+}
+
+
+// i) Create the Printer File
+//...........................................................................................
+setBatchMode(true);
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+populationDir = PopLocation;
+
+// Population Settings
+
+PopulationSet =populationDir+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+
+
+// Printer Settings
+
+PopulationSet =populationDir+"Settings_Print.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TreatmentN = split(PopulationSettings[0], "\t");
+TreatmentN  = TreatmentN [1];
+
+RepeatN = split(PopulationSettings[1], "\t");
+RepeatN  = RepeatN [1];
+
+GroupSize = split(PopulationSettings[3], "\t");
+GroupSize = parseFloat(GroupSize[1]);
+
+GroupMethod = split(PopulationSettings[4], "\t");
+GroupMethod = GroupMethod[1];
+
+
+PrintArange = split(PopulationSettings[5], "\t");
+
+maxPerRow = parseFloat(PrintArange [1]);
+
+xSpacing = parseFloat(PrintArange [2]);
+
+ySpacing = parseFloat(PrintArange [3]);
+
+nCopies = parseFloat(PrintArange [4]);
+
+
+spawnArange = split(PopulationSettings[6], "\t");
+
+spawnRows = parseFloat(spawnArange [1]);
+
+spawnColumns = parseFloat(spawnArange [2]);
+
+spawnSpace = parseFloat(spawnArange [3]);
+
+spawnMethod = spawnArange [4];
+
+
+LabelMethod = split(PopulationSettings[7], "\t");
+LabelMethod = LabelMethod[1];
+
+
+
+
+TargetSize=400;
+
+
+
+//Get Gen IDs
+//--------------------------------
+GeneratList  =  getFileList(populationDir);
+GeneratArray = newArray();
+GenSurvArray  = newArray();
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_genes.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}	
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GenSurvArray = Array.concat(GenSurvArray, GeneratList[i]);
+	}											
+		
+}
+
+genNum = GeneratArray.length-1;
+currentGen = "gen_"+genNum+"_genes.txt";
+currentGenPath = populationDir + currentGen;
+
+
+genString = File.openAsString(currentGenPath);
+genRows = split(genString, "\n");
+
+genIDs = newArray(genRows.length-1);
+
+for(i=0; i<genIDs.length; i++){
+tArray = split(genRows[i+1], "\t");
+genIDs[i] = tArray [0];
+}
+
+//Assign New Name
+//--------------------------------
+
+
+
+printIDs =Array.copy(genIDs);
+
+
+numIDs = genIDs.length;
+numBlocks = numIDs/GroupSize;
+
+colourValues=newArray("Red","Green","Blue","Yellow","Cyan","Magenta","Orange","Pink","White","Black");
+colourCodes= newArray("R","G","B","Y","C","M","O","P","W","E");
+colourNames= newArray("Red","Green","Blue","Yellow","Cyan","Magenta","Orange","Pink","White","Ebony"); 
+
+alphabetArray=newArray("A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z");
+
+numListArray = Array.getSequence(GroupSize);
+
+
+if(LabelMethod=="colour"){
+labelChoiceArray = Array.copy(colourCodes);
+}
+if(LabelMethod=="alphabet"){
+labelChoiceArray = Array.copy(alphabetArray);
+}
+if(LabelMethod=="number"){
+labelChoiceArray = Array.copy(numListArray);
+}
+
+
+nameArray = newArray(numIDs);
+
+
+
+sTreat = substring(TreatmentN,0,1) +substring(TreatmentN,lengthOf(TreatmentN)-2,lengthOf(TreatmentN));
+sRep = RepeatN;
+L=-1;
+for(i=0; i<numBlocks;i++){
+for(j=0; j<GroupSize;j++){
+L = L+1;
+
+tArray =  newArray(sTreat, sRep, i+1, labelChoiceArray[j]);
+tStr = String.join(tArray, ".");
+nameArray[L] = tStr;
+}
+}
+
+
+// If Random
+//--------------------------------------------
+if(GroupMethod == "Random"){
+randArray = Array.copy(nameArray);
+
+for(i=0;i<randArray.length;i++){
+randArray[i] = random();
+}
+
+randArray = Array.rankPositions(randArray);
+
+genIDs2 = Array.copy(genIDs);
+
+
+for(i=0;i<randArray.length;i++){
+rIndex = randArray[i];
+genIDs2[i] = genIDs[rIndex];
+}
+
+for(i=0;i< nameArray.length;i++){
+printIDs[i] = nameArray[i];
+}
+
+
+} // (random)
+
+
+// If Ranked
+//--------------------------------------------
+if(GroupMethod == "Ranked"){
+rankArray = newArray();
+tArray = newArray(GroupSize);
+tArray2 = newArray(GroupSize);
+randArray = newArray(GroupSize);
+
+for(i=0; i<numBlocks;i++){
+
+
+for(j=0; j<GroupSize;j++){
+
+tIndex = j*numBlocks + i;
+
+tArray[j]=genIDs[tIndex ];
+
+} // ( j )
+
+for(z=0; z<randArray.length; z++){
+randArray[z] = random();
+}
+randArray = Array.rankPositions(randArray);
+
+for(z=0;z<randArray.length;z++){
+rIndex = randArray[z];
+tArray2[z] = tArray[rIndex];
+}
+
+rankArray=Array.concat(rankArray, tArray2);
+
+
+} //( i )
+
+
+
+
+
+
+
+genIDs2 =rankArray;
+
+
+
+for(i=0;i< nameArray.length;i++){
+printIDs[i] = nameArray[i];
+}
+
+
+} // (Ranked)
+
+
+genIDs2 =Array.concat("ID", genIDs2);
+printIDs =Array.concat("ID", printIDs);
+
+
+//Save Printer Ids
+//--------------------------------
+
+	dataFile = File.open(populationDir + "Printer_"+genNum+".txt");
+	
+	for(i=0; i<genIDs2.length; i++){
+	saveArray = newArray(genIDs2[i], printIDs[i]);
+	saveStr = String.join(saveArray, "\t");
+	print(dataFile, saveStr);
+	}
+	File.close(dataFile);
+
+
+
+// ii) Create the Printer Blocks
+//...........................................................................................
+//Each block needs to fit on an A4 page. If the block size is greater than an A4 it will divide it in 2.
+
+// Calculate whether block is bigger than A4
+
+pixelSize = 8.836272040302267*TargetSize;
+
+TitleSpace = 50;
+
+targetsPerSheet = genIDs.length*nCopies;
+
+sheetXScale = xSpacing + ((TargetSize+xSpacing)*maxPerRow);
+
+nRows = targetsPerSheet/maxPerRow;
+
+sheetYScale = TitleSpace+ ySpacing*2 + (((TargetSize*1.2)+ySpacing)*Math.ceil(nRows));
+
+
+TitleString = "Print_"+TreatmentN +"_Repeat"+RepeatN;
+
+newImage(TitleString, "RGB white", sheetXScale, sheetYScale, 1);
+
+//Title
+
+TitleSize =75;
+setColor("#050505");
+setFont("Arial", TitleSize , "bold");
+setJustification("center");
+
+drawString(TitleString, sheetXScale/2, TitleSize*1.5);
+
+
+
+// Images
+
+spawnCount = 0;
+
+currentPhenotypes = "GenPat_"+genNum+"/";
+
+printIDs2 = Array.deleteIndex(printIDs,0);
+genIDs3 = Array.deleteIndex(genIDs2,0);
+
+printIDs3 = newArray();
+genIDs4 = newArray();
+
+for(i=0;i<nCopies;i++){
+printIDs3=Array.concat(printIDs3,printIDs2);
+genIDs4=Array.concat(genIDs4,genIDs3);
+}
+
+
+
+
+
+for(j=0; j<Math.ceil(nRows); j++){
+for(i=0; i<maxPerRow; i++){
+
+
+if(spawnCount<genIDs4.length){
+
+	xPos = xSpacing + (TargetSize+xSpacing)*i;
+	yPos = TitleSpace + ySpacing*2 + ((TargetSize*1.2)+ySpacing)*j;
+	
+	
+	open(PopLocation+currentPhenotypes+genIDs4[spawnCount]+".tif");
+	rename(genIDs4[spawnCount]);
+	//run("Size...", "width=&TargetSize height=&TargetSize depth=1 constrain average interpolation=None");
+	run("Select None");
+	
+	
+	Margin=TargetSize+0;
+	setBackgroundColor(255,255,255);
+	setColor("white");
+	run("Canvas Size...", "width=&Margin height=&Margin position=Center");
+
+	Tab = Margin*1.2;
+	Spacing = (Tab-Margin);
+	FontSize = (Tab-Margin)/2;
+	run("Canvas Size...", "width=&Margin height=&Tab position=Top-Center");
+	
+	setColor("#050505");
+	setFont("Arial", FontSize , "bold");
+	setJustification("center");
+
+	drawString(printIDs3[spawnCount], Margin/2, Tab-(Spacing-FontSize)/2);
+	pasteW = getWidth;
+	pasteH = getHeight;
+	run("Copy");
+	
+	
+	close();
+	
+	
+	selectImage(TitleString);
+
+	makeRectangle(xPos,yPos,pasteW,pasteH );
+	
+	setPasteMode("Transparant-zero");
+	run("Paste");
+	
+}
+
+
+
+	//Mark Divider Copy
+
+	if(spawnCount/genIDs.length == parseInt(spawnCount/genIDs.length) && spawnCount<genIDs4.length){
+
+	markerWidth = xSpacing + (TargetSize+xSpacing)*GroupSize-1;
+	
+	markerX  = xPos;
+	markerY = yPos - ySpacing/2 - 5;
+
+	makeRectangle(markerX,markerY,	markerWidth,10);
+
+	fill();
+
+
+	}
+	
+	spawnCount = spawnCount+1;	
+	
+
+	//Mark Divider Group
+
+	if(spawnCount/GroupSize == parseInt(spawnCount/GroupSize ) && spawnCount>0){
+
+	markerX = xPos + pasteW - 5 + xSpacing/2;
+	markerY = yPos;
+
+	makeRectangle(markerX,markerY,10,pasteH);
+
+	fill();
+
+
+	}
+
+
+
+}
+
+}
+
+run("Select None");
+
+setBatchMode("show");
+
+
+
+
+
+saveDIR = populationDir+"printSheet_"+genNum+".txt";
+saveAs("PNG", saveDIR);
+
+ gridSize = 30;
+
+
+//Save Spawn Locations
+//--------------------------------
+
+spawnX = newArray();
+spawnY = newArray();
+spawnCol = labelChoiceArray;
+spawnGroup = newArray(genIDs.length/GroupSize);
+
+dataFile = File.open(populationDir+"SpawnLocation_"+genNum+".txt");
+
+
+
+
+
+
+
+		//Demo Image
+		demoGridW= gridSize*spawnRows;
+		demoGridH= gridSize*spawnColumns;
+			
+			
+		newImage("demoGrids", "RGB Color white", demoGridW, demoGridH, 1);
+		run("Set...","value=230");
+			setColor("Black");
+			
+			for(x=0;x<spawnRows;x++){
+			for(y=0;y<spawnColumns;y++){
+			
+			drawRect(x* gridSize,y* gridSize, gridSize, gridSize);
+			
+			}
+			}
+			
+			labelSpace=15;
+		
+		labelW= demoGridW+labelSpace;
+		labelH= demoGridH+labelSpace;
+		run("Canvas Size...", "width=labelW height=labelH position=Top-Right zero");
+		
+		
+		setColor("white");
+			for(x=0;x<spawnRows;x++){
+			setFont("calbri", 10);
+			setJustification("center");
+			drawString(x+1,x*gridSize+labelSpace+gridSize*0.5, labelH);
+			}
+		
+		
+			for(y=0;y<spawnColumns;y++){
+			setFont("calbri", 10);
+			setJustification("center");
+			drawString(y+1, labelSpace/2,y*gridSize+gridSize*0.8);
+			}
+		setColor("black");
+		
+		
+		
+		for(i=0; i<spawnGroup.length-1; i++){
+		run("Copy");
+		setPasteMode("Copy");
+		run("Add Slice");
+		run("Paste");
+		}
+		
+
+
+
+
+
+
+
+	
+	if(spawnMethod == "random" || spawnMethod == "Random" ){
+
+
+		for(i=0; i<spawnGroup.length; i++){
+
+		saveArray=newArray();
+		
+		gridX = Array.getSequence(spawnRows*spawnColumns);
+		gridY = Array.getSequence(spawnRows*spawnColumns);
+		
+			for(x=0;x<spawnRows;x++){
+			for(y=0;y<spawnColumns;y++){
+			
+			v=(x*spawnColumns)+y;
+			
+			gridX[v]=x;
+			gridY[v]=y;
+			
+			}
+			}
+		
+			
+
+			
+
+
+			for(j=0; j<GroupSize; j++){
+			
+
+
+			
+			iG=Math.floor(random()*gridX.length-0.00000001);
+			
+			pointX=gridX[iG];
+			pointY=gridY[iG];
+			
+			
+			setSlice(i+1);
+			
+			if(LabelMethod=="colour"){
+			setColor("black");
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(colourCodes[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			makeRectangle(pointX* gridSize +gridSize*0.25 +labelSpace,pointY* gridSize +gridSize*0.25, gridSize*0.5, gridSize*0.5);
+			
+			run("Gaussian Blur...", "sigma=1 slice");
+			
+			setColor(colourValues[j]);
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(colourCodes[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			if(LabelMethod=="alphabet"){
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(alphabetArray[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			if(LabelMethod=="number"){
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(numListArray[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			
+			
+			
+			gridX=Array.deleteIndex(gridX,iG);
+			gridY=Array.deleteIndex(gridY,iG);
+			
+			Gcap = gridX.length;
+
+					for(v=0;v<Gcap;v++){
+					
+					iG = Gcap-1-v;
+					
+					X=gridX[iG];
+					Y=gridY[iG];
+					
+					Dist=Math.sqrt(Math.sqr(pointX-X)+Math.sqr(pointY-Y));
+					
+						if(Dist<spawnSpace){
+						gridX=Array.deleteIndex(gridX,iG);
+						gridY=Array.deleteIndex(gridY,iG);
+						}
+					
+					}
+			
+			
+			
+
+			tStr = spawnCol[j]  + "." + pointX+1  + "." +  pointY+1;
+			print(tStr);
+			saveArray = Array.concat(saveArray, tStr );
+			}
+			
+		saveArray = Array.concat("Group: "+i+1, saveArray);
+		saveStr =  String.join(saveArray, "\t");
+		print(dataFile, saveStr);
+
+		}
+
+}
+
+
+
+
+
+
+	if(spawnMethod == "left-right" || spawnMethod == "Left-Right" || spawnMethod == "Left-right"){
+	//print("Left");
+
+		for(i=0; i<spawnGroup.length; i++){
+
+		saveArray=newArray();
+		
+		gridX = Array.getSequence(spawnRows);
+		gridY = Array.getSequence(spawnColumns);
+		
+		gridDif = spawnRows-GroupSize;
+		
+		for(v=0;v<gridDif;v++){
+			iG=Math.floor(random()*gridX.length-0.00000001);
+			gridX=Array.deleteIndex(gridX,iG);
+		}
+		
+		targetXArray=newArray();
+		targetYArray=newArray();
+		
+		Array.print(gridX);
+			
+			
+			for(j=0; j<GroupSize; j++){
+			
+			pointX=gridX[j];
+			
+			
+			tempY=Array.copy(gridY);
+			
+				for(v=0;v<targetXArray.length;v++){
+				
+				yLeng=tempY.length;
+				
+				X=targetXArray[v];
+				Y=targetYArray[v];
+				
+				for(f=0;f<yLeng;f++){
+				
+				testY = tempY[yLeng-f-1];
+				
+				Dist=Math.sqrt(Math.sqr(pointX-X)+Math.sqr(testY-Y));
+						
+					if(Dist<spawnSpace){
+					tempY=Array.deleteIndex(tempY,yLeng-f-1);
+					}	
+				
+				
+				}
+				}
+			
+			iG=Math.floor(random()*tempY.length-0.00000001);
+			
+			pointY=tempY[iG];
+
+			
+			targetXArray=Array.concat(targetXArray,pointX);
+			targetYArray=Array.concat(targetYArray,pointY);
+			
+			
+			setSlice(i+1);
+			if(LabelMethod=="colour"){
+			setColor("black");
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(colourCodes[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			makeRectangle(pointX* gridSize +gridSize*0.25 +labelSpace,pointY* gridSize +gridSize*0.25, gridSize*0.5, gridSize*0.5);
+			
+			run("Gaussian Blur...", "sigma=1 slice");
+			
+			setColor(colourValues[j]);
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(colourCodes[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			if(LabelMethod=="alphabet"){
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(alphabetArray[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			if(LabelMethod=="number"){
+			setFont("calbri", 12);
+			setJustification("center");
+			drawString(numListArray[j], pointX*gridSize+gridSize*0.5+labelSpace,pointY*gridSize+gridSize*0.8);
+			}
+			
+			
+			
+			tStr = spawnCol[j]  + "." + pointX+1  + "." +  pointY+1;
+			//print(tStr);
+			saveArray = Array.concat(saveArray, tStr );
+			}
+			
+		saveArray = Array.concat("Group: "+i+1, saveArray);
+		saveStr =  String.join(saveArray, "\t");
+		print(dataFile, saveStr);
+
+		}
+
+	}
+
+run("Select None");
+
+
+File.close(dataFile);
+setBatchMode("show");
+
+run("Make Montage...");
+
+		setBatchMode("show");
+		run("Maximize");
+
+
+happyGate=getBoolean("Is this arrangement suitable?", "yes", "no");
+
+
+
+while(happyGate==0){
+close();
+run("Make Montage...");
+
+		setBatchMode("show");
+		run("Maximize");
+happyGate=getBoolean("Is this arrangement suitable?", "yes", "no");
+}
+
+
+
+saveDIR = populationDir+"spawnSheet_"+genNum;
+saveAs("PNG", saveDIR);

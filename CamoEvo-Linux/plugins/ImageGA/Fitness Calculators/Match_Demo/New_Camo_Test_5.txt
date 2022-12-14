@@ -1,0 +1,183 @@
+// Setup
+//===================================================
+
+setBatchMode(true);
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+
+
+
+baseImage = getTitle();
+
+roiManager("add");
+Roi.getBounds(x, y, width, height);
+
+maxB = width;
+if(height>width)maxB=height;
+
+fullroot=Math.sqrt(getHeight*getWidth);
+
+enVal = maxB/2;
+
+if(enVal< fullroot/8) enVal = fullroot/10;
+
+run("Enlarge...", "enlarge=enVal");
+
+
+run("Duplicate...", "title=GaussianStack");
+run("Enhance Contrast...", "saturated=0 normalize");
+
+run("Select All");
+run("Copy");
+setPasteMode("Copy");
+
+roiManager("select", roiManager("count")-1);
+Roi.move(getWidth/2-width/2, getHeight/2 - height/2);
+roiManager("update");
+
+rootArea = Math.sqrt(width*height)/2;
+
+sig1 = 1*rootArea;;
+sig2 = (1/2)*rootArea;
+sig3 = (1/4)*rootArea;
+sig4 = (1/8)*rootArea;
+sig5 = (1/16)*rootArea;
+
+sigArray = newArray(sig5, sig4,sig3,sig2,sig1);
+
+for(i=0;i<sigArray.length;i++){
+run("Add Slice");
+setSlice(nSlices);
+run("Paste");
+sigVal = sigArray[i];
+run("Gaussian Blur...", "sigma=sigVal");
+
+roiManager("select", roiManager("count")-1);
+run("Make Inverse");
+getStatistics(area, mean, min, max, std, histogram);
+
+run("Select None");
+
+setSlice(nSlices);
+
+}
+
+run("Fire");
+
+setBatchMode("show");
+
+
+
+cumDifMean=0;
+cumDifStdDev=0;
+cumShape=0;
+
+for(i=1;i<nSlices-1;i++){
+setSlice(i+2);
+run("Copy");
+setPasteMode("subtract");
+setSlice(i+1);
+run("Paste");
+}
+
+
+run("Enhance Contrast...", "saturated=0 normalize process_all");
+
+//Compare Mean and Dev
+//----------------------------------------------------------------------
+cumMean = 0;
+cumDev = 0;
+
+for(j=1;j<nSlices;j++){
+roiManager("select",roiManager("count")-1);
+setSlice(j+1);
+
+roiManager("add");
+
+getSelectionBounds(x, y, width, height);
+getStatistics(area,min,max,mean,dev);
+
+targetMean = mean;
+targetDev = dev;
+
+devArray=newArray();
+meanArray = newArray();
+
+maximum = width;
+if(height>maximum) maximum=height;
+
+Roi.move(x+maximum,y);
+
+orient = 12;
+
+
+for(i=0;i<orient;i++){
+
+rotation=360/orient;
+adjust = -rotation;
+
+run("Rotate...", "rotate angle=rotation");
+
+getStatistics(area,min,max,mean,dev);
+
+meanArray = Array.concat(meanArray, Math.sqrt(Math.sqr(mean-targetMean)));
+devArray = Array.concat(devArray, Math.sqrt(Math.sqr(dev-targetDev)));
+
+}
+
+
+Array.getStatistics(meanArray, min1,max1);
+Array.getStatistics(devArray, min2,max2);
+
+
+sumRank = newArray(meanArray.length);
+
+
+
+for(i=0;i<meanArray.length;i++){
+sumRank[i] = (meanArray[i]-min1/(max1-min1) ) + (devArray[i]-min2/(max2-min2) );
+}
+
+sumRank=Array.rankPositions(sumRank);
+
+bestMindex = sumRank[0];
+worstMindex = sumRank[sumRank.length-1];
+
+
+rotation=360/orient*bestMindex;
+adjust = -rotation;
+
+run("Rotate...", "rotate angle=rotation");
+run("Rotate...", "angle=adjust");
+
+bestDifMean = meanArray[bestMindex];
+bestDifDev = devArray[bestMindex];
+
+worstDifMean =meanArray[worstMindex];
+worstDifDev =devArray[worstMindex];
+
+cumMean = cumMean + bestDifMean;
+cumDev= cumDev + bestDifDev;
+
+roiManager("delete");
+
+
+}
+
+
+
+setResult("ID", nResults, baseImage);
+setResult("difMean", nResults-1, cumMean);
+setResult("difDev", nResults-1, cumDev);
+
+roiManager("select", roiManager("count")-1);
+roiManager("delete");
+

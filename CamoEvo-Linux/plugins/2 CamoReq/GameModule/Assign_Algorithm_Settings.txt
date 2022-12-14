@@ -1,0 +1,267 @@
+/*____________________________________________________________________
+
+	Title: Assign Algorithm Settings
+	Authors:  George Hancock 
+	Date: 07/01/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This code relays which templates and which algorithm settings CamoEvo wants ImageGA to use.
+
+*/
+
+
+setBatchMode(true);
+
+setOption("ShowRowNumbers", false);
+
+
+//===========================================================================
+//Get the File Path
+//============================================================================
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+popDIR =PopLocation;
+
+
+populationSettings = File.openAsString(PopLocation+"Settings_Population.txt");
+populationSetRows = split(populationSettings, "\n");
+
+numGenerations =  split(populationSetRows[1], "\t");
+numGenerations = numGenerations[1];
+
+popSize =  split(populationSetRows[2], "\t");
+popSize = popSize[1];
+
+
+
+//===========================================================================
+// Assign Algorithm Variables
+//===========================================================================
+defaultSettingsT = newArray(
+
+// Population Setup
+"0", 				// Sex
+"custom", 			// Use Template 
+"24", 				// Population Size
+"10",				// Max Number of Generations
+"random", 			// Population Genotype
+
+// Division Setup
+"fraction",			// Unit
+"0.50", 			// Deletion Pool	
+"0.50", 			// Mating Pool
+"0.0000", 			// Mutate Pool
+
+// Gametic Mutation
+"0.001",			// Gamete Point Mutation
+"0.001",			// Gamete Lvl1 Mutation
+"0.001",			// Gamete Lvl2 Mutation
+"0.001",			// Gamete Linked Mutation
+
+// Offspring Mutation
+"0.001",			// Offspring Point Mutation
+"0.001",			// Offspring Lvl1 Mutation
+"0.001",			// Offspring Lvl2 Mutation
+"0.001",			// Offspring Linked Mutation
+
+// Clonal Mutation
+"0.001",			// Clone Point Mutation
+"0.001",			// Clone Lvl1 Mutation
+"0.001",			// Clone Lvl2 Mutation
+"0.001",			// Clone Linked Mutation
+
+// Protective Mechanisms
+"false",			// Clone Best
+"false",			// Rescue Best
+
+// Adaptive Mechanisms
+"0.15",				// Displacement Mutation
+"true",				// Scale mutation with rank
+"true",				// Scale mutation with gene variance
+"true",				// Scale mutation with generation
+
+// Crossover
+"random",			//Crossover Type
+"0.80000",			//Crossover Probability
+"incomplete",		//Crossover Completeness
+
+// Mating Systems
+"ranked_choice",	//Breeding Pool 
+"random",			//Mating System
+"none");			//Poly System
+
+
+settingsFilePath = popDIR + "/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+}
+
+
+if(File.exists(settingsFilePath) != 1){
+
+settingsFilePath = getDirectory("plugins") + "2 CamoReq/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+} 
+}
+
+
+
+ 
+
+
+
+// Population Setup
+inableSex = parseFloat(defaultSettings[0]);
+populationChoice = defaultSettings[1];
+populationSize = popSize;
+generationCap = numGenerations;
+populationGenotype = defaultSettings[4];
+
+
+// Division Setup
+segmentationUnit = defaultSettings[5];
+segmentationDeletion = parseFloat(defaultSettings[6]);
+segmentationBreeding = parseFloat(defaultSettings[7]);
+segmentationMutate =  parseFloat(defaultSettings[8]);
+
+
+//Gametic Mutation
+pointMutationRateGamete = parseFloat(defaultSettings[9]);
+lvl1MutationRateGamete = parseFloat(defaultSettings[10]);
+lvl2MutationRateGamete = parseFloat(defaultSettings[11]);
+linkedMutationProbGamete = parseFloat(defaultSettings[12]);
+
+
+//Offspring Mutation
+pointMutationRateOffspring = parseFloat(defaultSettings[13]);
+lvl1MutationRateOffspring = parseFloat(defaultSettings[14]);
+lvl2MutationRateOffspring = parseFloat(defaultSettings[15]);
+linkedMutationProbOffspring = parseFloat(defaultSettings[16]);
+
+
+//Clonal Mutation
+pointMutationRateClone = parseFloat(defaultSettings[17]);
+lvl1MutationRateClone = parseFloat(defaultSettings[18]);
+lvl2MutationRateClone = parseFloat(defaultSettings[19]);
+linkedMutationProbClone = parseFloat(defaultSettings[20]);
+
+
+//Protective Mechanisms
+cloneBest =  defaultSettings[21];
+rescueBest = defaultSettings[22];
+
+
+//Adaptive Mechanisms
+distanceRateOffspring = parseFloat(defaultSettings[23]);
+rankedProbability = defaultSettings[24];
+varianceProbability = defaultSettings[25];
+fitnessProbability = defaultSettings[26];
+
+
+//Crossover
+crossOverType = defaultSettings[27];
+crossOverProbability = parseFloat(defaultSettings[28]);
+crossOverBalance = defaultSettings[29];
+
+
+//Mating System
+poolAssignmentSystem = defaultSettings[30];
+matingAssignmentSystem = defaultSettings[31];
+polySystem = defaultSettings[32];
+
+
+
+
+// Save Settings
+
+
+
+dataFile = File.open(PopLocation + "/AlgorithmSettings.txt");
+
+
+// Population Setup
+	print(dataFile, inableSex);
+	print(dataFile, populationChoice);
+	print(dataFile, populationSize);
+	print(dataFile, generationCap);
+	print(dataFile, populationGenotype);
+
+// Division Setup	
+	print(dataFile, segmentationUnit);	
+	print(dataFile, segmentationDeletion);
+	print(dataFile, segmentationBreeding);
+	print(dataFile, segmentationMutate);	
+	
+//Gametic Mutation
+	print(dataFile, pointMutationRateGamete);
+	print(dataFile, lvl1MutationRateGamete);
+	print(dataFile, lvl2MutationRateGamete);
+	print(dataFile, linkedMutationProbGamete);
+	
+//Offspring Mutation
+	print(dataFile, pointMutationRateOffspring);
+	print(dataFile, lvl1MutationRateOffspring);
+	print(dataFile, lvl2MutationRateOffspring);
+	print(dataFile, linkedMutationProbOffspring);
+	
+//Clone Mutation	
+	print(dataFile, pointMutationRateClone);
+	print(dataFile, lvl1MutationRateClone);
+	print(dataFile, lvl2MutationRateClone);
+	print(dataFile, linkedMutationProbClone);
+	
+	
+//Protective Mechanisms
+	print(dataFile, cloneBest);
+	print(dataFile, rescueBest);
+		
+	
+//Adaptive Mechanisms
+	print(dataFile, distanceRateOffspring);
+	print(dataFile, rankedProbability);
+	print(dataFile, varianceProbability);
+	print(dataFile, fitnessProbability);
+		
+//Crossover	
+	print(dataFile, crossOverType);
+	print(dataFile, crossOverProbability);	
+	print(dataFile, crossOverBalance);
+
+
+//Mating System	
+	print(dataFile, poolAssignmentSystem);
+	print(dataFile, matingAssignmentSystem);
+	print(dataFile, polySystem);
+	
+
+
+
+File.close(dataFile);
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,242 @@
+nColors = 12;
+
+spaceTable=newArray("RGB","HSB","Lab");
+colSpace="HSB";
+
+mean1 = 127;
+dev1 = 100;
+pow1 = 3;
+sym1 = 0.50;
+
+mean2 = 127;
+dev2= 100;
+pow2 = 3;
+sym2 = 0.50;
+
+mean3 = 127;
+dev3 = 100;
+pow3 = 3;
+sym3 = 0.50;
+
+
+choiceGate = "No";
+
+while(choiceGate == "No" ){
+
+if(isOpen("Preview")) close("Preview");
+if(isOpen("Variable 1")) close("Variable 1");
+if(isOpen("Variable 2")) close("Variable 2");
+if(isOpen("Variable 3")) close("Variable 3");
+if(isOpen("Values")) close("Values");
+
+
+Dialog.createNonBlocking("Variables");
+Dialog.addMessage("Range Settings");
+Dialog.addNumber("N colours" ,nColors);
+Dialog.addChoice("Col Space", spaceTable,colSpace);
+
+	Dialog.addMessage("Colour Settings");	
+	Dialog.addMessage("Variable1, either red, hue or luminance value");
+Dialog.addNumber("R / H / L mean" , mean1);	
+Dialog.addNumber("R / H / L deviation" , dev1);
+Dialog.addNumber("R / H / L power" , pow1);
+Dialog.addNumber("R / H / L symmetry" , sym1);
+
+	Dialog.addMessage("Variable2, either green, saturation or green-red value");
+Dialog.addNumber("G / S / a* mean" , mean2);	
+Dialog.addNumber("G / S / a* dev" , dev2);
+Dialog.addNumber("G / S / a* pow" , pow2);
+Dialog.addNumber("G / S / a* sym" , sym2);
+
+	Dialog.addMessage("Variable3, either blue, brightness or blue-yellow value");
+Dialog.addNumber("B / B / b* mean" , mean3);	
+Dialog.addNumber("B / B / b* dev" , dev3);
+Dialog.addNumber("B / B / b* pow" , pow3);
+Dialog.addNumber("B / B / b* sym" , sym3);
+Dialog.show();
+
+nColors = Dialog.getNumber();
+colSpace = Dialog.getChoice();
+
+mean1 = Dialog.getNumber();
+dev1 = Dialog.getNumber();
+pow1 = Dialog.getNumber();
+sym1 = Dialog.getNumber();
+
+mean2 = Dialog.getNumber();
+dev2 = Dialog.getNumber();
+pow2 = Dialog.getNumber();
+sym2 = Dialog.getNumber();
+
+mean3 = Dialog.getNumber();
+dev3 = Dialog.getNumber();
+pow3 = Dialog.getNumber();
+sym3 = Dialog.getNumber();
+
+
+plotArray=newArray(nColors);
+plotTransform1=newArray(nColors);
+plotTransform2=newArray(nColors);
+plotTransform3=newArray(nColors);
+
+v1Array=newArray(nColors);
+v2Array=newArray(nColors);
+v3Array=newArray(nColors);
+
+for(i=0;i<plotArray.length;i++){
+plotArray[i] = i*(1/(plotArray.length-1));
+
+symP = sym1*2;
+symN = (1-sym1)*2;
+
+print(symN);
+
+if(plotArray[i]<0.5) tV =   0.5-(0.5*((pow((0.5-(1-plotArray[i]))*2,pow1))) )*symP;
+if(plotArray[i]>=0.5) tV =   0.5+0.5*((pow((0.5-(plotArray[i]))*2,pow1)))*symN;
+plotTransform1[i] = tV;
+v1Array[i] = mean1-dev1/2 + tV*dev1;
+
+symP = sym2*2;
+symN = (1-sym2)*2;
+
+if(plotArray[i]<0.5) tV =   0.5-(0.5*((pow((0.5-(1-plotArray[i]))*2,pow1))) )*symP;
+if(plotArray[i]>=0.5) tV =   0.5+0.5*((pow((0.5-(plotArray[i]))*2,pow1)))*symN;
+plotTransform2[i] = tV;
+v2Array[i] = mean2-dev2/2 + tV*dev2;
+
+symP = sym3*2;
+symN = (1-sym3)*2;
+
+if(plotArray[i]<0.5) tV =   0.5-(0.5*((pow((0.5-(1-plotArray[i]))*2,pow1))) )*symP;
+if(plotArray[i]>=0.5) tV =   0.5+0.5*((pow((0.5-(plotArray[i]))*2,pow1)))*symN;
+plotTransform3[i] = tV;
+v3Array[i] = mean3-dev3/2 + tV*dev3;
+
+
+
+}
+
+Array.getStatistics(plotTransform1, pMin, pMax);	
+	Plot.create("Variable 1", "0-1", "V1", plotArray, plotTransform1);
+	Plot.setLineWidth(3);
+	Plot.setFontSize(30);
+	Plot.setAxisLabelSize(36, "bold");
+	Plot.setOptions("addhspace=15 addvspace=15");		
+	Plot.setLimits(0,  1, pMin, pMax);
+	Plot.setLineWidth(2);				
+	Plot.show();
+	
+Array.getStatistics(plotTransform2, pMin, pMax);	
+	Plot.create("Variable 2", "0-1", "V2", plotArray, plotTransform2);
+	Plot.setLineWidth(3);
+	Plot.setFontSize(30);
+	Plot.setAxisLabelSize(36, "bold");
+	Plot.setOptions("addhspace=15 addvspace=15");		
+	Plot.setLimits(0,  1, pMin, pMax);
+	Plot.setLineWidth(2);				
+	Plot.show();
+	
+Array.getStatistics(plotTransform3, pMin, pMax);	
+	Plot.create("Variable 3", "0-1", "V1", plotArray, plotTransform3);
+	Plot.setLineWidth(3);
+	Plot.setFontSize(30);
+	Plot.setAxisLabelSize(36, "bold");
+	Plot.setOptions("addhspace=15 addvspace=15");		
+	Plot.setLimits(0,  1, pMin, pMax);
+	Plot.setLineWidth(2);				
+	Plot.show();
+
+
+
+
+orderArray1=newArray(nColors);
+orderArray2=newArray(nColors);
+orderArray3=newArray(nColors);
+
+for(i=0;i<orderArray1.length;i++){
+orderArray1[i]=random();
+orderArray2[i]=random();
+orderArray3[i]=random();
+}
+
+Array.sort(orderArray1,v1Array);
+Array.sort(orderArray2,v2Array);
+Array.sort(orderArray3,v3Array);
+
+Array.show(plotArray,v1Array,v2Array,v3Array);
+
+d=50;
+
+
+w=d*1.5*Math.ceil(sqrt(nColors));
+y= d*1.5*Math.ceil(sqrt(nColors));
+cap = Math.ceil(sqrt(nColors));
+
+newImage("Preview", "RGB black", w, y, 1);
+
+channelStr = colSpace+" Stack";
+
+run(channelStr);
+
+setSlice(1);
+for(i=0;i<nColors;i++){
+
+p1 = Math.floor(i/cap);
+p2 = i-p1*cap;
+makeRectangle(d/4 + d*1.5*p1, d/4+ d*1.5*p2, d,d);
+v = v1Array[i];
+run("Set...","value=v");
+}
+
+
+
+setSlice(2);
+for(i=0;i<nColors;i++){
+p1 = Math.floor(i/cap);
+p2 = i-p1*cap;
+makeRectangle(d/4 + d*1.5*p1, d/4+ d*1.5*p2, d,d);
+v = v2Array[i];
+run("Set...","value=v");
+}
+
+p1max=0;
+p2max=0;
+setSlice(3);
+for(i=0;i<nColors;i++){
+p1 = Math.floor(i/cap);
+p2 = i-p1*cap;
+
+if(p1>p1max)p1max=p1;
+if(p2>p1max)p2max=p2;
+
+makeRectangle(d/4 + d*1.5*p1, d/4+ d*1.5*p2, d,d);
+v = v3Array[i];
+run("Set...","value=v");
+}
+
+makeRectangle(0, 0, ( d*1.5*p1max)+d*1.5,( d*1.5*p2max)+d*1.5);
+
+run("RGB Color");
+
+run("Crop");
+
+
+IDarray = Array.getSequence(nColors);
+sumDistance=newArray(nColors);
+
+
+for(i=0;i<nColors;i++){
+sumDistance[i]=Math.sqrt(Math.sqr(v1Array[i]-mean1)) + Math.sqrt(Math.sqr(v2Array[i]-mean2)) + Math.sqrt(Math.sqr(v3Array[i]-mean3));
+}
+
+
+Array.show("Values",IDarray, v1Array, v2Array, v3Array,sumDistance);
+
+happyChoice=newArray("No","Yes");
+Dialog.createNonBlocking("Happy?");
+Dialog.addChoice("Are you happy with this colour range?", happyChoice, happyChoice[0]);
+Dialog.show();
+choiceGate = Dialog.getChoice();
+
+}
+

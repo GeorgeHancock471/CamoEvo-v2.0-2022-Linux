@@ -1,0 +1,20 @@
+
+run("Enlarge...", "enlarge=-4");
+roiManager("add");
+roiManager("select", roiManager("count")-1);
+run("Enlarge...", "enlarge=8");
+roiManager("add");
+roiManager("select", newArray( roiManager("count")-1,  roiManager("count")-2) );
+roiManager("XOR");
+roiManager("add");
+
+roiManager("select", roiManager("count")-1);
+getStatistics(area, bgMean); 
+
+roiManager("select", roiManager("count")-1);
+codeString="code=v=((v/2)+15)*(1-(("+bgMean+"-v)/Math.sqrt(Math.sqr(("+bgMean+"-v)))))";
+run("Macro...", codeString);
+
+
+roiManager("select", newArray( roiManager("count")-1,  roiManager("count")-3) );
+roiManager("delete");

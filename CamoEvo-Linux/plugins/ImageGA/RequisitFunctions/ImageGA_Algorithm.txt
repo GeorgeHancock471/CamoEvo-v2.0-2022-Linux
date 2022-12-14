@@ -1,0 +1,7163 @@
+
+setBatchMode(true);
+
+
+/*_______________________________________________________________________________________________________________
+
+	Title: ImageGA Algorithm v2
+	Authors:  George Hancock 
+	Date: 19/05/2021
+	
+.................................................................................................................
+
+Description:
+''''''''''''''''''''''''''''''''
+This is the heart and soul for how ImageGA works and is used to generate the new populations.
+
+
+This system requires the following features
+-gene functional grouping
+-more mutation distributions
+-more efficient file reading
+-gamete mutations
+
+
+
+Possible Features
+-gene location
+-sex gene
+-binary gene system
+
+
+*/
+
+
+setOption("ShowRowNumbers", false);
+
+
+
+/*
+..........................................................................................................................................
+
+															Setup
+
+..........................................................................................................................................
+
+*/
+
+
+
+
+//===========================================================================
+// Make file names easier to handle.
+//===========================================================================
+
+csv = ".csv";
+tif = ".tif";
+txt = ".txt"'
+png = ".png"
+
+
+//===========================================================================
+// FUNCTIONS
+//==========================
+setOption("ShowRowNumbers", false);
+setOption("ShowRowIndexes", false);
+//===========================================================================
+
+// TestPoint
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+function TestPoint(Title) {
+Dialog.createNonBlocking("TestPoint");
+Dialog.createNonBlocking("Did " + Title + " work?");
+Dialog.show();
+
+}
+
+
+// Index
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function index(a, value) {
+      for (i=0; i<a.length; i++)
+          if (a[i]==value) return i;
+      return -1;
+  }
+  
+ // FindID
+//---------------------------------------------------
+// Allows you to obtain the index of a Value within an Array.
+
+  function findID(a, value) {
+      for (i=0; i<a.length; i++){
+		tA = split(a[i], "\t");
+		tStr = tA[0];
+          if (tStr == value) return i;
+		  }
+      return -1;
+  }
+
+
+
+
+// Obtain Table Names Array
+//---------------------------------------------------
+// Allows you to obtain an array of all the table column names
+
+ function getColumnNames(name) {
+	selectWindow(name);
+	Table.showRowNumbers(false);
+	name = Table.headings;
+	name = split(name, "\t");
+	Table.showRowNumbers(false);
+	return name; 
+}
+
+
+/*
+..........................................................................................................................................
+
+															Run Algorithm
+
+..........................................................................................................................................
+
+*/
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 0. Obtaining the Current Genome and Algorithm Settings
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//===========================================================================
+//Population Details
+//===========================================================================
+
+//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// Get the Directory
+//''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+popDIR = getDirectory("Select folder you wish to use.");
+
+generationList  =  getFileList(popDIR);
+generationArray = newArray();
+genFitnessArray  = newArray();
+
+for(i=0; i<generationList .length; i++) {
+
+	if(endsWith(generationList [i], "_genes.txt")==1){
+		generationArray = Array.concat(generationArray, generationList [i]);
+	}	
+
+	if(endsWith(generationList [i], "_ranks.txt")==1){
+		genFitnessArray  = Array.concat(genFitnessArray , generationList [i]);
+	}											
+		
+} // ( i )
+
+currentGenNum =  generationArray.length-1;
+currentFitNum = genFitnessArray.length-1;
+
+currentGeneration = popDIR + "gen_" + currentGenNum  + "_genes.txt";
+
+priorGeneration = popDIR + "gen_" + currentGenNum-1 + "_genes.txt";
+
+nextGeneration = popDIR + "gen_" + currentGenNum+1 + "_genes.txt";
+
+currentSelection  = popDIR + "gen_" + currentGenNum + "_select.txt";
+
+currentFitness = popDIR + "gen_" + currentGenNum  + "_ranks.txt";
+
+
+//Records
+fitnessAvgDir = popDIR + "record_fitness_avg.txt";
+fitnessMaxDir = popDIR + "record_fitness_max.txt";
+fitnessIndDir = popDIR + "record_fitness_ind.txt";
+
+if(currentGeneration == 0){
+if(File.exists(fitnessAvgDir)) File.delete(fitnessAvgDir);
+if(File.exists(fitnessMaxDir)) File.delete(fitnessMaxDir);
+if(File.exists(fitnessIndDir)) File.delete(fitnessIndDir);
+}
+
+
+//===========================================================================
+//  Wait for file to be made.
+//===========================================================================
+// For some programs if the fitness calculator is handled outside imageJ 
+// you may want it to sit idle waiting for a survival file.
+// This section allows it imageGA for wait for up to 30 days.
+
+//---------------------------------------------------------------------------
+
+faveArray=newArray(-1,1);
+randFave= random();
+
+pointCount=0;
+
+//===========================================================================
+// Assign Algorithm Variables
+//===========================================================================
+defaultSettingsT = newArray(
+
+// Population Setup
+"0", 				// Sex
+"custom", 			// Use Template 
+"24", 				// Population Size
+"10",				// Max Number of Generations
+"random", 			// Population Genotype
+
+// Division Setup
+"fraction",			// Unit
+"0.50", 			// Deletion Pool	
+"0.50", 			// Mating Pool
+"0.0000", 			// Mutate Pool
+
+// Gametic Mutation
+"0.001",			// Gamete Point Mutation
+"0.001",			// Gamete Lvl1 Mutation
+"0.001",			// Gamete Lvl2 Mutation
+"0.001",			// Gamete Linked Mutation
+
+// Offspring Mutation
+"0.001",			// Offspring Point Mutation
+"0.001",			// Offspring Lvl1 Mutation
+"0.001",			// Offspring Lvl2 Mutation
+"0.001",			// Offspring Linked Mutation
+
+// Clonal Mutation
+"0.001",			// Clone Point Mutation
+"0.001",			// Clone Lvl1 Mutation
+"0.001",			// Clone Lvl2 Mutation
+"0.001",			// Clone Linked Mutation
+
+// Protective Mechanisms
+"0",			// Clone Best
+"0",			// Rescue Best
+
+// Adaptive Mechanisms
+"0.15",				// Displacement Mutation
+"true",				// Scale mutation with rank
+"true",				// Scale mutation with gene variance
+"true",				// Scale mutation with generation
+
+// Crossover
+"random",			//Crossover Type
+"0.80000",			//Crossover Probability
+"incomplete",		//Crossover Completeness
+
+// Mating Systems
+"ranked_choice",	//Breeding Pool 
+"random",			//Mating System
+"none");			//Poly System
+
+
+
+settingsFilePath = popDIR + "/AlgorithmSettings.txt";
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+} 
+
+
+if(File.exists(settingsFilePath) != 1){
+
+settingsFilePath = getDirectory("plugins") + "ImageGA/RequisitFunctions/AlgorithmSettings.txt";
+
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	defaultSettings=split(settingsString,"\n");
+	if(defaultSettingsT.length != defaultSettings.length) defaultSettings = defaultSettingsT;
+  
+} 
+}
+
+
+
+// Population Setup
+inableSex = parseFloat(defaultSettings[0]);
+populationChoice = defaultSettings[1];
+populationSize = parseFloat(defaultSettings[2]);
+generationCap = parseFloat(defaultSettings[3]);
+populationGenotype = defaultSettings[4];
+
+
+// Division Setup
+segmentationUnit = defaultSettings[5];
+segmentationDeletion = parseFloat(defaultSettings[6]);
+segmentationBreeding = parseFloat(defaultSettings[7]);
+segmentationMutate =  parseFloat(defaultSettings[8]);
+
+
+//Gametic Mutation
+pointMutationRateGamete = parseFloat(defaultSettings[9]);
+lvl1MutationRateGamete = parseFloat(defaultSettings[10]);
+lvl2MutationRateGamete = parseFloat(defaultSettings[11]);
+linkedMutationProbGamete = parseFloat(defaultSettings[12]);
+
+
+//Offspring Mutation
+pointMutationRateOffspring = parseFloat(defaultSettings[13]);
+lvl1MutationRateOffspring = parseFloat(defaultSettings[14]);
+lvl2MutationRateOffspring = parseFloat(defaultSettings[15]);
+linkedMutationProbOffspring = parseFloat(defaultSettings[16]);
+
+
+//Clonal Mutation
+pointMutationRateClone = parseFloat(defaultSettings[17]);
+lvl1MutationRateClone = parseFloat(defaultSettings[18]);
+lvl2MutationRateClone = parseFloat(defaultSettings[19]);
+linkedMutationProbClone = parseFloat(defaultSettings[20]);
+
+
+//Protective Mechanisms
+cloneBest =  parseFloat(defaultSettings[21]);
+rescueBest = parseFloat(defaultSettings[22]);
+
+
+//Adaptive Mechanisms
+distanceRateOffspring = parseFloat(defaultSettings[23]);
+rankedProbability = defaultSettings[24];
+varianceProbability = defaultSettings[25];
+fitnessProbability = defaultSettings[26];
+
+//Crossover
+crossOverType = defaultSettings[27];
+crossOverProbability = parseFloat(defaultSettings[28]);
+crossOverBalance = defaultSettings[29];
+
+
+//Mating System
+poolAssignmentSystem = defaultSettings[30];
+matingAssignmentSystem = defaultSettings[31];
+polySystem = defaultSettings[32];
+
+
+//Experimental
+biasMutationDIR =0;  // Biases the mutation direction towards the fittest individuals
+mirrorMutation = 0; // When duplicating genes or mutations, it mirrors the mutation.
+polyPoolSystem = "Top"; // Determines how the poly individuals are selected ("Top", "Outlier"), if a polySystem is used.
+adaptiveMatingPool = 0; // Determines whether the number of breeders is adaptively adjusted to the fitness of the population.
+massExtinction = "none"; // Determines whether there are periodic bottleneck events
+randomPools = "none"; // Determines if the number breeding and dieing is randomised.
+
+polySystemArray = newArray("none","fittestChose","fittestPicked","male","female");
+
+
+dataFile = File.open(popDIR + "/AlgorithmSettings.txt");
+
+// Population Setup
+	print(dataFile, inableSex);
+	print(dataFile, populationChoice);
+	print(dataFile, populationSize);
+	print(dataFile, generationCap);
+	print(dataFile, populationGenotype);
+
+// Division Setup	
+	print(dataFile, segmentationUnit);	
+	print(dataFile, segmentationDeletion);
+	print(dataFile, segmentationBreeding);
+	print(dataFile, segmentationMutate);	
+	
+//Gametic Mutation
+	print(dataFile, pointMutationRateGamete);
+	print(dataFile, lvl1MutationRateGamete);
+	print(dataFile, lvl2MutationRateGamete);
+	print(dataFile, linkedMutationProbGamete);
+	
+//Offspring Mutation
+	print(dataFile, pointMutationRateOffspring);
+	print(dataFile, lvl1MutationRateOffspring);
+	print(dataFile, lvl2MutationRateOffspring);
+	print(dataFile, linkedMutationProbOffspring);
+	
+//Clone Mutation	
+	print(dataFile, pointMutationRateClone);
+	print(dataFile, lvl1MutationRateClone);
+	print(dataFile, lvl2MutationRateClone);
+	print(dataFile, linkedMutationProbClone);
+	
+	
+//Protective Mechanisms
+	print(dataFile, cloneBest);
+	print(dataFile, rescueBest);
+		
+	
+//Adaptive Mechanisms
+	print(dataFile, distanceRateOffspring);
+	print(dataFile, rankedProbability);
+	print(dataFile, varianceProbability);
+	print(dataFile, fitnessProbability);
+		
+//Crossover	
+	print(dataFile, crossOverType);
+	print(dataFile, crossOverProbability);	
+	print(dataFile, crossOverBalance);
+
+
+//Mating System	
+	print(dataFile, poolAssignmentSystem);
+	print(dataFile, matingAssignmentSystem);
+	print(dataFile, polySystem);
+	
+
+File.close(dataFile);
+
+
+//Only perform if generation is right
+
+
+if(randomPools == "yes"){
+
+segmentationUnit = "fraction";
+
+
+if(currentGenNum>10){
+
+segmentationBreeding = 0.3333;
+
+segmentationDeletion = 0.6666;
+
+}
+
+
+}
+
+
+if(currentGenNum/3 != parseInt(currentGenNum/3 )) varianceProbability=false;
+if(currentGenNum/3 == parseInt(currentGenNum/3 )) fitnessProbability=false;
+if(currentGenNum/3 == parseInt(currentGenNum/3 )) rankedProbability=false;
+
+//===========================================================================
+//Calculate The Change in Fitness
+//===========================================================================
+
+fitnessProbMod = 0;
+
+if(File.exists(fitnessMaxDir)){
+		priorMaxesString = File.openAsString(fitnessMaxDir);
+		priorMaxesArray = split(priorMaxesString, "\n");
+
+		priorAvgsString = File.openAsString(fitnessAvgDir);
+		priorAvgsArray = split(priorAvgsString, "\n");
+
+		startIndex = priorAvgsArray.length-1;
+		referenceFitness1 = parseFloat(priorAvgsArray[startIndex])+parseFloat(priorMaxesArray[startIndex]);
+		prior = referenceFitness1;
+
+		for(i=1; i<priorAvgsArray.length;i++){
+		currentIndex = startIndex-i;
+		referenceFitness2 = parseFloat(priorAvgsArray[currentIndex])+parseFloat(priorMaxesArray[currentIndex]);
+
+		if(referenceFitness2<referenceFitness1){
+		fitnessProbMod = fitnessProbMod -1;
+		} else {
+		i=1000;
+		}
+	
+		if(prior == referenceFitness2) i=100;
+		
+		prior = referenceFitness2;
+		
+		}
+		
+
+		for(i=1; i<priorAvgsArray.length;i++){
+		currentIndex = startIndex-i;
+		referenceFitness2 = parseFloat(priorAvgsArray[currentIndex]);
+
+		if(referenceFitness2>=referenceFitness1){
+		fitnessProbMod = fitnessProbMod + 1;
+		} else {
+		i=1000;
+		}
+
+
+		}
+		
+		
+
+		fitnessProbMod = 0.33 * fitnessProbMod;
+		
+		if(currentGenNum/3 != parseInt(currentGenNum/3)) fitnessProbMod=0;
+		
+		if(fitnessProbMod > 1.5) fitnessProbMod=0;
+	
+
+print(fitnessProbMod);
+}
+
+
+numExtinctGen = 1;
+numRecoverGen = 2;
+
+if(massExtinction != "none" && currentGenNum != 0 && currentGenNum > numExtinctGen+numRecoverGen){
+
+massExtinction = parseFloat(massExtinction);
+
+for(l=0;l<numExtinctGen;l++){
+if((currentGenNum-l)/massExtinction == parseInt((currentGenNum-l)/massExtinction)){
+segmentationUnit = "integer";
+segmentationBreeding = 4;
+segmentationDeletion = populationSize-4;
+segmentationMutate = 0;
+}}
+
+
+
+for(l=0;l<numRecoverGen;l++){
+if((currentGenNum-l-numExtinctGen)/massExtinction == parseInt((currentGenNum-l-numExtinctGen)/massExtinction)){
+segmentationUnit = "fraction";
+segmentationBreeding = 0.66;
+segmentationDeletion = 0.66;
+segmentationMutate = 0;
+
+
+//Gametic Mutation
+pointMutationRateGamete=pointMutationRateGamete*3;
+lvl1MutationRateGamete=lvl1MutationRateGamete*3;
+lvl2MutationRateGamete=lvl2MutationRateGamete*3;
+linkedMutationProbGamete=linkedMutationProbGamete*3;
+	
+//Offspring Mutation
+pointMutationRateOffspring=pointMutationRateOffspring*3;
+lvl1MutationRateOffspring=lvl1MutationRateOffspring*3;
+lvl2MutationRateOffspring=lvl2MutationRateOffspring*3;
+	
+//Clone Mutation	
+pointMutationRateClone=pointMutationRateClone*3;
+lvl1MutationRateClone=lvl1MutationRateClone*3;
+lvl2MutationRateClone=lvl2MutationRateClone*3;
+}}
+
+}
+
+
+
+
+
+
+if(currentGenNum<generationCap){
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 1. Extracting the Genomes and Ranking Individuals
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//===========================================================================
+//Obtain Genomes
+//===========================================================================
+
+genesString=File.openAsString(currentGeneration );	// open txt data file
+genesRows=split(genesString , "\n");
+
+geneNames = split(genesRows[0], "\t");
+
+populationArray=Array.deleteIndex(genesRows,0);
+
+
+
+//===========================================================================
+//Obtain Rankings
+//===========================================================================
+if(File.exists(currentFitness)){
+fitnessString=File.openAsString(currentFitness );	// open txt data file
+fitnessRows=split(fitnessString , "\n");
+
+Temp=Array.deleteIndex(fitnessRows,0);
+
+fitnessArray = newArray(Temp.length);
+idArray  = newArray(Temp.length);
+
+for(i=0; i<fitnessArray.length; i++){
+tStr = split(Temp[i], "\t");
+//Array.print(tStr);
+tStr1 = tStr[1];
+tStr2 = tStr[0];
+fitnessArray[i] = parseFloat(tStr1);
+idArray[i] =toString(tStr2);
+} // (i)
+
+fitnessArrayTemp = Array.copy(fitnessArray);
+idArrayTemp = Array.copy(idArray);
+
+lengthRecall = Array.copy(idArray);
+
+
+fitnessArray = newArray();
+idArray  = newArray();
+
+
+
+while(lengthRecall.length > 0){
+IDTemp = lengthRecall[0];
+
+idArray=Array.concat(idArray,IDTemp);
+
+avg=0;
+n=0;
+for(i=0;i<idArrayTemp.length;i++){
+if(idArrayTemp[i]==IDTemp){
+avg=avg+fitnessArrayTemp[i];
+n=n+1;
+}
+}
+
+
+fitnessArray=Array.concat(fitnessArray,avg/n);
+lengthRecall=Array.deleteValue(lengthRecall,IDTemp);
+}
+
+
+
+Array.sort(fitnessArray,idArray);
+
+Array.getStatistics(fitnessArray, minFitness, maxFitness, meanFitness, stdDevFitness);
+
+
+
+
+
+
+
+
+//===========================================================================
+//Rank Individuals by Fitness
+//===========================================================================
+
+
+
+rankedPopulationArray = newArray(fitnessArray.length);
+rankedFitnessArray = newArray(fitnessArray.length);
+rankedIDArray = newArray(fitnessArray.length);
+
+for(i=0; i<fitnessArray.length; i++){
+tID = idArray[i];
+
+tIndex2 = findID(populationArray, tID);
+
+rankedPopulationArray[i] = populationArray[tIndex2];
+rankedFitnessArray[i]  = fitnessArray[i];
+
+} // (i)
+
+
+
+
+
+
+// Reorganise Ranks of Sex is inabled
+
+
+
+if(inableSex == 1) {
+
+rankedMalePopulation = newArray(rankedPopulationArray.length/2);
+rankedFemalePopulation = newArray(rankedPopulationArray.length/2);
+
+j=0;
+for(i=0; i<rankedPopulationArray.length; i++){
+tStr1 = rankedPopulationArray[i];
+tArray = split(tStr1, "\t");
+tStr2 = tArray[3];
+	if(tStr2 == "m"){
+	rankedMalePopulation[j] = tStr1;
+	j=j+1;
+	}
+} // (i)
+
+j=0;
+for(i=0; i<rankedPopulationArray.length; i++){
+tStr1 = rankedPopulationArray[i];
+tArray = split(tStr1, "\t");
+tStr2 = tArray[3];
+	if(tStr2 == "f"){
+	rankedFemalePopulation[j] = tStr1;
+	j=j+1;
+	}
+} // (i)
+
+
+for(i=0; i<rankedPopulationArray.length; i++){
+if(i/2 == parseInt(i/2)){
+rankedPopulationArray[i] = rankedMalePopulation[ floor(i/2) ];
+}
+
+if(i/2 != parseInt(i/2)){
+rankedPopulationArray[i] = rankedFemalePopulation[ floor(i/2) ];
+}
+
+} // (i)
+
+
+} // (inableSex)
+
+
+//===========================================================================
+//Poly Individuals
+//===========================================================================
+
+polyBreeders = newArray();
+
+Array.getStatistics(rankedFitnessArray, min, max, mean, stdDev) ;
+
+if(polyPoolSystem == "Outlier"){
+
+for(i=0;i<rankedFitnessArray.length;i++){
+if(rankedFitnessArray[i] - (max-min)/2 > stdDev*1.25){
+
+		fitIndv= split(rankedPopulationArray[i], "\t");
+		fitID = fitIndv[0];
+		fitID = split(fitID,"_");
+		fitGen = fitID[0];
+		fitGen = parseFloat(replace(fitGen,"Gen",""));
+		
+		fitMut = fitID[1];
+		fitMut = parseFloat(replace(fitMut,"Mut",""));
+		
+		fitNum = fitGen+fitMut;
+		
+		print(fitNum,currentGenNum);
+
+		if(fitNum<currentGenNum && fitNum>currentGenNum-5){
+		polyBreeders=Array.concat(polyBreeders,rankedPopulationArray[i]);
+		}
+ 
+	}
+	
+	
+}
+}
+
+if(polyPoolSystem == "Top"){
+	polyBreeders=Array.concat(polyBreeders,rankedPopulationArray[rankedPopulationArray.length-1]);
+	polyBreeders=Array.concat(polyBreeders,rankedPopulationArray[rankedPopulationArray.length-2]);
+	polyBreeders=Array.concat(polyBreeders,rankedPopulationArray[rankedPopulationArray.length-3]);
+	polyBreeders=Array.concat(polyBreeders,rankedPopulationArray[rankedPopulationArray.length-4]);
+}
+
+
+if(adaptiveMatingPool == 1){
+
+	betterArray = newArray();
+	worseArray = newArray();
+	
+	Array.getStatistics(rankedFitnessArray, min, max, mean, stdDev) ;
+	
+	median=min+(max-min)/2;
+
+	for(i=0;i<rankedFitnessArray.length;i++){
+	if(rankedFitnessArray[i] - mean >= stdDev/2){
+			betterArray=Array.concat(betterArray,rankedPopulationArray[i]);
+		}
+		
+	if(rankedFitnessArray[i] < median){
+	worseArray=Array.concat(worseArray,rankedPopulationArray[i]);
+	}
+
+
+	}
+	
+	if(segmentationUnit == "fraction"){
+	better = betterArray.length;
+	if(betterArray.length<4) 	better=4;
+	segmentationBreeding = 	better  / populationSize;;
+	} 
+	
+	if(segmentationUnit == "integer"){
+	better = betterArray.length;
+	if(betterArray.length<4) 	better=4;
+	segmentationBreeding = betterArray.length;
+	}
+		
+
+	print("Num Breed", better);
+
+}
+
+
+
+
+
+
+//===========================================================================
+//Delete Individuals and Calculate Breeding Loops 
+//===========================================================================
+
+
+
+if(segmentationUnit == "fraction"){
+segmentationDeletion = parseInt((segmentationDeletion)*populationSize);
+segmentationBreeding = parseInt((segmentationBreeding)*populationSize);
+segmentationMutate = parseInt((segmentationMutate)*populationSize); 
+}
+
+segmentationNotBreeding = populationSize - segmentationBreeding;
+segmentationSurviving = populationSize - segmentationDeletion;
+
+SurvivingPopulation = Array.slice(rankedPopulationArray,segmentationDeletion,populationSize+1);
+BreedingPopulation = Array.slice(rankedPopulationArray,segmentationNotBreeding,populationSize+1);
+
+
+if(inableSex==1){
+BreedingMales = Array.slice(rankedMalePopulation,segmentationNotBreeding/2,populationSize/2);
+
+BreedingFemales = Array.slice(rankedFemalePopulation,segmentationNotBreeding/2,populationSize/2);
+}
+
+segmentationNonBreedSurv = segmentationSurviving - segmentationBreeding;
+
+
+repeatMatings = segmentationDeletion/segmentationBreeding;
+
+
+
+//=============================================================
+// Breeding Pool Selection, EXPERIMENTAL doesn't work with sex
+//=============================================================
+// random, rand individuals can breed
+// binary, binary choice selection
+// roulette, biased towards the best
+// ranked, ranked order
+
+
+
+// Binary Selection
+//-------------------
+
+if(poolAssignmentSystem == "binary_tournament"){
+
+BreedingPopulation2 = newArray(segmentationBreeding);
+
+tPool = Array.copy(rankedPopulationArray);
+
+for(i=0; i<segmentationBreeding; i++){
+
+	
+	index1 = parseInt(random()*(tPool.length-1));
+	index2 = index1;
+	while(index2 == index1){
+	index2 = parseInt(random()*(tPool.length-1));
+	}
+
+	str1=tPool[index1];
+	str2=tPool[index2];
+
+	if(index2 > index1) BreedingPopulation2 [i] = str2;
+	if(index1 > index2) BreedingPopulation2 [i] = str1;
+	
+	
+	if(polySystem!="pool") tPool=Array.deleteValue(tPool, str2);
+	if(polySystem!="pool") tPool=Array.deleteValue(tPool, str1);
+	
+	//(Duplicate if it runs out
+	if(tPool.length <= 1){
+	tPool = Array.copy(rankedPopulationArray);
+	}
+
+} // (i)
+
+BreedingPopulation = BreedingPopulation2;
+
+} // (Binary Tournament)
+
+
+// Random Selection
+//--------------------
+
+if(poolAssignmentSystem == "random_selection"){
+
+BreedingPopulation2 = Array.copy(BreedingPopulation);
+
+tPool = Array.copy(rankedPopulationArray);
+
+for(i=0; i<BreedingPopulation2.length; i++){
+
+	
+	index1 = parseInt(random()*(tPool.length-1));
+
+	str1=tPool[index1];
+
+	BreedingPopulation2 [i] = str1;
+	
+	if(polySystem!="pool") tPool=Array.deleteValue(tPool, str1);
+	
+	//(Duplicate if it runs out
+	if(tPool.length <= 1){
+	tPool = Array.copy(rankedPopulationArray);
+	}
+
+} // (i)
+
+BreedingPopulation = BreedingPopulation2;
+
+} // (Random Selection)
+
+
+
+// Roulette Selection
+//--------------------
+
+if(poolAssignmentSystem == "ranked_roulette"){
+
+BreedingPopulation2 = newArray(segmentationDeletion);
+
+
+
+tPool = Array.copy(rankedPopulationArray);
+
+BreedingPopulation2 [0] = tPool[0];
+if(polySystem!="pool") tPool=Array.deleteIndex(tPool, 0);
+
+for(i=1; i<segmentationDeletion; i++){
+
+	index1 = floor(1-Math.pow(random(),3))*(tPool.length-1));
+
+	str1=tPool[index1];
+
+	BreedingPopulation2 [i] = str1;
+	
+	if(polySystem!="pool") tPool=Array.deleteValue(tPool, str1);
+	
+	//(Duplicate if it runs out
+	if(tPool.length <= 1){
+	tPool = Array.copy(rankedPopulationArray);
+	}
+
+} // (i)
+
+BreedingPopulation = BreedingPopulation2;
+
+} // (roulette Selection)
+
+
+
+// Biased Roulette Selection
+//--------------------
+
+if(poolAssignmentSystem == "biased_roulette"){
+
+
+
+Array.getStatistics(rankedFitnessArray, min, max, mean, stdDev);
+
+sumFitness = 0;
+	for(i=0;i<populationSize; i++){
+	sumFitness = sumFitness + parseFloat(rankedFitnessArray[i]);
+	}
+	
+inverseFitnessArray = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	inverseFitnessArray[i] = sumFitness / rankedFitnessArray[i];
+	}
+
+inverseSum = 0;
+	for(i=0;i<populationSize; i++){
+	inverseSum = inverseSum + inverseFitnessArray[i];
+	}
+	
+normalisedFitnessArray = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	normalisedFitnessArray[i] = (inverseFitnessArray[i] / inverseSum);
+	}
+	
+	
+
+	
+	
+cumulativeTotal = 0;
+cumulativeProportions  = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	cumulativeProportions[i] = normalisedFitnessArray[i] + cumulativeTotal;
+	cumulativeTotal = cumulativeTotal + normalisedFitnessArray[i];
+	}
+	
+
+
+BreedingPopulation2 = newArray(segmentationDeletion);
+BreedingRanks = newArray(segmentationDeletion);
+
+tProportions  = Array.copy(cumulativeProportions);
+tPool = Array.copy(rankedPopulationArray);
+tFitness = Array.copy( rankedFitnessArray);
+
+for(i=0; i<BreedingPopulation2.length; i++){
+
+	while(BreedingRanks[i]==0){
+
+		value = pow(random(),1);
+		
+		indexChoice = 0;
+		pValue = 1;
+		for(j=0;j<tProportions.length;j++){
+		
+			tIndex = (tProportions.length-1)-j;
+			
+			if(value > (tProportions [tIndex]) && value <= pValue){
+			
+			BreedingPopulation2[i] = tPool[(tPool.length-1)-tIndex];
+			BreedingRanks[i] = tFitness[tIndex];
+			pValue = tProportions [tIndex];
+			
+			if(polySystem!="pool") {
+			tProportions = Array.deleteIndex(tProportions,tIndex);
+			tPool = Array.deleteIndex(tPool,tIndex);
+			tFitness = Array.deleteIndex(tFitness,tIndex);
+			
+			}
+			
+					j= 100;
+					
+					
+			}
+		}
+
+	}
+
+} // (i)
+
+BreedingPopulation = BreedingPopulation2;
+
+
+} // (poly roulette Selection)
+
+
+
+
+
+
+
+
+
+
+// Alpha Roulette Selection
+//--------------------
+
+if(poolAssignmentSystem == "alpha_roulette"){
+
+
+
+Array.getStatistics(rankedFitnessArray, min, max, mean, stdDev);
+
+sumFitness = 0;
+	for(i=0;i<populationSize; i++){
+	sumFitness = sumFitness + parseFloat(rankedFitnessArray[i]);
+	}
+	
+inverseFitnessArray = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	inverseFitnessArray[i] = sumFitness / rankedFitnessArray[i];
+	}
+
+inverseSum = 0;
+	for(i=0;i<populationSize; i++){
+	inverseSum = inverseSum + inverseFitnessArray[i];
+	}
+	
+normalisedFitnessArray = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	normalisedFitnessArray[i] = (inverseFitnessArray[i] / inverseSum);
+	}
+	
+	
+
+	
+	
+cumulativeTotal = 0;
+cumulativeProportions  = newArray(populationSize);
+	for(i=0;i<populationSize; i++){
+	cumulativeProportions[i] = normalisedFitnessArray[i] + cumulativeTotal;
+	cumulativeTotal = cumulativeTotal + normalisedFitnessArray[i];
+	}
+	
+
+
+BreedingPopulation2 = newArray(segmentationDeletion);
+BreedingRanks = newArray(segmentationDeletion);
+
+tProportions  = Array.copy(cumulativeProportions);
+tPool = Array.copy(rankedPopulationArray);
+tFitness = Array.copy( rankedFitnessArray);
+
+
+BreedingPopulation2[0] = tPool[tPool.length-1];
+BreedingPopulation2[1] = tPool[tPool.length-2];
+
+for(i=2; i<BreedingPopulation2.length; i++){
+
+	while(BreedingRanks[i]==0){
+
+		value = pow(random(),1);
+		
+		indexChoice = 0;
+		pValue = 1;
+		for(j=0;j<tProportions.length;j++){
+		
+			tIndex = (tProportions.length-1)-j;
+			
+			if(value > (tProportions [tIndex]) && value <= pValue){
+			
+			BreedingPopulation2[i] = tPool[(tPool.length-1)-tIndex];
+			BreedingRanks[i] = tFitness[tIndex];
+			pValue = tProportions [tIndex];
+			
+			if(polySystem!="pool") {
+			tProportions = Array.deleteIndex(tProportions,tIndex);
+			tPool = Array.deleteIndex(tPool,tIndex);
+			tFitness = Array.deleteIndex(tFitness,tIndex);
+			
+			}
+			
+					j= 100;
+					
+					
+			}
+		}
+
+	}
+
+} // (i)
+
+BreedingPopulation = BreedingPopulation2;
+
+
+} // (poly roulette Selection)
+
+
+
+
+
+
+
+
+
+// Ranked Selection
+//--------------------
+
+
+
+if(poolAssignmentSystem == "ranked_choice"){
+
+BreedingPopulation2 = Array.copy(BreedingPopulation);
+
+// automatically ranked
+
+} // (Raked Selection)
+
+
+
+
+//===========================================================================
+//Calculate Deviation and Direction for each Gene
+//===========================================================================
+meanGeneValArray = newArray(geneNames.length);
+stdvGeneValArray = newArray(geneNames.length);
+
+maxGeneValArray = newArray(geneNames.length);
+minGeneValArray = newArray(geneNames.length);
+
+
+meanGeneRankArray = newArray(geneNames.length);
+stdvGeneRankArray = newArray(geneNames.length);
+distGeneRankArray = newArray(geneNames.length);
+rangeGeneRankArray = newArray(geneNames.length);
+
+
+
+mutationDirShift = newArray(geneNames.length);
+mutationDirLog = newArray(geneNames.length);
+pointProbMod = newArray(geneNames.length);
+mutationStrMod = newArray(geneNames.length);
+
+crossoverProbMod = newArray(geneNames.length);
+
+//All Population
+tArray=newArray(rankedPopulationArray.length);
+for(j=0; j<geneNames.length; j++){
+for(i=0; i<rankedPopulationArray.length; i++){
+tGenes = split(rankedPopulationArray[i],"\t");
+tArray[i] = parseFloat(tGenes[j]);
+} // (i)
+
+Array.getStatistics(tArray, Bmin, Bmax, Bmean, BstdDev) ;
+
+meanGeneValArray[j] =  Bmean;
+stdvGeneValArray[j] = BstdDev;
+
+maxGeneValArray[j] = Bmax;
+minGeneValArray[j] = Bmin;
+
+
+fullRange = Bmax-Bmin;
+
+rArray = Array.slice(tArray, tArray.length-segmentationBreeding, tArray.length);
+Array.getStatistics(rArray, Rmin, Rmax, Rmean, RstdDev) ;
+
+
+dif= Rmean-Bmean;
+logArray = newArray();
+for(z=0;z<rArray.length;z++){
+direction = rArray[z]-Bmean;
+amount = Math.sqrt(Math.sqr( rArray[z]-Bmean));
+
+	if(amount>0){
+
+	if(direction<0) direction=-1;
+	if(direction>0) direction= 1;
+
+	logArray = Array.concat(logArray, direction);
+	
+	} 
+	
+	
+	
+	
+}
+
+
+wArray = Array.slice(tArray, 0, tArray.length*(0.25));
+Array.getStatistics(wArray, Wmin, Wmax, Wmean, WstdDev) ;
+
+mArray = Array.slice(tArray, tArray.length*(0.25), tArray.length*(0.75));
+Array.getStatistics(mArray, Mmin, Mmax, Mmean, MstdDev) ;
+
+
+mutationDirLog[j] = String.join(logArray, "\t");
+
+
+if(isNaN(RstdDev)) RstdDev=0;
+
+meanGeneRankArray[j] =  Rmean;
+stdvGeneRankArray[j] = RstdDev;
+distGeneRankArray[j] = Math.sqrt(Math.sqr(Rmean-Mmean));
+rangeGeneRankArray[j] = Rmax-Rmin;
+
+range = Rmax-Rmin;
+difProb1 = Math.sqrt(Math.sqr(Rmean-Mmean));
+difProb2 = Math.sqrt(Math.sqr(Wmean-Mmean));
+
+relativeDifProb = (1/fullRange) *  difProb1;
+relativeRange = (1/fullRange) * range;
+
+relativeDeviation = (1/BstdDev) *  RstdDev;
+
+mutationDirShift[j] = Rmean-Bmean;
+
+probMod = (Math.pow(relativeDeviation,2)*0.15)-(Math.pow(difProb2,2)*0.1);
+
+
+probMin = 0.10;
+probMax = 1.0;
+
+probReduction = ((1-pow(1-fullRange,2))*(probMax-probMin))+probMin;
+
+probMod = probMod * probReduction;
+
+if(isNaN(probMod)) probMod=0;
+
+pointProbMod[j] = probMod;
+
+mutationStrMod[j] = 1;
+
+crossoverProbMod[j] = relativeRange;
+
+
+} // (j)
+
+
+tArray = Array.slice(stdvGeneRankArray,4,stdvGeneRankArray.length);
+Array.getStatistics(tArray, Smin, Smax, Smean, SstdDev); 
+
+print(".");
+print("Generation",currentGenNum);
+Array.print(geneNames);
+Array.print(pointProbMod);
+Array.print(mutationDirShift);
+Array.print(mutationStrMod);
+Array.print(crossoverProbMod);
+
+avgGeneVariation = Smean;
+maxGeneVariation = Smax;
+
+if(isNaN(avgGeneVariation)) avgGeneVariation =0.01;
+
+print("AvgVar: "+ avgGeneVariation);
+
+
+tArray = Array.slice(stdvGeneValArray,4,stdvGeneValArray.length);
+Array.getStatistics(tArray, Smin, Smax, Smean, SstdDev) ;
+
+tArray = Array.slice(distGeneRankArray,4,distGeneRankArray.length);
+Array.getStatistics(tArray, Mmin, Mmax, Mmean, MstdDev) ;
+
+varianceMean = Smean;
+
+lvlProbMod =  Math.pow(1-varianceMean,2);
+
+if(isNaN(lvlProbMod)) lvlProbMod=0;
+
+exploreThreshold = Smean+SstdDev*0.5;
+directionThreshold = Smean-SstdDev*0.5;
+distanceThreshold  = Mmean + MstdDev*0.5;
+similarityThreshold = Mmean - MstdDev*0.5;
+
+LstdvSelection = newArray();
+HstdvSelection = newArray();
+HchangeSelection = newArray();
+LchangeSelection = newArray();
+
+
+for(j=0;j<geneNames.length;j++){
+
+if(stdvGeneRankArray[j]>(exploreThreshold) ){
+HstdvSelection = Array.concat(HstdvSelection, geneNames[j]);
+}
+
+if(stdvGeneRankArray[j]<directionThreshold){
+LstdvSelection = Array.concat(LstdvSelection, geneNames[j]);
+}
+
+
+if(distGeneRankArray[j] > distanceThreshold){
+HchangeSelection  = Array.concat(HchangeSelection , geneNames[j]);
+}
+
+if(distGeneRankArray[j] < similarityThreshold){
+LchangeSelection  = Array.concat(LchangeSelection , geneNames[j]);
+}
+
+}
+
+
+
+tArray = Array.slice(pointProbMod,4,pointProbMod.length);
+Array.getStatistics(tArray, min, max, Probmean, stdDev) ;
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 2. Identifying genes by function and unit
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//===========================================================================
+//ID the Genome
+//===========================================================================
+// Locates non-coding elements, functional groups and unit groups
+
+
+
+
+
+lvl1_Groups = newArray();
+lvl2_Groups = newArray();
+lvl3_Groups = newArray();
+
+lvl1_Indices = newArray();
+lvl2_Indices = newArray();
+lvl3_Indices = newArray();
+
+tArray1 = Array.slice(geneNames,4,geneNames.length);
+
+//lvl1 Groups
+//---------------------
+tArray1 = Array.slice(geneNames,4,geneNames.length);
+
+while(tArray1.length>0){
+	ref1 = tArray1[0];
+	arry1 = split(ref1, "_");
+if(arry1.length>0){
+	ref2 = arry1[0];
+	
+tArray2=tArray1;
+
+nameJoinArray  = newArray();
+indexJoinArray = newArray();
+	
+	for(j=0;j<tArray2.length;j++){
+	
+	com1 = tArray2[j];
+	arry2 = split(com1, "_");
+	com2 = arry2[0];
+	
+	if(ref2 == com2){
+		tArray1 = Array.deleteValue(tArray1, com1);
+		tIndex = index(geneNames, com1);
+		nameJoinArray = Array.concat(nameJoinArray, com1);
+		indexJoinArray = Array.concat(indexJoinArray, tIndex);
+		}
+	}
+
+	if(nameJoinArray.length>1){
+	lvl1_Groups = Array.concat(lvl1_Groups, String.join(nameJoinArray,"."));
+	lvl1_Indices = Array.concat(lvl1_Indices, String.join(indexJoinArray,"."));
+	}
+	
+} else{
+tArray1 = Array.deleteIndex(tArray1,0);
+}
+}
+
+Array.print(lvl1_Groups);
+
+
+
+//lvl2 Groups
+//---------------------
+tArray1 = Array.slice(geneNames,4,geneNames.length);
+
+while(tArray1.length>0){
+	ref1 = tArray1[0];
+	arry1 = split(ref1, "_");
+if(arry1.length==3){
+	ref2 = arry1[1];
+	ref3 = arry1[0];
+	
+tArray2=tArray1;
+
+nameJoinArray  = newArray();
+indexJoinArray = newArray();
+	
+	for(j=0;j<tArray2.length;j++){
+	
+	com1 = tArray2[j];
+	arry2 = split(com1, "_");
+	com2 = arry2[1];
+	com3 = arry2[0];
+	
+	if(ref2 == com2 && ref3 == com3){
+		tArray1 = Array.deleteValue(tArray1, com1);
+		tIndex = index(geneNames, com1);
+		nameJoinArray = Array.concat(nameJoinArray, com1);
+		indexJoinArray = Array.concat(indexJoinArray, tIndex);
+		}
+	}
+
+	if(nameJoinArray.length>1){	
+	lvl2_Groups = Array.concat(lvl2_Groups, String.join(nameJoinArray,"."));
+	lvl2_Indices = Array.concat(lvl2_Indices, String.join(indexJoinArray,"."));
+	}
+} else{
+tArray1 = Array.deleteIndex(tArray1,0);
+}
+}
+
+
+Array.print(lvl2_Groups);
+
+//lvl3 Groups
+//---------------------
+tArray1 = Array.slice(geneNames,4,geneNames.length);
+
+while(tArray1.length>0){
+	ref1 = tArray1[0];
+	arry1 = split(ref1, "_");
+if(arry1.length==3){
+	ref2 = arry1[2];
+	ref3 = arry1[0];
+	
+tArray2=tArray1;
+
+nameJoinArray  = newArray();
+indexJoinArray = newArray();
+	
+	for(j=0;j<tArray2.length;j++){
+	
+	com1 = tArray2[j];
+	arry2 = split(com1, "_");
+	com2 = arry2[2];
+	com3 = arry2[0];
+	
+	if(ref2 == com2 && ref3 == com3){
+		tArray1 = Array.deleteValue(tArray1, com1);
+		tIndex = index(geneNames, com1);
+		nameJoinArray = Array.concat(nameJoinArray, com1);
+		indexJoinArray = Array.concat(indexJoinArray, tIndex);
+		}
+	}
+
+	if(nameJoinArray.length>1){
+	lvl3_Groups = Array.concat(lvl3_Groups, String.join(nameJoinArray,"."));
+	lvl3_Indices = Array.concat(lvl3_Indices, String.join(indexJoinArray,"."));
+	}
+
+} else{
+tArray1 = Array.deleteIndex(tArray1,0);
+}
+}
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 3. Pair up Individuals according to the mating system selected
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+if(BreedingPopulation.length>=2){ // Only perform if there is a viable 
+
+//Make sure segmentation deletion is always even
+if(segmentationDeletion/2 != parseInt(segmentationDeletion/2)) segmentationDeletion=segmentationDeletion+1;
+
+assignedMatingPairs = newArray(segmentationDeletion);
+
+if(inableSex==1){
+fittestMale=BreedingMales[BreedingMales.length-1];
+fittestFemale=BreedingFemales[BreedingFemales.length-1];
+}
+
+fittestIndividual1 = rankedPopulationArray[rankedPopulationArray.length-1];
+fittestIndividual2 = rankedPopulationArray[rankedPopulationArray.length-2];
+
+if(matingAssignmentSystem == "adaptive"){
+
+	matingAssignmentSystem = "dissort-biased";
+
+	if(avgGeneVariation>0.1){
+	matingAssignmentSystem = "random";
+	}
+	
+	if(avgGeneVariation>0.2){
+	matingAssignmentSystem = "assort-biased";
+	}
+
+	
+
+print(matingAssignmentSystem);
+
+
+}
+
+
+if(matingAssignmentSystem == "flipflop"){
+
+	r = random();
+	
+	matingAssignmentSystem = "assortative";
+
+	if(r>=0.5){
+	matingAssignmentSystem = "disassortative";
+	}
+	
+	
+print(matingAssignmentSystem);
+
+
+}
+
+
+tempPolyBreeders = Array.copy(polyBreeders);
+
+
+
+//===========================================================================
+// Rank Based Mating
+//===========================================================================
+
+if(matingAssignmentSystem == "ranked" || matingAssignmentSystem ==  "rank-biased"|| matingAssignmentSystem == "inverse"|| matingAssignmentSystem == "inverse-biased"|| matingAssignmentSystem == "random"){
+
+if(inableSex==1){
+
+tMalePool = Array.copy(BreedingMales);
+tFemalePool = Array.copy(BreedingFemales);
+
+for(i=0; i<segmentationDeletion; i++){
+
+	index1 = tMalePool.length-1;
+	index2 = tFemalePool.length-1;
+
+	str1=tMalePool[index1];
+	str2=tFemalePool[index2];
+
+	assignedMatingPairs[i] = str1;
+	i=i+1;
+	assignedMatingPairs[i] = str2;
+
+	tMalePool=Array.deleteIndex(tMalePool, index1);
+	tFemalePool=Array.deleteIndex(tFemalePool, index2);
+
+	if(polySystem == "fittest"){
+	if(str1==fittestMale) tMalePool=Array.concat(tMalePool,fittestMale,);
+	if(str2==fittestFemale) tFemalePool=Array.concat(tFemalePool,fittestFemale);
+	}
+		
+	if(polySystem == "male"){
+	tMalePool = Array.copy(BreedingMales);
+	}
+	
+	if(polySystem == "female"){
+	tFemalePool = Array.copy(BreedingFemales);
+	}
+	
+	if(polySystem == "all"){
+	tMalePool = Array.copy(BreedingMales);
+	tFemalePool = Array.copy(BreedingFemales);
+	}
+
+	//(Duplicate if it runs out
+	if(tMalePool.length == 0) tMalePool = Array.copy(BreedingMales);
+	if(tFemalePool.length == 0)tFemalePool = Array.copy(BreedingFemales);
+
+} // (i)
+
+
+
+}  // (sex type = 1)
+
+else
+
+{
+
+rankedBreedingPop = newArray(BreedingPopulation.length);
+rankedBreedingOrder = newArray(BreedingPopulation.length);
+
+for(i=0;i<BreedingPopulation.length;i++){
+rankedBreedingOrder[i] = index(rankedPopulationArray, BreedingPopulation[i]);
+}
+
+rankedBreedingOrder = Array.rankPositions(rankedBreedingOrder );
+for(i=0;i<BreedingPopulation.length;i++){
+tIndex = rankedBreedingOrder[i];
+rankedBreedingPop[i] = BreedingPopulation[tIndex];
+}
+
+BreedingPopulation = rankedBreedingPop;
+
+
+tPool = Array.copy(BreedingPopulation);
+
+tPool2 = Array.copy(BreedingPopulation);
+
+for(i=0; i<segmentationDeletion; i++){
+
+	tPool = Array.copy(tPool2);
+
+	//Individual 1
+
+	if(polySystem != "fittestChose"){
+
+	index1 = tPool.length-1;
+	
+	str1=tPool[index1];
+	
+	tPool=Array.deleteValue(tPool, str1);
+	tPool2 = Array.deleteIndex(tPool2,index1);
+		
+
+	}
+	
+	
+	if(polySystem == "fittestChose"){
+	
+	if(polyBreeders.length==1 && i > 6) polyBreeders = newArray();
+	
+	if(polyBreeders.length>0){
+	
+	
+	if(tempPolyBreeders.length<1) tempPolyBreeders = Array.copy(polyBreeders);
+	
+		index1 = random()*tempPolyBreeders.length;
+		str1 = tempPolyBreeders[index1];
+		
+	tempPolyBreeders = Array.deleteValue(tempPolyBreeders, str1);
+	
+	
+	} else {
+	
+		index1 = tPool.length-1;
+		
+		str1=tPool[index1];
+		
+		tPool=Array.deleteValue(tPool, str1);
+		tPool2 = Array.deleteIndex(tPool2,index1);
+		
+		
+		}
+	}
+	
+	
+	assignedMatingPairs[i] = str1;
+
+
+	if(tPool.length <= 1){
+	tPool2 = Array.copy(BreedingPopulation);
+	tPool = Array.copy(tPool2);
+	}
+	
+
+
+	//Individual 2
+	
+	rankIndex = tPool.length-1;
+	inverseIndex =  0;
+	rBiasedIndex =  (1-Math.pow(random(),2))*(tPool.length-1);
+	iBiasedIndex = (Math.pow(random(),2))*(tPool.length-1);
+	randomIndex = (tPool.length-1)*random();
+	
+	if(matingAssignmentSystem == "ranked"){
+	IndexChoice = rankIndex;
+	}
+	if(matingAssignmentSystem == "inverse"){
+	IndexChoice = inverseIndex;
+	}
+	if(matingAssignmentSystem == "rank-biased"){
+	IndexChoice =rBiasedIndex;
+	}
+	if(matingAssignmentSystem == "inverse-biased"){
+	IndexChoice =iBiasedIndex;
+	}
+	if(matingAssignmentSystem == "random"){
+	IndexChoice = randomIndex;
+	}
+	
+	
+	index2 = IndexChoice;
+	
+		i = i+1;
+		
+		str2=tPool[index2];
+		
+		assignedMatingPairs[i] = str2;
+
+		tPool=Array.deleteValue(tPool, str2);	
+		
+	// Clear Indexes
+	
+	tPool2=Array.deleteIndex(tPool2, index2);
+
+
+	//(Duplicate if it runs out
+	if(tPool2.length <= 2){
+	tPool2 = Array.copy(BreedingPopulation);
+	}
+
+
+
+
+} // (i)
+
+} // (sex type = 1)
+
+
+
+
+} // (ranked mating)
+
+
+
+
+
+
+//===========================================================================
+// Genotypic Mating
+//===========================================================================
+
+if(matingAssignmentSystem == "assortative" || matingAssignmentSystem == "disassortative"|| matingAssignmentSystem == "semi-sortative" || matingAssignmentSystem == "assort-biased" || matingAssignmentSystem == "dissort-biased" || matingAssignmentSystem == "semi-biased"){
+
+if(inableSex==1){
+
+tMalePool = Array.copy(BreedingMales);
+tFemalePool = Array.copy(BreedingFemales);
+
+for(i=0; i<segmentationDeletion; i++){
+
+	sexChoice=random();
+	if(polySystem=="male")sexChoice=0;
+	if(polySystem=="female")sexChoice=1;
+	
+	 //(male chooses)
+	if(sexChoice>0.5){
+	
+	index1 = random()*tMalePool.length;
+
+	str1=tMalePool[index1];
+	
+	tMalePool=Array.deleteIndex(tMalePool, index1);
+	
+	baseGenome = split(str1, "\t"); 
+	
+	tDistanceArray = Array.copy(tFemalePool);
+	tCompareArray = Array.copy(tFemalePool);
+	
+	} //(male choice)
+
+	else
+	
+	{ 
+	//(female chooses)
+	
+	index1 = random()*tFemalePool.length;
+
+	str1=tFemalePool[index1];
+	
+	tFemalePool=Array.deleteIndex(tFemalePool, index1);
+	
+	baseGenome = split(str1, "\t"); 
+	
+	tDistanceArray = Array.copy(tMalePool);
+	tCompareArray = Array.copy(tMalePool);
+	
+	} //(female choice)
+	
+		// Individuals
+		for(k=0; k<tCompareArray.length; k++){
+		
+		tempIndividual = tCompareArray[k];
+		tempGenome = split(tempIndividual, "\t");
+		
+		tDistance = 0; 
+		
+			// Gene Distance
+			for(j=4; j<geneNames.length;j++){
+			tIndex = j;
+			
+			baseVal = parseFloat(baseGenome[tIndex]);
+			tempVal = parseFloat(tempGenome[tIndex]);
+			
+			distVal = Math.sqrt(Math.sqr(baseVal-tempVal));
+			
+			tDistance = distVal + tDistance; 
+			
+			} // ( j )
+			
+		tDistance = tDistance/(geneNames.length-4);
+	
+		tDistanceArray[k] = tDistance;
+	
+		} // ( k )
+		
+	similarityRanking = Array.rankPositions(tDistanceArray);
+	
+	assortativeIndex = similarityRanking[0];
+	disassortativeIndex =  similarityRanking[similarityRanking.length-1];
+	semiIndex = similarityRanking[(similarityRanking.length-1)/2];
+	aBiasedIndex = similarityRanking[Math.pow(random(),2)*(similarityRanking.length-1)];
+	dBiasedIndex = similarityRanking[(1-Math.pow(random(),2))*(similarityRanking.length-1)];
+	sBiasedIndex = similarityRanking[(Math.pow(random()-0.5,2)*4 )*(similarityRanking.length-1)];
+	
+	if(matingAssignmentSystem == "assortative"){
+	IndexChoice = assortativeIndex;
+	}
+	if(matingAssignmentSystem == "disassortative"){
+	IndexChoice = disassortativeIndex;
+	}
+	if(matingAssignmentSystem == "semi-sortative"){
+	IndexChoice = semiIndex;
+	}
+	if(matingAssignmentSystem == "assort-biased"){
+	IndexChoice = aBiasedIndex;
+	}
+	if(matingAssignmentSystem == "dissort-biased"){
+	IndexChoice = dBiasedIndex;
+	}
+	if(matingAssignmentSystem == "semi-biased"){
+	IndexChoice = sBiasedIndex;
+	}
+	
+	//(male chooses)
+	if(sexChoice>0.5){
+	str2=tFemalePool[IndexChoice];
+	tFemalePool=Array.deleteIndex(tFemalePool, IndexChoice);
+	
+	
+		if(polySystem == "fittest"){
+		if(str1==fittestMale) tMalePool=Array.concat(tMalePool,fittestMale);
+		if(str2==fittestFemale) tFemalePool=Array.concat(tFemalePool,fittestFemale);
+		}
+			
+		if(polySystem == "male"){
+		tMalePool = Array.copy(BreedingMales);
+		}
+		
+		if(polySystem == "female"){
+		tFemalePool = Array.copy(BreedingFemales);
+		}
+		
+		if(polySystem == "all"){
+		tMalePool = Array.copy(BreedingMales);
+		tFemalePool = Array.copy(BreedingFemales);
+		}
+		
+	}
+	else
+	{
+	//(female chooses)
+	str2=tMalePool[IndexChoice];
+	tMalePool=Array.deleteIndex(tMalePool, IndexChoice);
+	
+		if(polySystem == "fittest"){
+		if(str2==fittestMale) tMalePool=Array.concat(tMalePool,fittestMale);
+		if(str1==fittestFemale) tFemalePool=Array.concat(tFemalePool,fittestFemale);
+		}
+			
+		if(polySystem == "male"){
+		tMalePool = Array.copy(BreedingMales);
+		}
+		
+		if(polySystem == "female"){
+		tFemalePool = Array.copy(BreedingFemales);
+		}
+		
+		if(polySystem == "all"){
+		tMalePool = Array.copy(BreedingMales);
+		tFemalePool = Array.copy(BreedingFemales);
+		}
+		
+
+	}
+	
+
+	assignedMatingPairs[i] = str1;
+	i=i+1;
+	assignedMatingPairs[i] = str2;
+	
+	
+	//(Duplicate if it runs out
+	if(tMalePool.length == 0) tMalePool = Array.copy(BreedingMales);
+	if(tFemalePool.length == 0)tFemalePool = Array.copy(BreedingFemales);
+
+
+} // (i)
+
+
+
+}  // (sex type = 1)
+
+else
+
+{
+
+tPool = Array.copy(BreedingPopulation);
+tPool2 = Array.copy(BreedingPopulation);
+
+for(i=0; i<segmentationDeletion; i++){
+
+	tPool = Array.copy(tPool2);
+
+
+	if(polySystem != "fittestChose"){
+
+	index1 = random()*tPool.length;
+	
+	str1=tPool[index1];
+	
+	tPool=Array.deleteValue(tPool, str1);
+	tPool2 = Array.deleteIndex(tPool2,index1);
+		
+
+	}
+	
+	if(polySystem == "fittestChose"){
+	
+	if(polyBreeders.length==1 && i > 6) polyBreeders = newArray();
+	
+	if(polyBreeders.length>0){
+	
+	if(tempPolyBreeders.length<1) tempPolyBreeders = Array.copy(polyBreeders);
+	
+		index1 = random()*tempPolyBreeders.length;
+		str1 =tempPolyBreeders[index1];
+		
+	tempPolyBreeders = Array.deleteValue(tempPolyBreeders, str1);
+	
+	
+	} else {
+	
+		index1 = random()*tPool.length;
+		
+		str1=tPool[index1];
+		
+		tPool=Array.deleteValue(tPool, str1);
+		tPool2 = Array.deleteIndex(tPool2,index1);
+		
+		
+		}
+	}
+	
+	baseGenome = split(str1, "\t"); 
+	
+	if(tPool.length <= 0){
+		tPool2 = Array.copy(BreedingPopulation);
+		tPool = Array.copy(tPool2);
+	}
+	
+	if(polySystem == "fittestPicked" && polyBreeders.length>0){
+	tPoolSave =  Array.copy(tPool);
+	tPool = Array.copy(polyBreeders);
+	}
+	
+	tDistanceArray = Array.copy(tPool);
+	
+		// Individuals
+		for(k=0; k<tPool.length; k++){
+		
+		tempIndividual = tPool[k];
+		tempGenome = split(tempIndividual, "\t");
+		
+		tDistance = 0; 
+		
+			// Gene Distance
+			for(j=4; j<geneNames.length;j++){
+			tIndex = j;
+			
+			baseVal = parseFloat(baseGenome[tIndex]);
+			tempVal = parseFloat(tempGenome[tIndex]);
+			
+			distVal = Math.sqrt(Math.sqr(baseVal-tempVal));
+			
+			tDistance = distVal + tDistance; 
+			
+			} // ( j )
+			
+		tDistance = tDistance/(geneNames.length-4);
+	
+		tDistanceArray[k] = tDistance;
+	
+		} // ( k )
+		
+
+		
+	similarityRanking = Array.rankPositions(tDistanceArray);
+	
+	assortativeIndex = similarityRanking[0];
+	disassortativeIndex =  similarityRanking[similarityRanking.length-1];
+	semiIndex = similarityRanking[(similarityRanking.length-1)/2];
+	aBiasedIndex = similarityRanking[Math.pow(random(),2)*(similarityRanking.length-1)];
+	dBiasedIndex = similarityRanking[(1-Math.pow(random(),2))*(similarityRanking.length-1)];
+	sBiasedIndex = similarityRanking[(Math.pow(random()-0.5,2)*4 )*(similarityRanking.length-1)];
+	
+	if(matingAssignmentSystem == "assortative"){
+	IndexChoice = assortativeIndex;
+	}
+	if(matingAssignmentSystem == "disassortative"){
+	IndexChoice = disassortativeIndex;
+	}
+	if(matingAssignmentSystem == "semi-sortative"){
+	IndexChoice = semiIndex;
+	}
+	if(matingAssignmentSystem == "assort-biased"){
+	IndexChoice = aBiasedIndex;
+	}
+	if(matingAssignmentSystem == "dissort-biased"){
+	IndexChoice = dBiasedIndex;
+	}
+	if(matingAssignmentSystem == "semi-biased"){
+	IndexChoice = sBiasedIndex;
+	}
+	
+	str2=tPool[IndexChoice];
+	
+	if(polySystem != "fittestPicked" || polyBreeders.length==0){
+	tPool=Array.deleteValue(tPool, str2);
+	tPool2 = Array.deleteIndex(tPool2,IndexChoice);
+	} else {
+	tPool = tPoolSave;
+	}
+	
+
+	assignedMatingPairs[i] = str1;
+	i=i+1;
+	assignedMatingPairs[i] = str2;
+	
+
+	
+	
+	//(Duplicate if it runs out
+	if(tPool2.length <= 1){
+	tPool2 = Array.copy(BreedingPopulation);
+	}
+
+
+
+
+} // (i)
+
+
+} // (sex type = 1)
+
+
+} // (assortative mating)
+
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 4. Gamete Mutation
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Applies Genetic Mutations to the offspring
+
+
+
+copiedMatingPairs = Array.copy(assignedMatingPairs);
+
+/*
+pointRateBase = pointMutationRateGamete/geneNames.length;
+lvl1RateBase = lvl1MutationRateGamete/lvl1_Groups.length;
+lvl2RateBase = lvl2MutationRateGamete/lvl2_Groups.length;
+linkedProbBase = linkedMutationProbGamete;
+*/
+
+pointRateBase = pointMutationRateGamete;
+lvl1RateBase = lvl1MutationRateGamete;
+lvl2RateBase = lvl2MutationRateGamete;
+linkedProbBase = linkedMutationProbGamete;
+
+
+unitMutationLog = newArray(copiedMatingPairs.length);
+
+
+
+//----------------------------------------
+// GENOMES
+//----------------------------------------
+
+
+for(k=0; k<assignedMatingPairs.length; k++){
+
+baseStr =  assignedMatingPairs[k];
+
+baseGenome1 = split(baseStr , "\t");
+
+if(k/2 == parseInt(k/2)){
+	baseStr = assignedMatingPairs[k+1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k+1;
+}
+if(k/2 != parseInt(k/2)){
+	baseStr =  assignedMatingPairs[k-1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k-1;
+}
+
+mutantGenome1 = Array.copy(baseGenome1);
+mutantGenome2 = Array.copy(baseGenome2);
+
+
+//----------------------------------------
+// MUTATION SYSTEMS
+//----------------------------------------
+
+probModPoint=0;
+probModLvl1=0;
+probModLvl2=0;
+probModLvl3=0;
+
+if(rankedProbability=="true"){
+//Get Rank
+//-----------------------
+individualRank = index(rankedPopulationArray, baseStr);
+
+relativeRank = individualRank/rankedPopulationArray.length;
+
+relativeRank = pow(1-relativeRank,2) / (segmentationBreeding/rankedPopulationArray.length);
+
+probModPoint = probModPoint + 0.005*relativeRank + relativeRank*pointMutationRateGamete;
+probModLvl1 = probModLvl1  + 0.005*relativeRank + relativeRank*lvl1MutationRateGamete;
+probModLvl2 = probModLvl2   + 0.005*relativeRank + relativeRank*lvl2MutationRateGamete;
+probModLvl3 = probModLvl3;
+
+
+} // (true)
+
+if(varianceProbability=="true"){
+
+probModPoint = probModPoint - (1-avgGeneVariation)*pointMutationRateGamete;
+probModLvl1 = probModLvl1  - (1-avgGeneVariation)*lvl1MutationRateGamete;
+probModLvl2 = probModLvl2 - (1-avgGeneVariation)*lvl2MutationRateGamete;
+probModLvl3 = probModLvl3;
+
+} //(true);
+	
+if(fitnessProbability=="true"){
+
+probModPoint = probModPoint + fitnessProbMod*pointMutationRateGamete;
+probModLvl1 = probModLvl1  + fitnessProbMod*lvl1MutationRateGamete;
+probModLvl2 = probModLvl2 + fitnessProbMod + fitnessProbMod*lvl2MutationRateGamete;
+probModLvl3 = probModLvl3;
+
+}
+
+
+if(probModPoint >= 0.3)probModPoint = 0.3;
+if(probModLvl1 >= 0.3) probModLvl1 = 0.3;
+if(probModLvl2 >= 0.3) probModLvl2 = 0.3;
+if(probModLvl3 >= 0.3) probModLvl3 = 0.3;
+
+// Point Mutations
+//------------------------------------------
+
+randMin = 0;
+randMax = 1;
+rand =random();
+
+priorRef1 = 0;
+priorRef2 = 0;
+
+mutationIndices = newArray();
+mutationNames = newArray();
+
+
+for(i=4; i < baseGenome1.length; i++ ){
+
+rand = random();
+
+//Variance Mod
+probModPoint2 = probModPoint;
+
+if(varianceProbability=="true"){
+if(randFave<0.5) relativeDiversity = (1-stdvGeneRankArray[i]) / maxGeneVariation;
+if(randFave>=0.5) relativeDiversity = (stdvGeneRankArray[i]) / maxGeneVariation;
+probModPoint2 = probModPoint + relativeDiversity*pow(random(),2)*3*probModPoint; 
+}
+
+	if(pointRateBase>0){
+	if(rand<=pointRateBase+probModPoint2){
+
+	mutationIndices = Array.concat(mutationIndices, i);
+	mutationNames = Array.concat(mutationNames, geneNames[i]);
+	
+	pointCount=pointCount+1;
+	
+	}
+	}
+}
+
+
+randOrder = newArray(mutationIndices.length);
+
+for(i=0;i<mutationIndices.length;i++){
+
+randOrder[i] = random();
+
+}
+
+randOrder = Array.rankPositions(randOrder);
+
+// Repeat For All Genes
+for(x=0; x < mutationIndices.length; x++ ){
+
+i = randOrder[x];
+
+i = mutationIndices[i];
+
+tVal1 = parseFloat(baseGenome1[i]);
+
+if(!isNaN(tVal1)){
+
+
+// Point Sub Types
+//------------------------------------------
+// Directional, mutates gene biased towards direction
+// Optimal, the average of the fittest 25%
+// Invert, the inverse of the current
+
+	uVal = meanGeneRankArray[i];
+	popUVal = meanGeneValArray[i];
+	stdv = stdvGeneRankArray[i];
+
+	stdv = stdvGeneRankArray[i];
+	stdvDif = stdvGeneRankArray[i] - stdvGeneValArray[i];
+	range = parseFloat(rangeGeneRankArray[i]);
+	
+	
+	geneErrorOptions = newArray();
+	
+	refGene = split(geneNames[i], "_");
+	
+	for(j=4; j<geneNames.length; j++){
+		if(j!=i){
+		tArr = split(geneNames[j], "_");
+		if(tArr.length==3){
+		
+			if(refGene[0] == tArr[0] && refGene[2] == tArr[2]) geneErrorOptions = Array.concat(geneErrorOptions, j);
+		
+		}
+		}
+	}
+
+
+errorType = "None";
+
+if(geneErrorOptions.length>0){
+
+	if( random() <= linkedProbBase )   errorType = "Yes";
+
+
+  }
+
+mutationTypeArray = newArray("Optimal", "Directional", "Gaussian", "Poisson", "Randomise", "Invert");
+
+mutationTypeArray = newArray("Poisson", "Poisson", "Poisson", "Randomise", "Invert");
+
+mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+
+if(errorType=="Yes"){
+errorTypeArray = newArray("Share", "ShareAll", "Replace", "ReplaceAll");
+errorType = errorTypeArray[floor(random()*(errorTypeArray.length-0.0001))];
+ }
+	
+	
+	
+	
+	// Poisson
+	//..............
+	if(mutantType == "Poisson"){
+
+	dirArray=split(mutationDirLog[i], "\t");
+	 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+	
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	
+		power = 3;
+		divide = 3;
+		
+	mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	
+	
+	// Directional
+	//..............
+	if(mutantType == "Directional"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	//dir1=random();
+	//if(dir1<0.5) dir1 = -1;
+	//if(dir1>0.5) dir1 = 1;
+	
+	mutMin = 0.0001;
+	
+	mutMax1 = (stdv);
+	
+	muMaxMin1 = 0.005;
+	
+	if(mutMax1<muMaxMin1) mutMax1 = muMaxMin1;
+	
+	mutMax2 = mutMax1*3;
+	
+	power = 1.0 + (1.5*(range));
+	
+	mutation1 = mutMin + pow(random(),1.5)*(mutMax1) + pow(random(),power)*(mutMax2);
+	
+	if(rankedProbability == "true") mutation1 = mutation1  + (mutation1 * (relativeRank/10));
+	
+	//mutation1 = Math.sqr(Math.sqrt(random("gaussian")/6));
+	
+	mutation1 = (mutation1*dir1);
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Gaussian
+	//..............
+	if(mutantType == "Gaussian"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	mutation1 = Math.sqr(Math.sqrt(random("gaussian")/8))*dir1;
+	
+	mutation1 = random("gaussian")/8;
+	
+	nVal1 = tVal1 +(mutation1);
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Randomise
+	//..............
+	if(mutantType == "Randomise"){
+	
+	mutation1 = random();
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	
+	// Explore
+	//..............
+	if(mutantType == "Explore"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir = dirArray[parseInt(random())];
+
+	nVal1 =  uVal + dir*stdv + dir*random("gaussian")/4;
+	
+	//nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	
+	
+	// Extreme
+	//..............
+	if(mutantType == "Extreme"){
+	
+	aRange = newArray(0.1,0.5,0.9);
+	
+	mutation1 = aRange[parseInt(random*2)];
+	
+	mutation1 =mutation1-0.1+(random()*0.2);
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	// Optimal
+	//..............
+	
+	if(mutantType == "Optimal"){
+	
+	nVal1 =  meanGeneRankArray[i];
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+	
+	
+	// Invert
+	//..............
+	
+	if(mutantType == "Invert"){
+	
+	mutation1 = 0; 
+	
+	nVal1 = 1- tVal1; if(Math.sqrt(Math.sqr(nVal1-0.5)) <0.1) nVal1 =parseInt(random());
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+		
+	
+	
+	
+	if(isNaN(nVal1))nVal1=random();
+	mutantGenome1[i] = nVal1;
+	
+	//ERRORS
+	
+	if(errorType == "Share"){
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+	
+	}
+	
+	
+	if(errorType == "ShareAll"){
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+		
+		}
+	
+	}
+	
+	if(errorType == "Replace"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		
+		alter=random();
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+		if(alter>0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = setVal;
+		
+		}
+		
+		if(alter<=0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[errorIndex] = setVal;
+		
+		}
+		
+	
+	}
+	
+	
+	if(errorType == "ReplaceAll"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+		
+		replaceIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+
+		setVal = (parseFloat(baseGenome1[replaceIndex])+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = errorIndex;
+		
+		
+		
+		}
+	
+	}		
+	
+	
+	
+	
+	
+
+} // (NaN)
+
+} // (i)
+
+//------------------------------------------
+// Lvl1 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl1_Indices.length; i++ ){
+
+// i=floor(random()*(lvl1_Indices.length-0.001));
+
+rand=random();
+
+
+	if(lvl1RateBase>0){
+	
+
+
+	indicies = split(lvl1_Indices[i], ".");
+	groups =  split(lvl1_Groups[i], ".");
+
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+	
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	relatedArray=newArray();
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	Array.getStatistics(probArray, min, max, mean, stdDev);
+	
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	if(varianceProbability=="True") probModLvl1 = probModLvl1 + relativeDiversity*pow(random(),2)*3*probModLvl1 ;
+	
+	
+
+	if(rand<=lvl1RateBase+probModLvl1){
+
+	print("lvl1");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl1 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl1_Indices.length>1){
+	
+	mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl1_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl1_Indices[tIndex], ".");
+		
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}
+		
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+						
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// (lvl1 mutation end)
+
+
+// Lvl2 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl2_Indices.length; i++ ){
+//i=floor(random()*(lvl2_Indices.length-0.001));
+
+	if(lvl2RateBase>0){
+
+rand=random();
+
+
+	indicies = split(lvl2_Indices[i], ".");
+	groups =  split(lvl2_Groups[i], ".");
+	
+	family = split(groups[0],"_");
+	family = family[2];
+	
+	relatedArray=newArray();
+	relatedNames=newArray();
+	
+	for(j=0;j<lvl2_Groups.length;j++){
+	
+		tgroups =  split(lvl2_Groups[j], ".");
+	
+		tfamily = split(tgroups[0],"_");
+		tfamily = tfamily[2];
+		
+		if(tfamily==family){
+		
+		relatedArray=Array.concat(relatedArray,lvl2_Indices[j]);
+		relatedNames=Array.concat(relatedNames,lvl2_Groups[j]);
+		}
+	
+	
+	}
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	Array.getStatistics(probArray, min, max, mean, stdDev);
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	if(varianceProbability=="True") probModLvl2 = probModLvl2 + relativeDiversity*pow(random(),2)*3*probModLvl2 ;
+	
+	if(relatedArray.length>1) probModLvl2 = probModLvl2*2;
+	
+	if(rand<=lvl2RateBase+probModLvl2){
+	
+	print("lvl2");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl2 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl2_Indices.length>1){
+	
+	// mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	if(relatedArray.length>1){
+	
+	mutationTypeArray =  Array.concat(mutationTypeArray,"Duplicate","Switch","Average");
+	
+	tStr = lvl2_Indices[i];
+		
+		while(tStr== lvl2_Indices[i]){
+		tStr= relatedArray[floor(random()*(relatedArray.length-0.0001))];
+		}
+		
+		indicies2 = split(tStr, ".");
+		
+		
+		
+		if(relatedArray.length>2){
+		
+		mutationTypeArray = Array.concat(mutationTypeArray, "MultiDup", "MultiDup");
+		
+		indicies3 = newArray();
+		
+			for(j=0;j<relatedArray.length;j++){
+			
+			temp = split(relatedArray[j], ".");
+				
+			while(temp.length<randArray.length){
+			temp = Array.concat(temp, temp);
+			}
+			
+			if(temp.length>randArray.length) temp = Array.slice(temp,0,randArray.length);
+		
+			indicies3 = Array.concat(indicies3, temp);
+			
+			}
+		
+		}
+
+		
+		
+	} else {
+	
+		
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl2_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl2_Indices[tIndex], ".");
+		
+		
+		}	
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}	
+	
+		
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		// Average (n-mirrored)
+		//..............
+		if(mutantType == "Average"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex]);
+			nVal2 = parseFloat(baseGenome1[tIndex2]);
+			
+			aVal = (nVal1+nVal2)/2;
+			
+			
+			
+			nVal1 = nVal1*ratioCombine + aVal*(1-ratioCombine);		ratioCombine = 0.50 + ( 1-pow(random(),3) )*(1-0.50);		ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+			nVal2 = nVal2*ratioCombine + aVal*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			}
+			
+
+			
+		} // (Average)
+		
+		
+		// Replace (mirrored)
+		//..............
+		if(mutantType == "Replace"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Replace)
+		
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// lvl2 mutation end
+
+
+assignedMatingPairs[k] = String.join(mutantGenome1, "\t");
+if(mirrorMutation == 1) assignedMatingPairs[mirrorIndex] = String.join(mutantGenome2, "\t");
+
+} //(k)
+
+
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 5. Cossover 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+offspringPopulation = newArray(assignedMatingPairs.length);
+
+
+for(k =0; k<assignedMatingPairs.length; k++){
+
+
+//===========================================================================
+// Parents and Gametes
+//===========================================================================
+
+//Get Parents
+//------------------
+
+parent1Str = assignedMatingPairs[k];
+k=k+1;
+parent2Str = assignedMatingPairs[k];
+
+parent1Genome = split(parent1Str, "\t");
+parent2Genome = split(parent2Str, "\t");
+
+//Measure Disimilarity
+//-----------------------
+
+tDistance = 0;
+
+// Gene Distance
+for(j=4; j<geneNames.length;j++){
+tIndex = j;
+	
+p1Val = parseFloat(parent1Genome[tIndex]);
+p2Val = parseFloat(parent2Genome[tIndex]);
+			
+distVal = Math.sqrt(Math.sqr(p1Val-p2Val ));
+			
+tDistance = distVal + tDistance; 
+
+} // (j)
+
+
+
+//===========================================================================
+//Crossover
+//===========================================================================
+
+Crossover1 = Array.copy(parent1Genome);
+Crossover2 = Array.copy(parent2Genome);
+
+crossMin = 0.65;
+crossMax = 1;
+
+crossSet =  crossMin + (Math.pow(random(),1)*(crossMax-crossMin));
+
+crossRatio = crossMin + (Math.pow(random(),1)*(crossMax-crossMin));
+
+randCross = random();
+if (randCross<=crossOverProbability) {
+
+
+//One Point Crossover
+//------------------------
+
+if (crossOverType=="one_point") {
+
+crossPoint1 = 4;
+crossPoint2 = 5+parseInt(random()*(geneNames.length-6));
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); crossRatio = crossRatio = ((1-Math.pow(random(),6))*(crossMax-crossMin) + crossMin)*1.05;;
+	
+	
+	
+	
+	
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	if(i>=crossPoint1 && i<=crossPoint2){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+	
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		
+		
+
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+} //(one point)
+
+//Two Point Crossover
+//------------------------
+
+if (crossOverType=="two_point") {
+
+rPoint1 = 5+parseInt(random()*(geneNames.length-6));
+rPoint2 = 6+parseInt(random()*(geneNames.length-7));
+
+if(rPoint1<rPoint2){
+crossPoint1 = rPoint1; crossPoint2 = rPoint2;
+} else {
+crossPoint1 = rPoint2; crossPoint2 = rPoint1;
+}
+
+
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); crossRatio = crossRatio = ((1-Math.pow(random(),6))*(crossMax-crossMin) + crossMin)*1.05;;
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	if(i>=crossPoint1 && i<=crossPoint2){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		
+		
+
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+
+} //(two point)
+
+//Multi Point Crossover
+//------------------------
+
+if (crossOverType=="multi_point") {
+
+rwArray = newArray(geneNames.length);
+
+cross = 1;
+
+rT = 0.3;
+rT2 = 0.1;
+
+for(i=0; i < rwArray.length; i++ ){
+
+r = random();
+
+
+if(r<rT){
+if(cross==1){cross=0; 
+}else{
+if(cross==0)cross=1;
+}
+}
+
+if(i<3){
+rwArray[i] = 0;
+} else {
+rwArray[i] = cross;
+}
+
+
+if(r<rT2){
+if(cross==1){cross=0; 
+}else{
+if(cross==0)cross=1;
+}
+}
+
+
+
+} // (i)
+
+
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); crossRatio = crossRatio = ((1-Math.pow(random(),6))*(crossMax-crossMin) + crossMin)*1.05;;
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	if(rwArray[i]==1){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		
+		
+
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+} //(multi)
+
+
+
+
+//Adaptive Crossover
+//------------------------
+
+if (crossOverType=="adaptive") {
+
+rwArray = newArray(geneNames.length);
+
+cross = 1;
+
+probSwitch = 0.4*(1-(avgGeneVariation));
+
+rT = 0.1+(random()*probSwitch);
+
+for(i=0; i < rwArray.length; i++ ){
+
+r = random();
+
+
+if(r<crossoverProbMod[i]){
+if(cross==1){cross=0; 
+}else{
+if(cross==0)cross=1;
+}
+}
+
+if(i<3){
+rwArray[i] = 0;
+} else {
+rwArray[i] = cross;
+}
+
+} // (i)
+
+
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); crossRatio = crossRatio = ((1-Math.pow(random(),6))*(crossMax-crossMin) + crossMin)*1.05;;
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	if(rwArray[i]==1){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+	
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		
+		
+
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+
+} //(adaptive)
+
+
+
+
+//Random Crossover
+//------------------------
+
+
+if (crossOverType=="random") {
+
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); crossRatio = crossRatio = ((1-Math.pow(random(),6))*(crossMax-crossMin) + crossMin)*1.05;;
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	rv = parseInt(random());
+	
+
+	if(rv==1){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+	
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+
+} //(random)
+
+
+
+
+//Distance Crossover
+//------------------------
+
+
+if (crossOverType=="distance") {
+
+
+	for(i=0; i<geneNames.length; i++){
+	tIndex = i;			
+				
+	crossRatio = crossRatio + random("gaussian")/8;crossRatio = random(); if(crossRatio>=0.33) crossRatio = 1; if(crossRatio<0.33) crossRatio = crossMin + Math.pow(crossRatio*3,0.5)*(crossMax-crossMin);
+	if(crossRatio<crossMin) crossRatio=crossMin;
+	if(crossRatio>crossMax) crossRatio=crossMax;
+	
+	rv = random();
+	
+	genDistance = Math.sqr ( Math.sqrt ( parseFloat( parent1Genome[tIndex] ) - parseFloat( parent2Genome[tIndex] ) ) );
+	
+	if(isNaN(genDistance)) 	genDistance = 0;
+	
+	genDistance = genDistance/2;
+
+	if(rv<0.25+genDistance){
+
+	gen1= toString( parent1Genome[tIndex] );
+	gen2= toString( parent2Genome[tIndex] );
+	
+	} else {
+	
+	gen2= toString( parent1Genome[tIndex] );
+	gen1= toString( parent2Genome[tIndex] );
+	
+	}
+	
+	pGen1=parseFloat( gen1 );
+	pGen2=parseFloat( gen2 );
+	
+	if(isNaN(pGen1) || isNaN(pGen2)){
+	Crossover1[tIndex] = gen2;
+	Crossover2[tIndex] = gen1;
+	
+	} else {	
+	
+		distance = Math.sqrt(Math.sqr(gen1-gen2));
+		r = random();
+		MaxDisplace = 0.15; range = parseFloat(rangeGeneRankArray[i]); 
+		
+		if(distanceRateOffspring > 0 && r < distanceRateOffspring ){
+		
+			if(pGen1 <= pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			pGen2 =  pGen2 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			}
+			
+			if(pGen1 > pGen2){
+			
+			rDist = pow(random(),3)*(1-distance)*MaxDisplace;
+			
+			pGen1 =  pGen1 + 0.005*Math.pow(1-distance,2)  + rDist;
+			
+			pGen2 =  pGen2 - 0.005*Math.pow(1-distance,2)  - rDist;
+			
+			}
+			
+			if(pGen1>1) pGen1 =1;
+			if(pGen2>1) pGen2 =1;
+			if(pGen1<0) pGen1 =0;
+			if(pGen2<0) pGen2 =0;
+		
+		}
+		
+		
+		
+
+		// Incomplete Crossover
+		if(crossOverBalance == "incomplete"){
+		
+		pGen2 =  (pGen2*crossRatio) + (pGen1*(1-crossRatio));
+		pGen1 =  (pGen1*crossRatio) + (pGen2*(1-crossRatio));
+		
+		}
+		Crossover1[tIndex] = pGen2;
+		Crossover2[tIndex] = pGen1;
+	
+		
+		} // (NaN)
+
+	} // (i)
+
+
+} //(random)
+
+
+
+
+} // (crossover probability)
+
+Offspring1 = Array.copy(Crossover1);
+Offspring2 = Array.copy(Crossover2);
+
+Offspring1[0] = "Gen" + (currentGenNum+1) + "_Mut0_ID" + k-1;
+Offspring2[0] = "Gen" + (currentGenNum+1) + "_Mut0_ID" + k;
+
+Offspring1[1] = parent1Genome[0];
+Offspring2[1] = parent2Genome[0];
+
+Offspring1[2] = parent2Genome[0];
+Offspring2[2] = parent1Genome[0];
+
+offspringPopulation[k-1] = String.join(Offspring1, "\t");
+offspringPopulation[k] = String.join(Offspring2, "\t");
+
+
+} // ( k )
+
+} // breeding
+
+
+
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 5. Offspring Mutation
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Applies Genetic Mutations to the offspring
+
+
+
+copiedMatingPairs = Array.copy(assignedMatingPairs);
+
+/*
+pointRateBase = pointMutationRateOffspring/geneNames.length;
+lvl1RateBase = lvl1MutationRateOffspring/lvl1_Groups.length;
+lvl2RateBase = lvl2MutationRateOffspring/lvl2_Groups.length;
+linkedProbBase = linkedMutationProbOffspring;
+*/
+
+pointRateBase = pointMutationRateOffspring;
+lvl1RateBase = lvl1MutationRateOffspring;
+lvl2RateBase = lvl2MutationRateOffspring;
+linkedProbBase = linkedMutationProbOffspring;
+
+
+unitMutationLog = newArray(copiedMatingPairs.length);
+
+
+//----------------------------------------
+// GENOMES
+//----------------------------------------
+
+
+for(k=0; k<offspringPopulation.length; k++){
+
+baseStr = offspringPopulation[k];
+
+baseGenome1 = split(baseStr , "\t");
+
+if(k/2 == parseInt(k/2)){
+	baseStr = offspringPopulation[k+1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k+1;
+}
+if(k/2 != parseInt(k/2)){
+	baseStr =  offspringPopulation[k-1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k-1;
+}
+
+mutantGenome1 = Array.copy(baseGenome1);
+mutantGenome2 = Array.copy(baseGenome2);
+
+
+//----------------------------------------
+// MUTATION SYSTEMS
+//----------------------------------------
+
+probModPoint=0;
+probModLvl1=0;
+probModLvl2=0;
+probModLvl3=0;
+
+if(rankedProbability=="true"){
+//Get Rank
+//-----------------------
+individualRank1 = findID(rankedPopulationArray, mutantGenome1[1]);
+individualRank2 = findID(rankedPopulationArray, mutantGenome1[2]);
+
+
+relativeRank = (individualRank1+individualRank2)/rankedPopulationArray.length/2;
+relativeRank = pow(1-relativeRank,2)  / (segmentationBreeding/rankedPopulationArray.length);;
+
+
+probModPoint = probModPoint + 0.005*relativeRank + relativeRank*pointMutationRateOffspring;
+probModLvl1 = probModLvl1  + 0.005*relativeRank + relativeRank*lvl1MutationRateOffspring;
+probModLvl2 = probModLvl2   + 0.005*relativeRank + relativeRank*lvl2MutationRateOffspring;
+probModLvl3 = probModLvl3;
+
+
+} // (true)
+
+if(varianceProbability=="true"){
+
+probModPoint = probModPoint - (1-avgGeneVariation)*pointMutationRateOffspring;
+probModLvl1 = probModLvl1  - (1-avgGeneVariation)*lvl1MutationRateOffspring;
+probModLvl2 = probModLvl2 - (1-avgGeneVariation)*lvl2MutationRateOffspring;
+probModLvl3 = probModLvl3;
+
+} //(true);
+	
+if(fitnessProbability=="true"){
+
+probModPoint = probModPoint + fitnessProbMod*pointMutationRateOffspring;
+probModLvl1 = probModLvl1  + fitnessProbMod*lvl1MutationRateOffspring;
+probModLvl2 = probModLvl2 + fitnessProbMod + fitnessProbMod*lvl2MutationRateOffspring;
+probModLvl3 = probModLvl3;
+
+}
+
+
+
+
+if(probModPoint >= 0.3)probModPoint = 0.3;
+if(probModLvl1 >= 0.3) probModLvl1 = 0.3;
+if(probModLvl2 >= 0.3) probModLvl2 = 0.3;
+if(probModLvl3 >= 0.3) probModLvl3 = 0.3;
+
+
+// Point Mutations
+//------------------------------------------
+
+randMin = 0;
+randMax = 1;
+rand =random();
+
+priorRef1 = 0;
+priorRef2 = 0;
+
+mutationIndices = newArray();
+mutationNames = newArray();
+
+
+for(i=4; i < baseGenome1.length; i++ ){
+
+rand = random();
+
+//Variance Mod
+probModPoint2 = probModPoint;
+
+if(varianceProbability=="true"){
+if(randFave<0.5) relativeDiversity = (1-stdvGeneRankArray[i]) / maxGeneVariation;
+if(randFave>=0.5) relativeDiversity = (stdvGeneRankArray[i]) / maxGeneVariation;
+probModPoint2 = probModPoint + relativeDiversity*pow(random(),2)*3*probModPoint; 
+}
+
+	if(pointRateBase>0){
+	if(rand<=pointRateBase+probModPoint2){
+
+	mutationIndices = Array.concat(mutationIndices, i);
+	mutationNames = Array.concat(mutationNames, geneNames[i]);
+	
+		pointCount=pointCount+1;
+	
+	}
+	}
+}
+
+
+randOrder = newArray(mutationIndices.length);
+
+for(i=0;i<mutationIndices.length;i++){
+
+randOrder[i] = random();
+
+}
+
+randOrder = Array.rankPositions(randOrder);
+
+// Repeat For All Genes
+for(x=0; x < mutationIndices.length; x++ ){
+
+i = randOrder[x];
+
+i = mutationIndices[i];
+
+tVal1 = parseFloat(baseGenome1[i]);
+
+if(!isNaN(tVal1)){
+
+
+// Point Sub Types
+//------------------------------------------
+// Directional, mutates gene biased towards direction
+// Optimal, the average of the fittest 25%
+// Invert, the inverse of the current
+
+	uVal = meanGeneRankArray[i];
+	popUVal = meanGeneValArray[i];
+	stdv = stdvGeneRankArray[i];
+
+	stdv = stdvGeneRankArray[i];
+	stdvDif = stdvGeneRankArray[i] - stdvGeneValArray[i];
+	range = parseFloat(rangeGeneRankArray[i]);
+	
+	
+	geneErrorOptions = newArray();
+	
+	refGene = split(geneNames[i], "_");
+	
+	for(j=4; j<geneNames.length; j++){
+		if(j!=i){
+		tArr = split(geneNames[j], "_");
+		if(tArr.length==3){
+		
+			if(refGene[0] == tArr[0] && refGene[2] == tArr[2]) geneErrorOptions = Array.concat(geneErrorOptions, j);
+		
+		}
+		}
+	}
+
+
+errorType = "None";
+
+if(geneErrorOptions.length>0){
+
+	if( random() <= linkedProbBase )   errorType = "Yes";
+
+
+  }
+
+mutationTypeArray = newArray("Optimal", "Directional", "Gaussian", "Poisson", "Randomise", "Invert");
+
+mutationTypeArray = newArray("Poisson", "Poisson", "Poisson", "Randomise", "Invert");
+
+mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+
+if(errorType=="Yes"){
+errorTypeArray = newArray("Share", "ShareAll", "Replace", "ReplaceAll");
+errorType = errorTypeArray[floor(random()*(errorTypeArray.length-0.0001))];
+ }
+	
+	
+	
+	
+	// Poisson
+	//..............
+	if(mutantType == "Poisson"){
+
+	dirArray=split(mutationDirLog[i], "\t");
+	 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+
+	
+	}
+	
+	
+	
+	
+	// Directional
+	//..............
+	if(mutantType == "Directional"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	//dir1=random();
+	//if(dir1<0.5) dir1 = -1;
+	//if(dir1>0.5) dir1 = 1;
+	
+	mutMin = 0.0001;
+	
+	mutMax1 = (stdv);
+	
+	muMaxMin1 = 0.005;
+	
+	if(mutMax1<muMaxMin1) mutMax1 = muMaxMin1;
+	
+	mutMax2 = mutMax1*3;
+	
+	power = 1.0 + (1.5*(range));
+	
+	mutation1 = mutMin + pow(random(),1.5)*(mutMax1) + pow(random(),power)*(mutMax2);
+	
+	if(rankedProbability == "true") mutation1 = mutation1  + (mutation1 * (relativeRank/10));
+	
+	//mutation1 = Math.sqr(Math.sqrt(random("gaussian")/6));
+	
+	mutation1 = (mutation1*dir1);
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Gaussian
+	//..............
+	if(mutantType == "Gaussian"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	mutation1 = Math.sqr(Math.sqrt(random("gaussian")/8))*dir1;
+	
+	mutation1 = random("gaussian")/8;
+	
+	nVal1 = tVal1 +(mutation1);
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Randomise
+	//..............
+	if(mutantType == "Randomise"){
+	
+	mutation1 = random();
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	// Extreme
+	//..............
+	if(mutantType == "Extreme"){
+	
+	aRange = newArray(0.1,0.5,0.9);
+	
+	mutation1 = aRange[parseInt(random*2)];
+	
+	mutation1 =mutation1-0.1+(random()*0.2);
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	// Explore
+	//..............
+	if(mutantType == "Explore"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+		dir = dirArray[parseInt(random())];
+
+	nVal1 =  uVal + dir*stdv + dir*random("gaussian")/4;
+	
+	//nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	
+	// Optimal
+	//..............
+	
+	if(mutantType == "Optimal"){
+	
+	nVal1 =  meanGeneRankArray[i];
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+	
+	
+	// Invert
+	//..............
+	
+	if(mutantType == "Invert"){
+	
+	mutation1 = 0; 
+	
+	nVal1 = 1- tVal1; if(Math.sqrt(Math.sqr(nVal1-0.5)) <0.1) nVal1 =parseInt(random());
+	
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+		
+	
+	
+	
+	if(isNaN(nVal1))nVal1=random();
+	mutantGenome1[i] = nVal1;
+	
+	//ERRORS
+	
+	if(errorType == "Share"){
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+	
+	}
+	
+	
+	if(errorType == "ShareAll"){
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+		
+		}
+	
+	}
+	
+	if(errorType == "Replace"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		
+		alter=random();
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+		if(alter>0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = setVal;
+		
+		}
+		
+		if(alter<=0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[errorIndex] = setVal;
+		
+		}
+		
+	
+	}
+	
+	
+	if(errorType == "ReplaceAll"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+		
+		replaceIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+
+		setVal = (parseFloat(baseGenome1[replaceIndex])+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = errorIndex;
+		
+		
+		
+		}
+	
+	}	
+	
+	
+
+} // (NaN)
+
+} // (i)
+
+//------------------------------------------
+// Lvl1 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl1_Indices.length; i++ ){
+
+// i=floor(random()*(lvl1_Indices.length-0.001));
+
+rand=random();
+
+
+	if(lvl1RateBase>0){
+	
+
+
+	indicies = split(lvl1_Indices[i], ".");
+	groups =  split(lvl1_Groups[i], ".");
+
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	relatedArray=newArray();
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	Array.getStatistics(probArray, min, max, mean, stdDev);
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	if(varianceProbability=="True") probModLvl1 = probModLvl1 + relativeDiversity*pow(random(),2)*3*probModLvl1 ;
+	
+
+	if(rand<=lvl1RateBase+probModLvl1){
+
+	print("lvl1");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl1 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl1_Indices.length>1){
+	
+	mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl1_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl1_Indices[tIndex], ".");
+		
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1, 1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}
+		
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+						
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// (lvl1 mutation end)
+
+
+// Lvl2 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl2_Indices.length; i++ ){
+//i=floor(random()*(lvl2_Indices.length-0.001));
+
+	if(lvl2RateBase>0){
+
+rand=random();
+
+
+	indicies = split(lvl2_Indices[i], ".");
+	groups =  split(lvl2_Groups[i], ".");
+	
+	family = split(groups[0],"_");
+	family = family[2];
+	
+	relatedArray=newArray();
+	relatedNames=newArray();
+	
+	for(j=0;j<lvl2_Groups.length;j++){
+	
+		tgroups =  split(lvl2_Groups[j], ".");
+	
+		tfamily = split(tgroups[0],"_");
+		tfamily = tfamily[2];
+		
+		if(tfamily==family){
+		
+		relatedArray=Array.concat(relatedArray,lvl2_Indices[j]);
+		relatedNames=Array.concat(relatedNames,lvl2_Groups[j]);
+		}
+	
+	
+	}
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	Array.getStatistics(probArray, min, max, mean, stdDev);
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	if(varianceProbability=="True") probModLvl2 = probModLvl2 + relativeDiversity*pow(random(),2)*3*probModLvl2 ;
+	
+	if(relatedArray.length>1) probModLvl2 = probModLvl2*2;
+
+	if(rand<=lvl2RateBase+probModLvl2){
+	
+	print("lvl2");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl2 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl2_Indices.length>1){
+	
+	// mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	if(relatedArray.length>1){
+	
+	mutationTypeArray =  Array.concat(mutationTypeArray,"Duplicate","Switch","Average");
+	
+	tStr = lvl2_Indices[i];
+		
+		while(tStr== lvl2_Indices[i]){
+		tStr= relatedArray[floor(random()*(relatedArray.length-0.0001))];
+		}
+		
+		indicies2 = split(tStr, ".");
+		
+		
+		
+		if(relatedArray.length>2){
+		
+		mutationTypeArray = Array.concat(mutationTypeArray, "MultiDup", "MultiDup");
+		
+		indicies3 = newArray();
+		
+			for(j=0;j<relatedArray.length;j++){
+			
+			temp = split(relatedArray[j], ".");
+				
+			while(temp.length<randArray.length){
+			temp = Array.concat(temp, temp);
+			}
+			
+			if(temp.length>randArray.length) temp = Array.slice(temp,0,randArray.length);
+		
+			indicies3 = Array.concat(indicies3, temp);
+			
+			}
+		
+		}
+
+		
+		
+	} else {
+	
+		
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl2_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl2_Indices[tIndex], ".");
+		
+		
+		}	
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}	
+	
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		// Average (n-mirrored)
+		//..............
+		if(mutantType == "Average"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex]);
+			nVal2 = parseFloat(baseGenome1[tIndex2]);
+			
+			aVal = (nVal1+nVal2)/2;
+			
+			
+						nVal1 = nVal1*ratioCombine + aVal*(1-ratioCombine);		ratioCombine = 0.50 + ( 1-pow(random(),3) )*(1-0.50);	
+			nVal2 = nVal2*ratioCombine + aVal*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			}
+			
+
+			
+		} // (Average)
+		
+		
+		// Replace (mirrored)
+		//..............
+		if(mutantType == "Replace"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Replace)
+		
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// lvl2 mutation end
+
+
+
+offspringPopulation[k] = String.join(mutantGenome1, "\t");
+if(mirrorMutation == 1) offspringPopulation[mirrorIndex] = String.join(mutantGenome2, "\t");
+
+} //(k)
+
+
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 6. Clone Mutation
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Applies Genetic Mutations to clone replacements
+
+
+
+copiedMatingPairs = Array.copy(assignedMatingPairs);
+
+/*
+pointRateBase = pointMutationRateClone/geneNames.length;
+lvl1RateBase = lvl1MutationRateClone/lvl1_Groups.length;
+lvl2RateBase = lvl2MutationRateClone/lvl2_Groups.length;
+linkedProbBase = linkedMutationProbClone;
+*/
+
+pointRateBase = pointMutationRateClone;
+lvl1RateBase = lvl1MutationRateClone;
+lvl2RateBase = lvl2MutationRateClone;
+linkedProbBase = linkedMutationProbClone;
+
+if(cloneBest > 0){
+
+	for(j=0;j<cloneBest;j++){
+	SurvivingPopulation = Array.deleteIndex(SurvivingPopulation,0);
+	}
+
+	for(j=0;j<cloneBest;j++){
+	SurvivingPopulation = Array.concat(rankedPopulationArray[rankedPopulationArray.length-j-1],SurvivingPopulation);
+	}
+
+if(segmentationMutate<cloneBest) segmentationMutate=cloneBest;
+}
+
+//----------------------------------------
+// GENOMES
+//----------------------------------------
+
+
+
+for(k=0; k<segmentationMutate; k++){
+
+baseStr =  SurvivingPopulation[k];
+
+baseGenome1 = split(baseStr , "\t");
+
+if(k/2 == parseInt(k/2)){
+	baseStr =  SurvivingPopulation[k+1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k+1;
+}
+if(k/2 != parseInt(k/2)){
+	baseStr =  SurvivingPopulation[k-1];
+	baseGenome2 = split(baseStr , "\t");
+	mirrorIndex = k-1;
+}
+
+mutantGenome1 = Array.copy(baseGenome1);
+mutantGenome2 = Array.copy(baseGenome2);
+
+
+
+
+//----------------------------------------
+// MUTATION SYSTEMS
+//----------------------------------------
+
+probModPoint=0;
+probModLvl1=0;
+probModLvl2=0;
+probModLvl3=0;
+
+
+if(rankedProbability=="true"){
+//Get Rank
+//-----------------------
+individualRank = index(rankedPopulationArray, baseStr);
+
+relativeRank = individualRank/rankedPopulationArray.length;
+
+relativeRank = pow(1-relativeRank,2) / (segmentationBreeding/rankedPopulationArray.length);
+
+probModPoint = probModPoint + 0.005*relativeRank + relativeRank*pointMutationRateClone;
+probModLvl1 = probModLvl1  + 0.005*relativeRank + relativeRank*lvl1MutationRateClone;
+probModLvl2 = probModLvl2   + 0.005*relativeRank + relativeRank*lvl2MutationRateClone;
+probModLvl3 = probModLvl3;
+
+
+} // (true)
+
+if(varianceProbability=="true"){
+
+probModPoint = probModPoint - (1-avgGeneVariation)*pointMutationRateClone;
+probModLvl1 = probModLvl1  - (1-avgGeneVariation)*lvl1MutationRateClone;
+probModLvl2 = probModLvl2 - (1-avgGeneVariation)*lvl2MutationRateClone;
+probModLvl3 = probModLvl3;
+
+} //(true);
+	
+if(fitnessProbability=="true"){
+
+probModPoint = probModPoint + fitnessProbMod*pointMutationRateClone;
+probModLvl1 = probModLvl1  + fitnessProbMod*lvl1MutationRateClone;
+probModLvl2 = probModLvl2 + fitnessProbMod + fitnessProbMod*lvl2MutationRateClone;
+probModLvl3 = probModLvl3;
+
+}
+
+
+
+
+
+if(probModPoint >= 0.3)probModPoint = 0.3;
+if(probModLvl1 >= 0.3) probModLvl1 = 0.3;
+if(probModLvl2 >= 0.3) probModLvl2 = 0.3;
+if(probModLvl3 >= 0.3) probModLvl3 = 0.3;
+
+
+
+//clone specific
+//------------------------------------------
+//if(cloneBest != "true" || k>1){
+//------------------------------------------
+
+
+// Point Mutations
+//------------------------------------------
+
+randMin = 0;
+randMax = 1;
+rand =random();
+
+priorRef1 = 0;
+priorRef2 = 0;
+
+mutationIndices = newArray();
+mutationNames = newArray();
+
+
+for(i=4; i < baseGenome1.length; i++ ){
+
+rand = random();
+
+//Variance Mod
+probModPoint2 = probModPoint;
+
+if(varianceProbability=="true"){
+if(randFave<0.5) relativeDiversity = (1-stdvGeneRankArray[i]) / maxGeneVariation;
+if(randFave>=0.5) relativeDiversity = (stdvGeneRankArray[i]) / maxGeneVariation;
+probModPoint2 = probModPoint + relativeDiversity*pow(random(),2)*3*probModPoint; 
+}
+
+	if(pointRateBase>0){
+	if(rand<=pointRateBase+probModPoint2){
+
+	mutationIndices = Array.concat(mutationIndices, i);
+	mutationNames = Array.concat(mutationNames, geneNames[i]);
+	
+	pointCount=pointCount+1;
+	
+	}
+	}
+}
+
+
+randOrder = newArray(mutationIndices.length);
+
+for(i=0;i<mutationIndices.length;i++){
+
+randOrder[i] = random();
+
+}
+
+randOrder = Array.rankPositions(randOrder);
+
+// Repeat For All Genes
+for(x=0; x < mutationIndices.length; x++ ){
+
+i = randOrder[x];
+
+i = mutationIndices[i];
+
+tVal1 = parseFloat(baseGenome1[i]);
+
+if(!isNaN(tVal1)){
+
+
+// Point Sub Types
+//------------------------------------------
+// Directional, mutates gene biased towards direction
+// Optimal, the average of the fittest 25%
+// Invert, the inverse of the current
+
+	uVal = meanGeneRankArray[i];
+	popUVal = meanGeneValArray[i];
+	stdv = stdvGeneRankArray[i];
+
+	stdv = stdvGeneRankArray[i];
+	stdvDif = stdvGeneRankArray[i] - stdvGeneValArray[i];
+	range = parseFloat(rangeGeneRankArray[i]);
+	
+	
+	geneErrorOptions = newArray();
+	
+	refGene = split(geneNames[i], "_");
+	
+	for(j=4; j<geneNames.length; j++){
+		if(j!=i){
+		tArr = split(geneNames[j], "_");
+		if(tArr.length==3){
+		
+			if(refGene[0] == tArr[0] && refGene[2] == tArr[2]) geneErrorOptions = Array.concat(geneErrorOptions, j);
+		
+		}
+		}
+	}
+
+
+errorType = "None";
+
+if(geneErrorOptions.length>0){
+
+	if( random() <= linkedProbBase )   errorType = "Yes";
+
+
+  }
+
+mutationTypeArray = newArray("Optimal", "Directional", "Gaussian", "Poisson", "Randomise", "Invert");
+
+mutationTypeArray = newArray("Poisson", "Poisson", "Poisson", "Randomise", "Invert");
+
+mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+
+if(errorType=="Yes"){
+errorTypeArray = newArray("Share", "ShareAll", "Replace", "ReplaceAll");
+errorType = errorTypeArray[floor(random()*(errorTypeArray.length-0.0001))];
+ }
+	
+	
+	
+	
+	// Poisson
+	//..............
+	if(mutantType == "Poisson"){
+
+	dirArray=split(mutationDirLog[i], "\t");
+	 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	
+	
+	// Directional
+	//..............
+	if(mutantType == "Directional"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	//dir1=random();
+	//if(dir1<0.5) dir1 = -1;
+	//if(dir1>0.5) dir1 = 1;
+	
+	mutMin = 0.0001;
+	
+	mutMax1 = (stdv);
+	
+	muMaxMin1 = 0.005;
+	
+	if(mutMax1<muMaxMin1) mutMax1 = muMaxMin1;
+	
+	mutMax2 = mutMax1*3;
+	
+	power = 1.0 + (1.5*(range));
+	
+	mutation1 = mutMin + pow(random(),1.5)*(mutMax1) + pow(random(),power)*(mutMax2);
+	
+	if(rankedProbability == "true") mutation1 = mutation1  + (mutation1 * (relativeRank/10));
+	
+	//mutation1 = Math.sqr(Math.sqrt(random("gaussian")/6));
+	
+	mutation1 = (mutation1*dir1);
+	
+	nVal1 = tVal1 + mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Gaussian
+	//..............
+	if(mutantType == "Gaussian"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+	dir2=dirArray[parseInt(random()*(dirArray.length-1))];
+	
+	dir1=parseFloat(dir1);
+	dir2=parseFloat(dir2);
+	
+	mutation1 = Math.sqr(Math.sqrt(random("gaussian")/8))*dir1;
+	
+	mutation1 = random("gaussian")/8;
+	
+	nVal1 = tVal1 +(mutation1);
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	}
+	
+	
+	// Randomise
+	//..............
+	if(mutantType == "Randomise"){
+	
+	mutation1 = random();
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	
+	// Extreme
+	//..............
+	if(mutantType == "Extreme"){
+	
+	aRange = newArray(0.1,0.5,0.9);
+	
+	mutation1 = aRange[parseInt(random*2)];
+	
+	mutation1 = mutation1-0.1+(random()*0.2);
+	
+	nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	// Explore
+	//..............
+	if(mutantType == "Explore"){
+	
+	dirArray=split(mutationDirLog[i], "\t");
+	dirArray=Array.concat(dirArray,1,-1); if(biasMutationDIR == 0) 	dirArray=newArray("1","-1");
+	
+	dir = dirArray[parseInt(random())];
+
+	nVal1 =  uVal + dir*stdv + dir*random("gaussian")/4;
+	
+	//nVal1 = mutation1;
+	
+	if(nVal1>1) nVal1=1;
+	if(nVal1<0) nVal1=0;
+	
+	mutation1 = nVal1 - tVal1;
+	
+	
+	}
+	
+	
+	// Optimal
+	//..............
+	
+	if(mutantType == "Optimal"){
+	
+	nVal1 =  meanGeneRankArray[i];
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+	
+	
+	// Invert
+	//..............
+	
+	if(mutantType == "Invert"){
+	
+	mutation1 = 0; 
+	
+	nVal1 = 1- tVal1; if(Math.sqrt(Math.sqr(nVal1-0.5)) <0.1) nVal1 =parseInt(random());
+	
+	mutation1 = nVal1 - tVal1;
+	
+	}
+		
+	
+	
+	
+	if(isNaN(nVal1))nVal1=random();
+	mutantGenome1[i] = nVal1;
+	
+	//ERRORS
+	
+	if(errorType == "Share"){
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+	
+	}
+	
+	
+	if(errorType == "ShareAll"){
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		nVal2 =  parseFloat(baseGenome1[errorIndex]) + mutation1;
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome1[errorIndex] = nVal2;
+		
+		}
+	
+	}
+	
+	if(errorType == "Replace"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+	
+		errorIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+		
+		alter=random();
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+		if(alter>0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = setVal;
+		
+		}
+		
+		if(alter<=0.5){
+		setVal = (tVal1+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[errorIndex] = setVal;
+		
+		}
+		
+	
+	}
+	
+	
+	if(errorType == "ReplaceAll"){
+	
+		mutantGenome1[i] = baseGenome1[i];
+	
+		mixRatio = (1-pow(random(),3) );
+		
+		replaceIndex = geneErrorOptions[floor(random()*(geneErrorOptions.length-0.0001))];
+	
+		for(y=0; y<geneErrorOptions.length; y++){
+	
+		errorIndex = geneErrorOptions[y];
+		
+		if(tVal1 > parseFloat(baseGenome1[errorIndex]) ){
+		mod1=pow(random(),2)*0.1;
+		mod2=pow(random(),2)*-0.1;
+		}else{
+		mod2=pow(random(),2)*0.1;
+		mod1=pow(random(),2)*-0.1;
+		}
+		
+
+		setVal = (parseFloat(baseGenome1[replaceIndex])+mod1)*(1-mixRatio) + (parseFloat(baseGenome1[errorIndex])+mod2)*(mixRatio);
+		
+		if(setVal<0) setVal=0;
+		if(setVal>1) setVal=1;
+		
+		mutantGenome1[i] = errorIndex;
+		
+		
+		
+		}
+	
+	}	
+	
+	
+	
+	
+	
+
+} // (NaN)
+
+} // (i)
+
+
+//------------------------------------------
+// Lvl1 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl1_Indices.length; i++ ){
+
+// i=floor(random()*(lvl1_Indices.length-0.001));
+
+rand=random();
+
+
+	if(lvl1RateBase>0){
+	
+
+
+	indicies = split(lvl1_Indices[i], ".");
+	groups =  split(lvl1_Groups[i], ".");
+
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	relatedArray=newArray();
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	Array.getStatistics(probArray, min, max, mean, stdDev);
+	
+	
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	
+	if(varianceProbability=="True") probModLvl1 = probModLvl1 + relativeDiversity*pow(random(),2)*3*probModLvl1 ;
+	
+
+	if(rand<=lvl1RateBase+probModLvl1){
+
+	print("lvl1");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl1 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl1_Indices.length>1){
+	
+	mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl1_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl1_Indices[tIndex], ".");
+		
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}
+		
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+						
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// (lvl1 mutation end)
+
+
+// Lvl2 Mutations
+//------------------------------------------
+
+// Repeat For All Groups
+
+for(i=0; i < lvl2_Indices.length; i++ ){
+//i=floor(random()*(lvl2_Indices.length-0.001));
+
+	if(lvl2RateBase>0){
+
+rand=random();
+
+
+	indicies = split(lvl2_Indices[i], ".");
+	groups =  split(lvl2_Groups[i], ".");
+	
+	family = split(groups[0],"_");
+	family = family[2];
+	
+	relatedArray=newArray();
+	relatedNames=newArray();
+	
+	for(j=0;j<lvl2_Groups.length;j++){
+	
+		tgroups =  split(lvl2_Groups[j], ".");
+	
+		tfamily = split(tgroups[0],"_");
+		tfamily = tfamily[2];
+		
+		if(tfamily==family){
+		
+		relatedArray=Array.concat(relatedArray,lvl2_Indices[j]);
+		relatedNames=Array.concat(relatedNames,lvl2_Groups[j]);
+		}
+	
+	
+	}
+	//Random Walk
+
+	randArray = newArray(indicies.length);
+
+	Array.getStatistics(randArray, min, max, mean, stdDev);
+
+	rW = parseInt(random);
+	
+	rThresholdArray = newArray(-0.1, 0.1, 0.15, 0.2); rThreshold =  rThresholdArray[floor(random()*(rThresholdArray.length-0.0001))]; if(rThreshold == 0) rW = 1;
+
+	
+	while(mean < 2/randArray.length){ rW = parseInt(random);
+
+
+		for(j=0;j<randArray.length;j++){
+		
+		r=random();
+		if(r<rThreshold){
+			if(rW==0){ rW=1;
+			}else{
+			if(rW==1) rW=0;
+			}
+		}
+			
+		randArray[j] = rW; 
+
+		}
+		Array.getStatistics(randArray, min, max, mean, stdDev);
+	}
+	
+	
+	probArray = newArray(randArray.length);
+	for(j=0;j<randArray.length;j++){
+	tIndex = indicies[j];
+	probArray[0] =  parseFloat(stdvGeneRankArray[tIndex]);
+	probArray[j] =   parseFloat(stdvGeneRankArray[tIndex]);
+	}
+	
+	if(randFave<0.5) relativeDiversity = (1-mean) / maxGeneVariation;
+	if(randFave>=0.5) relativeDiversity = (mean) / maxGeneVariation;
+	
+	if(varianceProbability=="True") probModLvl2 = probModLvl2 + relativeDiversity*pow(random(),2)*3*probModLvl2 ;
+	
+	if(relatedArray.length>1) probModLvl2 = probModLvl2*2;
+	
+
+	if(rand<=lvl2RateBase+probModLvl2){
+	
+	print("lvl2");
+	Array.print(groups); Array.print(randArray);
+
+
+	// Lvl2 Sub Types
+	//------------------------------------------
+	// Gaussian, mutates genes with random("gaussian").
+	// Wipe, replaces all the genes with same random value
+	// Randomise, replaces the genes with random values.
+
+	mutationTypeArray = newArray("Poisson", "Randomise", "Wipe", "Scramble");
+	
+	
+	// Duplicate Setup
+	//----------------------------------
+	if(lvl2_Indices.length>1){
+	
+	// mutationTypeArray = Array.concat(mutationTypeArray, "Duplicate", "Switch");
+	
+	if(relatedArray.length>1){
+	
+	mutationTypeArray =  Array.concat(mutationTypeArray,"Duplicate","Switch","Average");
+	
+	tStr = lvl2_Indices[i];
+		
+		while(tStr== lvl2_Indices[i]){
+		tStr= relatedArray[floor(random()*(relatedArray.length-0.0001))];
+		}
+		
+		indicies2 = split(tStr, ".");
+		
+		
+		
+		if(relatedArray.length>2){
+		
+		mutationTypeArray = Array.concat(mutationTypeArray, "MultiDup", "MultiDup");
+		
+		indicies3 = newArray();
+		
+			for(j=0;j<relatedArray.length;j++){
+			
+			temp = split(relatedArray[j], ".");
+				
+			while(temp.length<randArray.length){
+			temp = Array.concat(temp, temp);
+			}
+			
+			if(temp.length>randArray.length) temp = Array.slice(temp,0,randArray.length);
+		
+			indicies3 = Array.concat(indicies3, temp);
+			
+			}
+		
+		}
+
+		
+		
+	} else {
+	
+		
+	tIndex = i;
+		
+		while(tIndex == i){
+		tIndex = floor(random()*(lvl2_Indices.length-0.0001));
+		}
+		
+		indicies2 = split(lvl2_Indices[tIndex], ".");
+		
+		
+		}	
+	}	
+	
+	// Wipe Setup
+	//----------------------------------
+
+	wipeIndex = indicies[floor(random()*(indicies.length-0.0001))];
+	wipeValue = random();
+	
+	ratioCombine = 0.50 + ( 1-pow(random(),5) )*(1-0.50);
+	if(ratioCombine > 1) ratioCombine = 1;
+	
+	
+	// Scramble Setup
+	//----------------------------------	
+	scrambleOrder = newArray(randArray.length);
+			for(j=0;j<randArray.length;j++){
+			scrambleOrder[j] = random();
+			}
+	scrambleOrder  = Array.rankPositions(scrambleOrder);
+	
+	
+		// Shift Setup
+	//----------------------------------	
+	
+	dirArrayF=newArray();
+	for(j=0;j<indicies.length;j++){
+	tIndex = indicies[j];
+	dirArray=split(mutationDirLog[tIndex], "\t");
+	dirArrayF = Array.concat(dirArrayF, dirArray);
+	}
+	
+	dirArrayF=Array.concat(dirArrayF,1,-1);
+	
+	dir=dirArrayF[floor(random()*(dirArrayF.length-0.001))];
+	
+	shiftVal = 0.2*pow(random(),2) + 0.005;
+	shiftVal = shiftVal*dir;
+	
+	// Choose Mutation
+	//----------------------------------	
+	mutantType = mutationTypeArray[floor(random()*(mutationTypeArray.length-0.0001))];
+	
+
+	//Apply Mutation
+	for(j=0;j<randArray.length;j++){
+	rW = randArray[j];
+	
+		if(rW==1){
+		tIndex = indicies[j];
+		
+		tVal1 = parseFloat(baseGenome1[tIndex]);
+		tVal2 = parseFloat(baseGenome2[tIndex]);
+		
+		nVal1 = tVal1;
+		nVal2 = tVal2;
+		
+		
+		
+		// Poisson (n-mirrored)
+		//..............
+		if(mutantType == "Poisson"){
+
+		dirArray=split(mutationDirLog[tIndex], "\t");
+		 dirArray = Array.concat(dirArray, "1", "-1", "1", "-1"); if(biasMutationDIR == 0) dirArray=newArray("1","-1");
+		
+		dir1=dirArray[parseInt(random()*(dirArray.length-1))];
+		
+		dir1=parseFloat(dir1);
+		
+		power = 3;
+		divide = 3;
+		
+		mutation1 = ( 0.001 + (exp(Math.pow(random(),2))/1.5) - 0.85-(pow(random(),2)*0.15) )* dir1;
+		
+		nVal1 = tVal1 + mutation1;
+		
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		}	
+	
+		
+		
+		// Gaussian (n-mirrored)
+		//..............
+		if(mutantType == "Gaussian"){
+		
+		rDir = newArray(1,-1);
+		dir = rDir[parseInt(random() )];
+		
+		nVal1 = tVal1 + random("gaussian")/8*dir;
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+
+		}
+		
+		// Wipe (n-mirrored)
+		//..............
+		if(mutantType == "Wipe"){
+		
+		nVal1 = wipeValue*ratioCombine + tVal1*(1-ratioCombine);
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+		
+		}
+		
+		// Randomise (n-mirrored)
+		//..............
+		if(mutantType == "Randomise"){
+		
+		mutation1 = random();
+		
+		nVal1 = mutation1;
+		
+		mutation1 = 0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+		}
+		
+		
+		// Duplicate (mirrored)
+		//..............
+		if(mutantType == "Duplicate"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Duplicate)
+		
+		
+		// Average (n-mirrored)
+		//..............
+		if(mutantType == "Average"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex]);
+			nVal2 = parseFloat(baseGenome1[tIndex2]);
+			
+			aVal = (nVal1+nVal2)/2;
+			
+			
+						nVal1 = nVal1*ratioCombine + aVal*(1-ratioCombine);		ratioCombine = 0.50 + ( 1-pow(random(),3) )*(1-0.50);	
+			nVal2 = nVal2*ratioCombine + aVal*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			}
+			
+
+			
+		} // (Average)
+		
+		
+		// Replace (mirrored)
+		//..............
+		if(mutantType == "Replace"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			nVal1 = nVal1*ratioCombine + tVal1*(1-ratioCombine);
+			
+			nVal2 = parseFloat(baseGenome2[tIndex]);
+			
+			nVal2 = nVal2*ratioCombine + tVal2*(1-ratioCombine);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex2] = nVal2;
+			
+			
+				if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+				if(isNaN(nVal2))nVal2=random();
+				mutantGenome2[tIndex2] = nVal2;
+				
+				}
+		
+			
+			}
+			
+
+			
+		} // (Replace)
+		
+		
+		
+		
+		// Switch (n-mirrored)
+		//..............
+		if(mutantType == "Switch"){
+		
+			if(j<indicies2.length){
+
+			tIndex2 = indicies2[j];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			
+			} else {
+			
+			nVal1 = random();
+			
+			nVal2 = random();
+			
+			}
+			
+		if(isNaN(nVal1))nVal1=random();
+		
+		mutantGenome1[tIndex] = nVal1;
+		
+		
+			if(tIndex2<mutantGenome2.length && relatedArray.length>1){
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex2] = nVal2;
+				
+			}
+		
+
+			
+		}
+		
+		
+		
+		// Scramble (n-mirrored)
+		//..............
+		if(mutantType == "Scramble"){
+		
+			tIndex2 = scrambleOrder[j];
+			
+			tIndex2 = indicies[tIndex2];
+			
+			nVal1 = parseFloat(baseGenome1[tIndex2]);
+			
+			if(isNaN(nVal1))nVal1=random();
+			mutantGenome1[tIndex] = nVal1;
+		
+			if(isNaN(nVal2))nVal2=random();
+			mutantGenome2[tIndex] = nVal2;
+		}
+
+
+		// Shift  (mirrored)
+		//..............
+		if(mutantType == "Shift"){
+		
+		nVal1 = tVal1 + shiftVal;
+
+		if(nVal1>1) nVal1=1;
+		if(nVal1<0) nVal1=0;
+		
+		nVal2 = tVal2 - shiftVal;
+
+		if(nVal2>1) nVal2=1;
+		if(nVal2<0) nVal2=0;
+		
+		if(isNaN(nVal1))nVal1=random();
+		mutantGenome1[tIndex] = nVal1;
+		
+		if(isNaN(nVal2))nVal2=random();
+		mutantGenome2[tIndex] = nVal2;
+			
+		}
+
+		
+		
+		}//(rW)
+		
+	} // (j)
+	} // (rand)
+	} // (allowed)
+} // (i)
+//------------------------------------------
+// lvl2 mutation end
+
+
+
+//clone specific
+//------------------------------------------
+//}
+oldName = mutantGenome1[0];
+newName = split(oldName, "_");
+Num=replace(newName[1],"Mut","");
+mutNum = parseFloat(Num)+1;
+newName[1]="Mut"+toString(mutNum);
+mutantGenome1[0] = String.join(newName,"_");
+
+if(cloneBest>=0 && k<cloneBest){
+mutantGenome1[0]  = "Gen" + (currentGenNum+1) + "_Mut0_IDC" + segmentationDeletion+k;
+mutantGenome1[1] = oldName;
+mutantGenome1[2] = oldName;
+}
+//------------------------------------------
+
+
+SurvivingPopulation[k] = String.join(mutantGenome1, "\t");
+if(mirrorMutation==1) SurvivingPopulation[mirrorIndex] = String.join(mutantGenome2, "\t");
+
+if(mirrorIndex>segmentationMutate){
+
+}
+
+} //(k)
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 7. Create New Population
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+//===========================================================================
+//Protect Fittest from prior generation
+//===========================================================================
+if(currentGenNum > 0 && rescueBest > 0){
+//Rescues the fittest 4 individuals from the previous extinction
+
+
+
+priorPopulation = popDIR + "gen_" + currentGenNum  + "_genes.txt";
+
+priorString=File.openAsString(priorPopulation);	// open txt data file
+priorRows=split(priorString, "\n");
+priorRows=Array.deleteIndex(priorRows, 0);
+
+bestIndex = priorRows.length - 1 - segmentationDeletion;
+bestIndex = bestIndex;
+
+priorBestID = newArray(rescueBest);
+priorBestInd = newArray(rescueBest);
+
+for(j=0;j<rescueBest;j++){
+
+	splitTemp = split(priorRows[bestIndex-j],"\t");
+			
+	priorBestID[j] =  splitTemp[0];
+	priorBestInd[j] =  priorRows[bestIndex-j];
+
+}
+	
+
+
+checkArray = newArray(rescueBest);
+rescueArray = newArray();
+
+	for(j=0;j<rescueBest;j++){
+
+		checkArray[j] = index(SurvivingPopulation, priorBestInd[j]); 
+		
+		if(checkArray[j] == -1){
+		
+		rescueArray = Array.concat(rescueArray,	priorBestInd[j]);
+		
+		}
+
+	}
+
+
+
+if(inableSex==0){	
+	
+possibleIndexes = newArray(offspringPopulation.length);
+
+}
+
+
+if(inableSex==1){
+
+maleIndexes=newArray();
+femaleIndexes=newArray();
+sexes = newArray();
+
+for(i=0;i<offspringPopulation.length;i++){
+
+tArray1=split(offspringPopulation[i],"\t");
+
+
+
+if(tArray1[3] == "m") maleIndexes = Array.concat(maleIndexes,i);
+if(tArray1[3] == "f") femaleIndexes = Array.concat(femaleIndexes,i);
+
+sexes= Array.concat(sexes, tArray1[3]);
+
+}
+
+}
+
+
+
+for(j=0;j<rescueArray.length;j++){
+	
+	tStr1 = rescueArray[j];
+	tArray1 = split(tStr1 , "\t");
+	
+	rArray = Array.copy(tArray1);
+	
+		
+	if(segmentationMutate>0){
+	rArray[0] = "Gen"+currentGenNum+1+"_Mut0_IDR"+j; 
+	rArray[1] = tArray1[1]; 
+	rArray[2] = tArray1[2];
+	}
+	
+	rStr = String.join(rArray,"\t");
+
+
+	if(inableSex == 0){
+	rIndex = (possibleIndexes.length)*random();
+	offspringPopulation[rIndex] = rStr ;
+	possibleIndex=Array.deleteIndex(possibleIndexes,rIndex);
+	}
+	
+	
+	if(inableSex == 1){
+	
+		if(tArray1[3] == "m"){
+			rIndex = (maleIndexes.length)*random();
+			rIndex2 = maleIndexes[rIndex];
+			offspringPopulation[rIndex2] = rStr ;
+			possibleIndex=Array.deleteIndex(maleIndexes,rIndex);
+		
+		}
+	
+		if(tArray1[3] == "f"){
+			rIndex = (femaleIndexes.length)*random();
+			rIndex2 = femaleIndexes[rIndex];
+			offspringPopulation[rIndex2] = rStr ;
+			possibleIndex=Array.deleteIndex(femaleIndexes,rIndex);
+		}
+	
+	
+	} //(sex)
+	
+	
+
+
+} // (j)
+
+
+
+
+
+
+
+
+} // (protect)
+
+
+
+//Concat Arrays
+//------------------------
+
+Generation_New = Array.concat(genesRows[0],SurvivingPopulation,offspringPopulation);
+
+mutationDirRecord = String.join(mutationDirShift, "\t");
+mutationProbRecord  = String.join(pointProbMod, "\t");
+meanGeneValRecord = String.join(meanGeneValArray, "\t");
+
+Selection_New = Array.concat(genesRows[0],meanGeneValRecord,mutationDirRecord,mutationProbRecord);
+
+
+//===========================================================================
+//Clear non-decimal values
+//===========================================================================
+for(i=1;i<Generation_New.length;i++){
+tArray = split(Generation_New[i],"\t");
+for(j=4;j<tArray.length;j++){
+tV = parseFloat(tArray[j]);
+if(tV>1) tV=1;
+if(tV<0) tV=0;
+tArray[j]=tV;
+}
+tString = String.join(tArray, "\t");
+Generation_New[i]=tString;
+}
+
+
+
+
+
+
+
+
+
+
+//Save new Generation
+//------------------------
+
+	dataFile = File.open(nextGeneration);
+	
+	for(i=0; i<Generation_New.length; i++){
+	print(dataFile, Generation_New[i]);
+	}
+	File.close(dataFile);
+	
+	
+//Save Fitness Records
+//------------------------
+
+File.append(meanFitness, fitnessAvgDir);	
+File.append(maxFitness, fitnessMaxDir);
+if(inableSex != 1) File.append(fittestIndividual1, fitnessIndDir);
+if(inableSex == 1) 	{
+File.append(fittestMale, fitnessIndDir);
+File.append(fittestFemale, fitnessIndDir);
+					}
+
+
+/*
+//Save direction
+//------------------------
+
+	
+		dataFile = File.open(currentSelection);
+	
+	for(i=0; i<Selection_New.length; i++){
+	print(dataFile, Selection_New[i]);
+	}
+	File.close(dataFile);
+*/
+	
+	
+} // (Fitness Check)
+} // ( Generation Check )
+
+print("N Mutations", pointCount);
+

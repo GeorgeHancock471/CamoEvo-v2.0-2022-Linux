@@ -1,0 +1,192 @@
+close("*");
+Dialog.create("");
+	Dialog.addMessage("Step 1, Select Population");
+Dialog.show();
+
+populationDir = getDirectory("Select the Population you wish to upload the rankings to");
+
+dataFile = File.open(getDirectory("plugins") +"2 CamoReq/PopLocation.txt");
+print(dataFile, populationDir);
+File.close(dataFile);
+
+
+GeneratList  =  getFileList(populationDir);
+GeneratArray = newArray();
+GenSurvArray  = newArray();
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_genes.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}	
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GenSurvArray = Array.concat(GenSurvArray, GeneratList[i]);
+	}											
+		
+}
+
+CheckDirectory = populationDir;
+
+genNum = GeneratArray.length-1;
+currentGen = "gen_"+genNum+"_genes.txt";
+currentGenPath = populationDir + currentGen;
+currentSurv = "gen_"+genNum+"_ranks.txt";
+currentSurvPath = populationDir +currentSurv;
+
+GenNumber = genNum;
+fold = "GenPat_" +GenNumber;
+foldOld = "GenPat_" + genNum;
+PatternPath = CheckDirectory + fold;
+PriorPath = CheckDirectory + foldOld;
+
+CheckDirectory = populationDir;
+
+
+print(currentGen);
+
+
+//Patterns
+//------------------------------------------------------------------------------
+setBatchMode(true);
+
+GenerationString=File.openAsString(currentGenPath);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+
+
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+setBatchMode(true);	
+
+notMade=newArray();
+
+for(i=1; i<GenerationRows.length; i++){
+Temp = split(GenerationRows[i], "\t");
+Temp = Temp[0];
+patternGet = PriorPath + "/" + Temp + ".tif";
+
+
+if(File.exists(patternGet) == 1){
+	while(!isOpen(Temp + ".tif")){
+	open(patternGet);
+}
+
+selectImage(Temp + ".tif");
+
+//setBatchMode("show");
+
+title = getTitle();
+newName = replace (title, ".tif", "");
+rename(newName);
+
+
+} else {
+	str=GenerationRows[i];
+	notMade=Array.concat(notMade,str);
+}
+
+
+
+}
+
+File.delete(PatternTemplate);
+dataFile = File.open(PatternTemplate);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+	print(dataFile, GenerationRows[0]);
+	
+	for(i=0; i<notMade.length; i++){
+	print(dataFile, notMade[i]);
+	
+	}
+	File.close(dataFile);
+
+
+
+
+
+
+
+
+
+
+
+//Target
+//---------------
+
+makeStr = CheckDirectory;
+
+PopulationSet = makeStr+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetChoice = TargetSet[1];
+
+
+
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(f=0; f<TargetSettingsRows.length; f++){
+temp = TargetSettingsRows[f];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+
+
+
+
+
+
+
+
+generateString = "Generate "+ TargetPatternChoice;
+
+
+run(generateString);
+
+//setBatchMode("exit and display");
+//exit
+
+
+
+// Save
+//------------------------------------------------------------------------------
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+File.makeDirectory( PatternPath);
+
+for ( p=0; p<Win; p++ ) { 
+
+pat = "/" + WinNam[p] + ".tif";
+
+SavePath =PatternPath + pat;
+
+selectWindow(WinNam[p]);
+if(startsWith(WinNam[p], "Gen")){
+
+saveAs("TIFF", SavePath); 
+
+close(WinNam[p]+".tif");
+
+}
+}
+
+waitForUser("Done");
+

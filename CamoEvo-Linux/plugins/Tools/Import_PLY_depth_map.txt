@@ -1,0 +1,229 @@
+
+
+//----------Variables to play with-------------
+resolution = 0.001; // the desired reconstruced resolution, 0.001=millimetres
+header = 4; // the number of rows at the start of the OBJ file to ignore
+nanRadius = 5; // if the depth map has black "NaN" holes in it increase this radius
+
+path = File.openDialog("Select PLY point cloud");
+
+
+header = File.openAsRawString(path, 1000);
+
+header = split(header, "\n");
+header = replace(header[2], "element vertex ", "");
+nRows = parseInt(header);
+
+
+setBatchMode(true);
+
+startByte = 278;
+imgBytes = nRows * 280; // 280 byes per row
+
+
+
+
+run("Raw...", "open=[&path] image=[1-bit Bitmap] width=&imgBytes height=1 offset=278");
+
+bin = newArray(imgBytes);
+
+for(x=0; x<imgBytes; x++)
+	if(getPixel(x,0) == 0)
+		bin[x] = 0;
+	else bin[x] = 1;
+
+close();
+
+
+j=0;
+count = 0;
+row = 0;
+
+x = newArray(nRows);
+y = newArray(nRows);
+z = newArray(nRows);
+
+r = newArray(nRows);
+g = newArray(nRows);
+b = newArray(nRows);
+
+for(i=0; i<nRows; i++){
+	x[i] = NaN;
+	y[i] = NaN;
+	z[i] = NaN;
+}
+
+/*
+q = newArray(w);
+nx = newArray(w);
+ny = newArray(w);
+nz = newArray(w);
+rad = newArray(w);
+*/
+
+
+for(j=0; j<=imgBytes-(280-96); j=j+32){
+
+
+fl = newArray(32);
+
+// convert from little-endian stupid byte order to big endian standard
+for(i=0; i<8; i++)
+	fl[i+24] = bin[j+i];
+for(i=0; i<8; i++)
+	fl[i+16] = bin[j+i+8];
+for(i=0; i<8; i++)
+	fl[i+8] = bin[j+i+16];
+for(i=0; i<8; i++)
+	fl[i] = bin[j+i+24];
+
+//Array.show(fl);
+
+// RGB values:
+if(count == 0){
+for(i=0; i<8; i++)
+	if(bin[j+i+96] == 1) //32
+		r[row] += pow(2,7-i);
+
+for(i=0; i<8; i++)
+	if(bin[j+i+104] == 1) //40
+		g[row] += pow(2,7-i);
+
+for(i=0; i<8; i++)
+	if(bin[j+i+112] == 1) //48
+		b[row] += pow(2,7-i);
+
+}
+
+
+
+// sign
+si = -1;
+if(fl[0] == 0)
+	si = 1;
+
+// exponent
+ex = 0;
+for(i=1; i<=8; i++)
+	if(fl[i] == 1)
+		ex += pow(2,8-i);
+ex -= 127;
+
+// mantissa
+ma = 1;
+for(i=0; i<23; i++)
+	if(fl[i+9] == 1)
+		ma += pow(2,-1*(i+1));
+
+
+//res[j] = si*ma*pow(2,ex);
+res = si*ma*pow(2,ex);
+//print( j + " " + res);
+
+if(count == 0)
+	x[row] = res;
+if(count == 1)
+	z[row] = -1*res;
+if(count == 2)
+	y[row] = res;
+
+count ++;
+if(count == 3){
+	j = j+184;
+	count = 0;
+	row++;
+}
+
+}//j
+
+Array.show(x,y,z,r,g,b);
+
+
+
+//-----------------Measure arrays------------------
+Array.getStatistics(x, xmin, xmax);
+Array.getStatistics(y, ymin, ymax);
+Array.getStatistics(z, zmin, zmax);
+
+print("x min: " + xmin + " x max: " + xmax);
+print("y min: " + ymin + " y max: " + ymax);
+print("z min: " + zmin + " z max: " + zmax);
+
+w = (xmax-xmin)/resolution;
+h = (ymax-ymin)/resolution;
+
+
+//-------------Create new image of correct size & resolution----------------
+newImage("Depth Map", "32-bit black", w, h, 1);
+run("Select All");
+run("Set...", "value=NaN");
+run("Select None");
+setMinAndMax(zmin/resolution, zmax/resolution);
+
+
+//-----------------Fill image with points from cloud-------------------
+for(i=0; i<x.length; i++){
+	
+	x2 = round((x[i] - xmin) / resolution );
+	y2 = round((y[i] - ymin) / resolution );
+
+	setPixel(x2, y2, z[i]/resolution);
+}
+
+run("Remove NaNs...", "radius=&nanRadius");
+setBatchMode("show");
+
+
+
+
+//-------------Create new image of correct size & resolution----------------
+newImage("R", "32-bit black", w, h, 1);
+run("Select All");
+run("Set...", "value=NaN");
+run("Select None");
+
+//-----------------Fill image with points from cloud-------------------
+for(i=0; i<x.length; i++){
+	x2 = round((x[i] - xmin) / resolution );
+	y2 = round((y[i] - ymin) / resolution );
+	setPixel(x2, y2, r[i]);
+}
+run("Remove NaNs...", "radius=&nanRadius");
+setMinAndMax(0, 255);
+run("8-bit");
+
+newImage("G", "32-bit black", w, h, 1);
+run("Select All");
+run("Set...", "value=NaN");
+run("Select None");
+for(i=0; i<x.length; i++){
+	x2 = round((x[i] - xmin) / resolution );
+	y2 = round((y[i] - ymin) / resolution );
+	setPixel(x2, y2, g[i]);
+}
+run("Remove NaNs...", "radius=&nanRadius");
+setMinAndMax(0, 255);
+run("8-bit");
+
+newImage("B", "32-bit black", w, h, 1);
+run("Select All");
+run("Set...", "value=NaN");
+run("Select None");
+for(i=0; i<x.length; i++){
+	x2 = round((x[i] - xmin) / resolution );
+	y2 = round((y[i] - ymin) / resolution );
+	setPixel(x2, y2, b[i]);
+};
+run("Remove NaNs...", "radius=&nanRadius");
+setMinAndMax(0, 255);
+run("8-bit");
+
+run("Concatenate...", "  title=[RGB Map] image1=R image2=G image3=B");
+
+run("Make Composite", "display=Composite");
+run("RGB Color");
+
+
+setBatchMode("show");
+
+

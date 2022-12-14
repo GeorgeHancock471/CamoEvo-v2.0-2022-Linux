@@ -1,0 +1,346 @@
+// i) Get the Population Location
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+
+Dialog.create("");
+	Dialog.addMessage("Step 1, Select Population");
+Dialog.show();
+
+populationDir = getDirectory("Select the Population you wish to upload the rankings to");
+
+dataFile = File.open(getDirectory("plugins") +"2 CamoReq/PopLocation.txt");
+print(dataFile, populationDir);
+File.close(dataFile);
+
+
+
+// ii) Count generation and survival
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+GeneratList  =  getFileList(populationDir);
+GeneratArray = newArray();
+GenSurvArray  = newArray();
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_genes.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}	
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GenSurvArray = Array.concat(GenSurvArray, GeneratList[i]);
+	}											
+		
+}
+
+CheckDirectory = populationDir;
+
+genNum = GeneratArray.length-1;
+currentGen = "gen_"+genNum+"_genes.txt";
+currentGenPath = populationDir + currentGen;
+currentSurv = "gen_"+genNum+"_ranks.txt";
+currentSurvPath = populationDir +currentSurv;
+
+GenNumber = genNum+1;
+fold = "GenPat_" +GenNumber;
+foldOld = "GenPat_" + genNum;
+PatternPath = CheckDirectory + fold;
+PriorPath = CheckDirectory + foldOld;
+
+
+if(GenNumber >=1 && File.exists(PriorPath)){
+
+// iii) Continue Check
+//-------------------------------------------------
+// If there is already enough survival entries the system will stop.
+//...........................................................................................................................................................................
+
+if(GenSurvArray.length==GeneratArray.length){
+Dialog.create("");
+	Dialog.addMessage("STOP, you already have a survival entry for the most recent generation/n Press Ok to Continue");
+Dialog.show();
+}
+
+
+
+// iv) Generate ID array list
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+
+genString = File.openAsString(populationDir + "Printer_"+genNum+".txt");
+genRows = split(genString, "\n");
+
+arrayIDs = newArray(genRows.length);
+arrayPrint = newArray(genRows.length);
+
+for(i=0 ; i<arrayIDs.length;i++){
+tArr = split(genRows[i], "\t");
+tStr = tArr[0];
+arrayIDs[i] = tStr ;
+
+tStr = tArr[1];
+arrayPrint[i] = tStr ;
+}
+
+tableSize = 12;
+
+// v) Generate fitness dialog
+//-------------------------------------------------
+//...........................................................................................................................................................................
+TLeng = arrayIDs.length;
+arrayFit = newArray(TLeng);
+arrayFit[0] = "fitness";
+
+g1=1;
+
+for(z = 0; z< floor(TLeng/tableSize)+1; z++){
+
+dialogTitle = "Step 2, Enter Fitness Part ("+z+1+"/" +floor(TLeng/tableSize)+1+")";
+
+Dialog.createNonBlocking(dialogTitle);
+startVal = 1+((z)*tableSize);
+endVal = startVal +tableSize;
+if(endVal>TLeng){
+endVal = TLeng;
+}
+
+	Dialog.addMessage("Type the Fitness Value for each ID");
+	for(k=startVal; k<endVal ; k++)	{
+	g2=split(arrayPrint[k],".");
+	g2=g2[2];
+	if(g2!=g1 ||k==startVal){ g1=g2;
+	Dialog.addMessage("		Group"+g1);
+	}
+	
+	Label =arrayPrint[k];
+	Dialog.addNumber("		"+arrayPrint[k]+"..."+arrayIDs[k],0);
+					}
+	Dialog.show();
+
+	
+	for(k=startVal; k<endVal ; k++){
+	arrayFit[k] = Dialog.getNumber();
+	}
+
+
+}
+
+
+
+
+// vi) Save Values
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+
+	dataFile = File.open(currentSurvPath);
+	
+	for(i=0; i<arrayFit.length; i++){
+	saveArray = newArray(arrayIDs[i], arrayFit[i]);
+	saveStr = String.join(saveArray, "\t");
+	print(dataFile, saveStr);
+	}
+	File.close(dataFile);
+
+}
+
+
+// vii) Generate
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+// Algorithm
+//------------------------------------------------------------------------------
+CheckDirectory = populationDir;
+
+
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes.txt";
+GenName = "gen_" + GenNumber + "_genes.txt";
+SurvGenNum= CheckDirectory + "gen_" + GenNumber +"_ranks"+ ".txt";
+
+
+GeneratList  =  getFileList(populationDir);
+GeneratArray = newArray();
+GenSurvArray  = newArray();
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_genes.txt")==1){
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+	}	
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1){
+		GenSurvArray = Array.concat(GenSurvArray, GeneratList[i]);
+	}											
+		
+}
+
+if(File.exists(PriorPath) && GenSurvArray.length==GeneratArray.length){
+pathPrintStr = "select=["+populationDir+"]";
+print(pathPrintStr);
+run("ImageGA Algorithm",pathPrintStr);
+}
+
+
+
+//Patterns
+//------------------------------------------------------------------------------
+setBatchMode(true);
+
+GenerationString=File.openAsString(GenNum);	// open txt data file
+GenerationRows=split(GenerationString, "\n");
+
+
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+setBatchMode(true);	
+
+notMade=newArray();
+
+for(i=1; i<GenerationRows.length; i++){
+Temp = split(GenerationRows[i], "\t");
+Temp = Temp[0];
+patternGet = PriorPath + "/" + Temp + ".tif";
+
+
+if(File.exists(patternGet) == 1){
+	while(!isOpen(Temp + ".tif")){
+	open(patternGet);
+}
+
+selectImage(Temp + ".tif");
+
+//setBatchMode("show");
+
+title = getTitle();
+newName = replace (title, ".tif", "");
+rename(newName);
+
+
+} else {
+	str=GenerationRows[i];
+	notMade=Array.concat(notMade,str);
+}
+
+
+
+}
+
+File.delete(PatternTemplate);
+dataFile = File.open(PatternTemplate);  // writes the pattern genome to a temporary text file, which the target generator then uses.
+
+	print(dataFile, GenerationRows[0]);
+	
+	for(i=0; i<notMade.length; i++){
+	print(dataFile, notMade[i]);
+	
+	}
+	File.close(dataFile);
+
+
+
+
+
+
+
+
+//Target
+//---------------
+
+makeStr = CheckDirectory;
+
+PopulationSet = makeStr+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetChoice = TargetSet[1];
+
+
+
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(f=0; f<TargetSettingsRows.length; f++){
+temp = TargetSettingsRows[f];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+
+
+
+
+
+
+
+
+generateString = "Generate "+ TargetPatternChoice;
+
+
+run(generateString);
+
+//setBatchMode("exit and display");
+//exit
+
+
+
+// Save
+//------------------------------------------------------------------------------
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+File.makeDirectory( PatternPath);
+
+for ( p=0; p<Win; p++ ) { 
+
+pat = "/" + WinNam[p] + ".tif";
+
+SavePath =PatternPath + pat;
+
+selectWindow(WinNam[p]);
+if(startsWith(WinNam[p], "Gen")){
+
+saveAs("TIFF", SavePath); 
+
+close(WinNam[p]+".tif");
+
+}
+}
+
+
+
+//Sheet
+
+run("Generate Prey Sheet");
+
+
+Dialog.create("");
+	Dialog.addMessage("Generation Complete! You'll find the new population sheet ready to print!");
+Dialog.show();
+
+	
+
+
+
+
+
+
+

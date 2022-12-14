@@ -1,0 +1,117 @@
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+PopLocation = File.openAsString(PopLocal);
+PopLocation=split(PopLocation, "\n");
+PopLocation = PopLocation[0];
+PopLocation = PopLocation;
+
+//setBatchMode(true);
+
+CheckDirectory = PopLocation;
+
+GeneratArray = newArray();
+
+GeneratList  =  getFileList(CheckDirectory);
+
+
+
+
+
+for(i=0; i<GeneratList.length; i++) { // list all .txt files
+
+	if(endsWith(GeneratList[i], "_ranks.txt")==1)
+
+		GeneratArray = Array.concat(GeneratArray, GeneratList[i]);
+}
+
+
+
+
+
+close("*");
+
+
+
+
+while(roiManager("count")>0){
+roiManager("select",0);
+roiManager("Delete");
+}
+
+ArrayLeng = lengthOf(GeneratArray);
+
+csv = ".txt";
+tif = ".tif";
+txt = ".txt";
+png = ".png";
+
+GenNumber = ArrayLeng;
+GenNum = CheckDirectory + "gen_" + GenNumber + "_genes" + txt;
+GenName = "gen_" + GenNumber  + "_genes" +  txt;
+SurvGenNum = CheckDirectory + "gen_" + GenNumber +"_ranks" + txt;
+
+
+GenStr = File.openAsString(GenNum);
+GenArr = split(GenStr, "\n");
+GenRand = newArray(GenArr.length);
+
+BgDirectory = CheckDirectory+"Backgrounds/";
+BGList  =  getFileList(BgDirectory);
+
+open(BgDirectory+BGList[0]);
+rename("BG");
+w=getWidth();
+h=getHeight();
+
+
+
+
+
+makeRectangle(w/2-200,h/2-200,400,400);
+roiManager("Add");
+roiManager("select",roiManager("count")-1);
+roiManager("rename","BG");
+run("Duplicate...", "title=LAB duplicate");
+run("Lab Stack");
+
+
+
+patDIR =CheckDirectory+"GenPat_"+GenNumber+"/";
+
+
+
+GenRand[0] = "ID"+"\t"+"Fitness";
+for(j=1;j<GenRand.length;j++){
+t = split(GenArr[j], "\t");
+
+open(patDIR+t[0]+".tif");
+run("Select None");
+run("Copy");
+setPasteMode("Transparent-Zero");
+close();
+selectImage("BG");
+run("Duplicate...", "title=COM-BG duplicate");
+run("Paste");
+run("Lab Stack");
+imageCalculator("Difference stack", "COM-BG","LAB");
+
+setSlice(1); getStatistics(area,mean1);
+setSlice(2); getStatistics(area,mean2);
+setSlice(3); getStatistics(area,mean3);
+close();
+
+
+
+GenRand[j] = t[0]+"\t"+-mean1-mean2-mean3;
+
+
+}
+
+
+
+
+
+	dataFile = File.open(SurvGenNum);
+	for(i=0;i<GenRand.length;i++){
+		print(dataFile, GenRand[i]);
+	}		
+	File.close(dataFile);

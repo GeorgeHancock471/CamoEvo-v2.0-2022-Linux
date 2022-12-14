@@ -1,0 +1,145 @@
+close("*");
+
+setBatchMode(true);
+setPasteMode("Copy");
+
+v=0;
+
+
+
+shellL =99;
+shellA = -1;
+shellB = 5;
+
+ppL = -0.88;
+ppA = 0.19;
+ppB = 0.30;
+
+bvL = -0.7;
+bvA = -0.15;
+bvB = -0.13;
+
+
+expt = 0.1;
+
+ppL = ppL + ppL*expt;
+ppA = ppA + ppA*expt;
+ppB= ppB + ppB*expt;
+
+bvL = bvL + bvL*expt;
+bvA = bvA + bvA*expt;
+bvB= bvB + bvB*expt;
+
+canvasW=500;
+interval=1;
+
+
+
+newImage("Egg_CIE_Space", "32bit white", canvasW*interval, canvasW, 3);
+
+//L*
+//--------------
+setSlice(1);
+for(i=0; i<canvasW; i++){
+for(j=0; j<canvasW; j++){
+
+bg_Dp = 1- j /canvasW;
+bg_Pi = i /canvasW;
+
+DepositionBg = (bg_Dp*100);
+RatioBg = pow(bg_Pi,1);
+
+BvAmount = (RatioBg*DepositionBg);
+PpAmount= ((1-RatioBg)*DepositionBg);
+	 
+bgL = ( (BvAmount )*bvL ) +  ( Math.pow(PpAmount,1)*ppL);
+bgL = shellL+ bgL;
+
+valStr = bgL;
+
+setPixel(i,j,valStr);
+}
+}
+
+
+//A*
+//--------------
+setSlice(2);
+for(i=0; i<canvasW; i++){
+for(j=0; j<canvasW; j++){
+
+bg_Dp = 1- j /canvasW;
+bg_Pi = i /canvasW;
+
+DepositionBg = (pow(bg_Dp,0.25)*100);
+RatioBg = pow(bg_Pi,0.85);
+
+BvAmount = (RatioBg*DepositionBg);
+PpAmount= ((1-RatioBg)*DepositionBg);
+	 
+bgA = ( (BvAmount )*bvA ) +  ( Math.pow(PpAmount,1)*ppA);
+bgA = shellA+ bgA;
+
+valStr = bgA;
+
+setPixel(i,j,valStr);
+}
+}
+
+
+//B*
+//--------------
+setSlice(3);
+for(i=0; i<canvasW; i++){
+for(j=0; j<canvasW; j++){
+
+bg_Dp = 1- j /canvasW;
+bg_Pi = i /canvasW;
+
+DepositionBg = (pow(bg_Dp,0.25)*100);
+RatioBg = (bg_Pi);
+
+RatioBg = 1-cos((RatioBg-0.3)*7/PI);
+if(RatioBg<0) RatioBg=0;
+if(RatioBg>1) RatioBg=1;
+
+BvAmount = (RatioBg*DepositionBg);
+PpAmount= ((1-RatioBg)*DepositionBg);
+	 
+bgB = ( (BvAmount )*bvB ) +  ( Math.pow(PpAmount,1)*ppB);
+bgB = shellB+ bgB;
+
+valStr = bgB;
+
+setPixel(i,j,valStr);
+}
+}
+
+
+
+run("CIELAB 32Bit to RGB24 smooth");
+selectImage("Output");
+rename("Egg_Space");
+close("Egg_CIE_Space");
+
+
+if(nImages>1)
+run("Images to Stack", "name=Stack title=[] use");
+
+
+newImage("ColourSpace", "RGB black", 550, 550, 1);
+	setLineWidth(2);
+	setColor("white");
+
+	selectImage("Egg_Space");
+	run("Copy");
+	selectImage("ColourSpace");
+	makeRectangle(25,25, 500, 500);
+	run("Paste");
+	drawRect(25,25, 500, 500);
+
+run("Select None");
+setBatchMode("Show");
+setBatchMode(false);
+
+run("Copy to System");

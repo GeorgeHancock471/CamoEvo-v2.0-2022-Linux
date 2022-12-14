@@ -1,0 +1,49 @@
+setBatchMode(true);
+
+roiIndex = roiManager("index")
+roiName=Roi.getName;
+Lab= getTitle();
+if(nSlices<3) run("Lab Stack");
+
+
+newImage("LAB_MAP", "32-bit black", 200, 200, 101);
+
+selectImage(Lab);
+roiManager("select",roiIndex);
+
+Roi.getContainedPoints(xpoints, ypoints);
+areaV=ypoints.length;
+
+L_arr=newArray(xpoints.length);
+A_arr=newArray(xpoints.length);
+B_arr=newArray(xpoints.length);
+
+for(k=0;k<L_arr.length;k++){
+x=xpoints[k];
+y=ypoints[k];
+setZCoordinate(0);
+L_arr[k] = parseInt(getPixel(x,y));
+setZCoordinate(1);
+A_arr[k] = parseInt(getPixel(x,y));
+setZCoordinate(2);
+B_arr[k] =parseInt(getPixel(x,y));
+}
+
+selectImage("LAB_MAP");
+
+for(k=0;k<L_arr.length;k++){
+if(L_arr[k]<101){
+setZCoordinate(L_arr[k]);
+x=A_arr[k]+100;
+y=B_arr[k]+100;
+v=getPixel(x,y)+1;
+setPixel(x,y,v);
+}
+}
+
+
+label="color-map-"+roiName;
+rename(label);
+setBatchMode("show");
+
+

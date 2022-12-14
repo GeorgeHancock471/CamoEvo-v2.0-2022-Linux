@@ -1,0 +1,38 @@
+wS = getWidth;
+hS = getHeight;
+rS = hS/wS;
+
+Title = getTitle();
+
+
+w1 = wS *10;
+h1 = hS*10;
+
+setBatchMode(true);
+run("Duplicate...", "title=Slice");
+
+iV = 100;
+
+minW=200;
+minH=minW*rS;
+
+for(i=0;i<=iV ;i++){
+
+w = minW+(wS-minW) * pow(i/iV ,2);
+h = minH+(hS-minH)  * pow(i/iV ,2);
+
+selectImage("Slice");
+run("Duplicate...", "title=Temp");
+run("Scale...", "x=- y=- width=w height=h interpolation=Bilinear average");
+run("Copy");
+close();
+
+selectImage(Title);
+
+run("Paste");
+
+
+
+wait(100);
+
+}

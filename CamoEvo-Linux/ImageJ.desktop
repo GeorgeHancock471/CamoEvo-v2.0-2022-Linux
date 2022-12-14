@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Name=ImageJ
+GenericName=ImageJ
+X-GNOME-FullName=ImageJ
+Comment=Scientific Image Analysis
+Type=Application
+Categories=Education;Science;ImageProcessing;
+Exec=/home/jolyon/Documents/Software/ImageJ CamoGame/ImageJ
+TryExec=/home/jolyon/Documents/Software/ImageJ CamoGame/ImageJ
+Terminal=false
+StartupNotify=true
+Icon=/home/jolyon/Documents/Software/ImageJ CamoGame/images/icon.png
+StartupWMClass=ij-ImageJ

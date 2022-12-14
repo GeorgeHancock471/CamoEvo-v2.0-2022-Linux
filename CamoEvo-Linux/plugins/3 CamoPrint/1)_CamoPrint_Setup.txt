@@ -1,0 +1,494 @@
+
+/*_______________________________________________________________________________________________________________
+
+	Title: CamoPrint Setup
+	Authors:  George Hancock 
+	Date: 30/05/2022
+.................................................................................................................
+
+Creates multiple replicate populations using an existing population folder.
+*/
+
+setBatchMode(true);
+
+
+// Defaults
+//.......................................................
+
+defaultSettings = newArray(
+
+"2", 						// TreatmentNumber
+"3", 						// RepeatNumber
+"Random", 					// startType
+"4", 						// GroupSize
+"Random", 					// GroupMethod
+"4	60	60	1",				// Grid Dimensions
+"5	5	2	left-right",	// Spawn Dimensions
+"colour"					// Label Method
+ );					
+ 
+
+
+settingsFilePath = getDirectory("plugins") + "3 CamoPrint/Print_Set/Setup_Defaults.txt";
+if(File.exists(settingsFilePath) == 1){
+	settingsString=File.openAsString(settingsFilePath);	// open txt data file
+	tempSettings=split(settingsString, "\n");
+	if(tempSettings.length == defaultSettings.length) defaultSettings = tempSettings;
+} 
+
+
+
+
+//.......................................................................
+
+
+
+setPasteMode("copy");
+
+
+// i) Choose Storage Location
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+Dialog.create("");
+	Dialog.addMessage("Step 1, Select Folder Location");
+Dialog.show();
+
+populationDir = getDirectory("Select Where you'd Like to Store Your Populations");
+
+camoPrintExpDir = populationDir + "camoPrintExp/";
+
+File.makeDirectory(camoPrintExpDir);
+
+
+
+// ii) Choose Population Settings
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+Dialog.create("");
+	Dialog.addMessage("Step 2, Select Population Settings File");
+Dialog.show();
+
+populationSettingsDIR = File.openDialog("Select the Settings_Population.txt template");
+
+
+
+
+// ii) Choose Experiment Settings
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+
+startPopArray = newArray("Random", "Matched","Shared");
+
+Dialog.createNonBlocking("Step 2, Experiment Settings Part 1");
+Dialog.addMessage(    ".........................................................\nAssign Values to the following:\n.........................................................");
+	Dialog.addMessage(" (i) Number of Treatments:\n ----------------------------------------\nChoose how many treatments (e.g. habitats) you'd like to use?");
+	Dialog.addNumber("           Treatments", parseFloat(defaultSettings[0]) );
+	Dialog.addMessage("(ii) Number of Repeats:\n ----------------------------------------\nChoose how many repeats per treatment (e.g. habitats) you'd like to use?");
+	Dialog.addNumber("           Repeats", parseFloat(defaultSettings[1]));
+	Dialog.addMessage("(iii) Starting Population:\n ----------------------------------------\nChoose which format you'd like to use for the starting population?\n \n    Random: all populations are randomly generated, no treatment has the same population.\n    Matched: each repeat has a different starting population, shared across all treatments.\n    Shared: all treatments and repeats share the exact same starting population.");
+	Dialog.addChoice("          Populations",startPopArray, defaultSettings[2]);
+Dialog.show();
+
+treatmentNumber = Dialog.getNumber();
+repeatNumber = Dialog.getNumber();
+startType =  Dialog.getChoice();
+
+popSize = newArray();
+for(i=1;i<12;i++){
+popSize=Array.concat(popSize, i*8);
+}
+
+colourRangeArray = newArray("Full", "Camo", "Measure", "Custom");
+groupMethodArray = newArray("Random", "Ranked");
+
+
+Target_Settings = File.openAsString(getDirectory("plugins") +"1 CamoEvo/Targets/Target_Settings.txt");
+Target_Rows=split(Target_Settings, "\n");
+targetChoices = newArray(Target_Rows.length-1);
+
+for(i=0;i<targetChoices.length;i++){
+
+tArray = split(Target_Rows[i+1], "\t");
+if(tArray.length>1){
+tString = tArray [0];
+targetChoices[i] = tString;
+}
+}
+
+
+defaultSheetLayout = split(defaultSettings[5],"\t");
+
+
+Dialog.createNonBlocking("Step 2, Experiment Settings Part 2");
+	Dialog.addMessage(" (iv) Group Size:\n ----------------------------------------\nHow many individuals are shown together, if individuals are all independent put 1.");
+	Dialog.addNumber("           Group Size", parseFloat(defaultSettings[3]));
+
+	Dialog.addMessage(" (v) Grouping Method:\n ----------------------------------------\nHow are individuals assiged to groups?\n \n    Random: individuals are randomly assigned.\n    Ranked: each group has an even distribution of individual fitnesses.\n    Disassortative: individuals are grouped dissassortatively by genotype.");
+	Dialog.addChoice("            Grouping",groupMethodArray, defaultSettings[4]);
+
+Dialog.show();
+
+groupSize =  Dialog.getNumber();
+groupMethod =  Dialog.getChoice();
+
+
+Dialog.createNonBlocking("Step 2, Experiment Settings Part 3");
+
+	Dialog.addMessage(" (vi) Sheet Layout:\n ----------------------------------------\nhow do you want the printer sheet arranged?");
+	Dialog.addNumber("        Targets Per Row:",  defaultSheetLayout[0] );
+	Dialog.addNumber("       Row Spacing (px):",  defaultSheetLayout[1] );
+	Dialog.addNumber("    Column Spacing (px):",  defaultSheetLayout[2] );
+	Dialog.addNumber("       Copies Per Sheet:",  defaultSheetLayout[3] );
+	
+Dialog.show();
+	
+
+targetsPerRow = Dialog.getNumber();
+xSpace = Dialog.getNumber();
+ySpace = Dialog.getNumber();
+nCopies = Dialog.getNumber();
+
+dimensionArray = newArray(targetsPerRow, xSpace, ySpace, nCopies);
+dimensionString = String.join(dimensionArray, "\t");
+
+
+
+defaultSpawnLayout = split(defaultSettings[6],"\t");
+
+spawnChoices=newArray("random","left-right");
+labelChoices=newArray("colour","alphabet","number");
+
+
+
+Dialog.createNonBlocking("Step 2, Experiment Settings Part 4");
+
+	Dialog.addMessage(" (vii) Spawn Layout:\n ----------------------------------------\nhow do you want the spawn grid arranged?");
+	Dialog.addNumber("        N rows (x):",  defaultSpawnLayout[0] );
+	Dialog.addNumber("        N column (y):",  defaultSpawnLayout[1] );
+	Dialog.addNumber("    	  Min Distance:",  defaultSpawnLayout[2] );
+	Dialog.addChoice("        Spawn Method: (random, left-right)",  spawnChoices,defaultSpawnLayout[3]);
+	Dialog.addMessage(" (viii) Label Method:\n ----------------------------------------\nhow do you want the targets labelled");
+	Dialog.addChoice("        Label: (colour,alphabet,number)",  labelChoices,defaultSettings[7]);
+	
+Dialog.show();
+	
+
+xNum = Dialog.getNumber();
+yNum = Dialog.getNumber();
+minSpace = Dialog.getNumber();
+spawnChoice = Dialog.getChoice();
+labelChoice = Dialog.getChoice();
+
+spawnArray = newArray(xNum, yNum, minSpace, spawnChoice);
+spawnString = String.join(spawnArray, "\t");
+
+
+
+// Save 
+dataFile = File.open(settingsFilePath);
+
+print(dataFile, treatmentNumber);
+print(dataFile, repeatNumber);
+print(dataFile, startType);
+print(dataFile, groupSize);
+print(dataFile, groupMethod);
+print(dataFile, dimensionString);
+print(dataFile, spawnString);
+print(dataFile, labelChoice);
+File.close(dataFile);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// iii) Assign Treatment Names
+//-------------------------------------------------
+//...........................................................................................................................................................................
+TLeng = treatmentNumber;
+RLeng = repeatNumber;
+
+listTreatments = newArray(TLeng);
+
+for(z = 0; z< floor(TLeng/15)+1; z++){
+
+dialogTitle = "Step 3, enter treatment names Part ("+z+1+"/" +floor(TLeng/15)+1+")";
+
+Dialog.createNonBlocking(dialogTitle);
+
+startVal = ((z)*15);
+endVal = startVal +15;
+if(endVal>TLeng){
+endVal = TLeng;
+}
+
+	Dialog.addMessage("Give a name for each treatment, e.g. Habitat1");
+	for(k=startVal; k<endVal ; k++)	{
+	Label = "Treatment "+ k + 1 +":";
+	Dialog.addString(Label, "Habitat"+k+1,20);
+					}
+	Dialog.show();
+
+	
+	for(k=startVal; k<endVal ; k++)	{
+	listTreatments[k] = Dialog.getString();
+	}
+
+
+}
+
+
+
+// iv) Generate Folders
+//-------------------------------------------------
+//...........................................................................................................................................................................
+
+
+for(i=0; i<TLeng; i ++){
+for(j=0; j<RLeng; j ++){
+makeStr = camoPrintExpDir + listTreatments[i] + "_R"+j+1+"/";
+File.makeDirectory(makeStr);
+dataFile = File.open(makeStr+"Settings_Print.txt");
+print(dataFile, "Treatment: "+"\t"+listTreatments[i]);
+print(dataFile, "Repeat: "+"\t"+j+1);
+print(dataFile, "GeneMethod: "+"\t"+startType);
+print(dataFile, "GroupSize: "+"\t"+groupSize);
+print(dataFile, "GroupMethod: "+"\t"+groupMethod);;
+print(dataFile, "PrintSetting: "+"\t"+dimensionString);
+print(dataFile, "SpawnSetting: "+"\t"+spawnString);
+print(dataFile, "LabelMethod: "+"\t"+labelChoice);
+File.close(dataFile);
+
+
+pasteDIR = makeStr+"Settings_Population.txt";
+File.copy(populationSettingsDIR,pasteDIR);
+
+} // ( j )
+} // ( i )
+
+
+
+
+// v) Apply Algorithm and Colour Settings
+//--------------------------------------------------------
+//...........................................................................................................................................................................
+
+for(j=0; j<RLeng; j ++){
+for(i=0; i<TLeng; i ++){
+
+
+
+//Target
+//---------------
+
+makeStr = camoPrintExpDir + listTreatments[i] + "_R"+j+1+"/";
+
+PopulationSet = makeStr+"Settings_Population.txt";
+PopulationSettings = File.openAsString(PopulationSet );
+PopulationSettings = split(PopulationSettings, "\n");
+
+TargetSet = split(PopulationSettings[0],"\t");
+TargetChoice = TargetSet[1];
+
+
+
+
+TargetDirectory = getDirectory("plugins")+ "1 CamoEvo/Targets/";
+
+TargetSettings = File.openAsString(TargetDirectory+"Target_Settings.txt");
+TargetSettingsRows = split(TargetSettings , "\n");
+
+for(f=0; f<TargetSettingsRows.length; f++){
+temp = TargetSettingsRows[f];
+
+if(startsWith(temp, TargetChoice)){
+TargetSetting = temp;
+}
+
+}
+
+TargetChoiceSettings = split(TargetSetting, "\t");
+
+TargetChoiceShape = TargetChoiceSettings[1];
+TargetChoiceScale = parseFloat(TargetChoiceSettings[2]);
+TargetPatternChoice = TargetChoiceSettings[3];
+TargetChoiceMinRotation = parseFloat(TargetChoiceSettings[5]);
+TargetChoiceMaxRotation = parseFloat(TargetChoiceSettings[6]);
+
+
+
+
+
+//Algorithm
+//---------------
+folderPath = camoPrintExpDir + listTreatments[i] + "_R"+j+1+"/";
+
+PopLocation=folderPath;
+
+PopLocal = getDirectory("plugins") + "2 CamoReq/PopLocation.txt";
+dataFile = File.open(PopLocal);
+print(dataFile, folderPath);
+File.close(dataFile);
+
+
+run("Assign Algorithm Settings");
+
+if(startType=="Random"){
+
+populatorDirectory1= "select_folder=[" + PopLocation+ "]";
+populatorDirectory2= " select_template=[" + getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+TargetPatternChoice+".txt]";
+
+		populatorDirectory = populatorDirectory1+populatorDirectory2;
+
+		run("ImageGA Populator", populatorDirectory);
+		
+		run("Colour Range Modifier");
+}
+
+if(startType=="Matched"){
+	if(i==0){
+
+
+populatorDirectory1= "select_folder=[" + PopLocation+ "]";
+populatorDirectory2= " select_template=[" + getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+TargetPatternChoice+".txt]";
+
+		populatorDirectory = populatorDirectory1+populatorDirectory2;
+
+		run("ImageGA Populator", populatorDirectory);
+		
+		run("Colour Range Modifier");
+		
+	} else {
+
+	genCopy  = camoPrintExpDir + listTreatments[0] + "_R"+j+1+"/gen_0_genes.txt";
+	genPaste  = camoPrintExpDir + listTreatments[i] + "_R"+j+1+"/gen_0_genes.txt";
+
+	File.copy(genCopy,genPaste);
+	} // (else)
+
+	
+
+} //   (if)
+
+
+if(startType=="Shared"){
+	if(i==0 && j==0){
+
+
+populatorDirectory1= "select_folder=[" + PopLocation+ "]";
+populatorDirectory2= " select_template=[" + getDirectory("plugins") + "2 CamoReq/Target_Gen/Template_"+TargetPatternChoice+".txt]";
+
+		populatorDirectory = populatorDirectory1+populatorDirectory2;
+
+		run("ImageGA Populator", populatorDirectory);
+		
+		run("Colour Range Modifier");
+
+	} else {
+
+	genCopy  = camoPrintExpDir + listTreatments[0] + "_R"+0+1+"/gen_0_genes.txt";
+	genPaste  = camoPrintExpDir + listTreatments[i] + "_R"+j+1+"/gen_0_genes.txt";
+
+	File.copy(genCopy,genPaste);
+	} // (else)
+
+} //   (if)
+
+
+
+
+PatternTemplate = getDirectory("plugins") + "2 CamoReq/PatternTemplate.txt";
+
+
+//Copy all if Gen = 0
+//---------------------------------
+
+File.copy(folderPath+"gen_0_genes.txt", PatternTemplate);
+
+generateString = "Generate "+ TargetPatternChoice;
+
+setBatchMode(true);
+run(generateString);
+
+
+File.makeDirectory(folderPath + "GenPat_0/");
+
+
+
+
+//Save Patterns
+//---------------------------------
+
+WinNam = getList("image.titles");
+Win = lengthOf(WinNam);
+
+for ( f=0; f<Win; f++ ) { 
+
+	pat = "/" + WinNam[f] + ".tif";
+	PatternPath = folderPath + "GenPat_0/" + pat;
+
+	selectWindow(WinNam[f]);
+
+	if(endsWith(WinNam[f], ".tif")){
+
+	close(WinNam[f]);
+	} else {
+
+		if(startsWith(WinNam[f], "Gen")==1 || startsWith(WinNam[f], "gloss")==1){
+
+		saveAs("Tiff", PatternPath); 
+
+		close(WinNam[f]+".tif");
+
+		} // GenTarget
+		
+		
+		if(startsWith(WinNam[f], "Train")==1){
+
+		saveAs("Tiff", TrainPath + WinNam[f] + ".tif"); 
+
+		close(WinNam[f]+".tif");
+
+		} // GenTarget
+
+
+	}
+} // (f)
+
+
+run("Generate Prey Sheet");
+
+
+} // ( i )
+} // ( j )
+
+Dialog.create("Step 5, Get Printing");
+	Dialog.addMessage("All completed and all ready to print!");
+Dialog.show();
+
